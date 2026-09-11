@@ -10,27 +10,36 @@
     .page {
         max-width: 1440px !important;
         width: 100% !important;
-        padding: 32px 24px 20px !important;
+        padding: clamp(10px, 1.5vh, 18px) 24px clamp(6px, 1vh, 10px) !important;
         box-sizing: border-box;
+    }
+
+    body:has(.dashboard-page) .footer {
+        padding: 6px 16px;
+        font-size: 0.70rem;
     }
 
     .dashboard-page .dashboard-page-shell {
         display: grid;
         grid-template-columns: minmax(0, 1fr) 240px;
-        gap: 24px;
+        gap: clamp(14px, 1.8vh, 22px);
         align-items: start;
         width: 100%;
         margin: 0 auto;
-        padding: 24px 28px 56px;
+        padding: clamp(6px, 1vh, 12px) clamp(16px, 2vw, 24px) clamp(10px, 1.6vh, 20px);
         box-sizing: border-box;
         overflow: visible;
+    }
+
+    .dashboard-page .dashboard-page-shell.no-ad-rail {
+        grid-template-columns: 1fr;
     }
 
     .dashboard-page .dashboard-hub {
         min-width: 0;
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: clamp(12px, 1.5vh, 16px);
     }
 
     .dashboard-page .dashboard-grid {
@@ -55,14 +64,14 @@
 
     .dashboard-page .dashboard-ad-rail {
         position: sticky;
-        top: 96px;
+        top: calc(var(--topbar-height) + 12px);
         width: 240px;
         flex-shrink: 0;
         align-self: start;
-        max-height: calc(100dvh - 124px);
+        max-height: calc(100dvh - var(--topbar-height) - 28px);
         overflow-x: hidden;
         overflow-y: auto;
-        padding: 0 4px 16px;
+        padding: 0 4px 12px;
         box-sizing: border-box;
         overscroll-behavior: contain;
         z-index: 5;
@@ -136,7 +145,7 @@
     .sponsor-media-frame {
         width: 100%;
         aspect-ratio: 9 / 16;
-        max-height: 390px;
+        max-height: clamp(260px, 35vh, 370px);
         background: #080c24;
         overflow: hidden;
         position: relative;
@@ -507,68 +516,586 @@
             padding: 22px 16px calc(16px + env(safe-area-inset-bottom)) !important;
         }
     }
+    /* ================= 4. RESTRUCTURED 3-ZONE DASHBOARD ================= */
+    .dashboard-greeting-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: clamp(10px, 1.4vh, 14px) clamp(14px, 1.8vw, 18px);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+    }
+    .greeting-text-block {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+    .dashboard-greeting-title {
+        font-size: 1.35rem;
+        font-weight: 900;
+        color: var(--ink);
+        margin: 0;
+    }
+    .dashboard-greeting-sub {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.82rem;
+        color: var(--muted);
+    }
+    .greeting-tier-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--tier-color, var(--primary));
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        font-size: 0.74rem;
+    }
+    .greeting-dot { opacity: 0.5; }
+    .greeting-level { font-weight: 700; color: var(--ink); }
+
+    .streak-status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 999px;
+        font-size: 0.80rem;
+        font-weight: 700;
+        border: 1px solid var(--border);
+        background: var(--surface-glass);
+        white-space: nowrap;
+    }
+    .streak-status-pill.streak-secured {
+        border-color: rgba(0, 194, 168, 0.35);
+        background: rgba(0, 194, 168, 0.08);
+        color: var(--accent);
+    }
+    .streak-status-pill.streak-pending {
+        border-color: rgba(255, 84, 112, 0.35);
+        background: rgba(255, 84, 112, 0.08);
+        color: var(--danger);
+    }
+    .streak-status-pill.streak-zero {
+        border-color: var(--border);
+        background: rgba(148, 163, 184, 0.08);
+        color: var(--muted);
+    }
+
+    /* Action Stage */
+    .next-action-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: clamp(16px, 2.2vh, 22px) clamp(18px, 2.2vw, 24px);
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+        gap: clamp(10px, 1.4vh, 14px);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .next-action-card.state-reading_not_started {
+        border-left: 4px solid var(--primary);
+    }
+    .next-action-card.state-quiz_ready {
+        border-left: 4px solid var(--accent);
+    }
+    .next-action-card.state-quiz_not_passed {
+        border-left: 4px solid var(--gold);
+    }
+    .next-action-card.state-all_courses_completed,
+    .next-action-card.state-course_completed {
+        border-left: 4px solid #10b981;
+    }
+
+    .next-action-eyebrow {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.72rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--primary);
+    }
+    .next-action-content {
+        display: flex;
+        flex-direction: column;
+        gap: clamp(10px, 1.4vh, 14px);
+    }
+    .next-action-header {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .next-course-title {
+        font-size: 1.45rem;
+        font-weight: 900;
+        color: var(--ink);
+        margin: 0;
+        line-height: 1.25;
+    }
+    .next-chapter-subtitle {
+        font-size: 0.92rem;
+        color: var(--muted);
+        font-weight: 600;
+        margin: 4px 0 0;
+        line-height: 1.5;
+    }
+
+    /* Emphasized Course Progress */
+    .course-progress-block {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 2px 0;
+    }
+    .course-progress-summary {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+    }
+    .course-progress-copy {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .course-progress-copy strong {
+        color: var(--ink);
+        font-size: 0.95rem;
+        font-weight: 900;
+    }
+    .course-progress-copy span {
+        color: var(--muted);
+        font-size: 0.78rem;
+    }
+    .course-progress-percentage {
+        color: var(--accent);
+        font-size: 1.25rem;
+        font-weight: 900;
+        line-height: 1;
+    }
+    .course-progress-track {
+        width: 100%;
+        height: 11px;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: rgba(108, 92, 231, 0.12);
+    }
+    .course-progress-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--primary), var(--accent));
+        transition: width 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .next-status-callout {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 13px 16px;
+        border-radius: 12px;
+        background: rgba(108, 92, 231, 0.06);
+        border: 1px solid rgba(108, 92, 231, 0.15);
+        font-size: 0.84rem;
+        color: var(--ink);
+        line-height: 1.5;
+    }
+    .next-action-buttons {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .btn-locked {
+        opacity: 0.65;
+        cursor: not-allowed;
+        background: rgba(255, 255, 255, 0.03);
+        border-color: var(--border);
+        color: var(--muted);
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .btn-locked:hover {
+        background: rgba(255, 255, 255, 0.03);
+        border-color: var(--border);
+        color: var(--muted);
+        transform: none;
+    }
+    .action-lock-hint {
+        font-size: 0.74rem;
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    /* Sidebar Mini Cards */
+    .dashboard-mini-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: clamp(12px, 1.6vh, 16px) clamp(14px, 1.8vw, 18px);
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+        gap: clamp(8px, 1.2vh, 12px);
+    }
+    .mini-card-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+    }
+    .mini-card-header h3 {
+        font-size: 0.95rem;
+        font-weight: 900;
+        color: var(--ink);
+        margin: 0;
+    }
+    .mini-card-sub {
+        font-size: 0.68rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    .weekly-metrics-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .weekly-metric-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.82rem;
+        padding: 4px 0;
+        border-bottom: 1px solid var(--border);
+    }
+    .weekly-metric-row:last-child {
+        border-bottom: none;
+    }
+    .metric-label {
+        color: var(--muted);
+    }
+    .metric-val {
+        font-weight: 800;
+    }
+    .btn-fullwidth {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
+
+    /* Achievement Preview Mini Card */
+    .achievement-preview-card .achievement-preview-body {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .achievement-preview-top {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .achievement-preview-icon {
+        font-size: 1.85rem;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+    .achievement-preview-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+        min-width: 0;
+    }
+    .achievement-preview-name {
+        font-size: 0.92rem;
+        font-weight: 900;
+        color: var(--ink);
+    }
+    .achievement-preview-instruction {
+        font-size: 0.78rem;
+        color: var(--muted);
+        margin: 0;
+        line-height: 1.4;
+    }
+    .achievement-progress-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .achievement-progress-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.72rem;
+        color: var(--muted);
+    }
+    .achievement-remaining {
+        font-weight: 700;
+        color: var(--accent);
+    }
+    .achievement-progress-track {
+        width: 100%;
+        height: 7px;
+        background: rgba(108, 92, 231, 0.1);
+        border-radius: 999px;
+        overflow: hidden;
+    }
+    .achievement-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary), var(--accent));
+        border-radius: 999px;
+        transition: width 0.3s ease;
+    }
+
+    /* Recent Courses Section */
+    .dashboard-recent-courses-section {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-top: 4px;
+    }
+    .recent-courses-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .recent-section-title {
+        font-size: 1.15rem;
+        font-weight: 900;
+        color: var(--ink);
+        margin: 0 0 2px 0;
+    }
+    .recent-section-sub {
+        font-size: 0.74rem;
+        color: var(--muted);
+        margin: 0;
+    }
+    .dashboard-recent-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 16px;
+    }
+    .recent-course-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px 18px;
+        text-decoration: none;
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .recent-course-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--primary);
+    }
+    .recent-course-card-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    .recent-course-name {
+        font-size: 0.95rem;
+        font-weight: 800;
+        color: var(--ink);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .recent-course-badge {
+        font-size: 0.72rem;
+        font-weight: 800;
+        color: var(--primary);
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(108, 92, 231, 0.1);
+        white-space: nowrap;
+    }
+    .recent-course-badge.badge-complete {
+        background: rgba(0, 194, 168, 0.12);
+        color: var(--accent);
+    }
+    .recent-course-meta {
+        font-size: 0.76rem;
+        color: var(--muted);
+    }
+    .recent-course-bar {
+        width: 100%;
+        height: 5px;
+        background: rgba(108, 92, 231, 0.1);
+        border-radius: 999px;
+        overflow: hidden;
+    }
+    .recent-course-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+        border-radius: 999px;
+    }
+    .recent-courses-single-note {
+        padding: 16px 20px;
+        border-radius: 12px;
+        background: var(--surface);
+        border: 1px dashed var(--border);
+        font-size: 0.82rem;
+        color: var(--muted);
+    }
+    .recent-courses-single-note a {
+        color: var(--primary);
+        font-weight: 700;
+        text-decoration: none;
+    }
 </style>
 
-{% if courses %}
-    <!-- ================= ACTIVE DASHBOARD ================= -->
-    <div class="dashboard-page-shell">
+{% if next_action.state != 'no_courses' %}
+    <!-- ================= 3-ZONE ACTION DASHBOARD ================= -->
+    <div class="dashboard-page-shell {% if profile.plan != 'free' %}no-ad-rail{% endif %}">
         <div class="dashboard-hub">
-            <div class="card hero-banner">
-                <div class="hero-banner-main">
-                    <div class="hero-badge">LV. {{ profile.current_level }}</div>
-                    <div>
-                        <h1 class="hero-greeting">Welcome Back, {{ request.user.username }}!</h1>
-                        <p class="subtitle">Current Streak: 🔥 {{ profile.streak_days }} days</p>
-                    </div>
-                </div>
-                <div class="hero-progress-section">
-                    <div class="hero-progress-labels">
-                        <span>Progress to Lv. {{ profile.current_level|add:1 }}</span>
-                        <span class="hero-xp-text"><strong>{{ profile.total_xp }}</strong> / {{ xp_needed_next }} XP</span>
-                    </div>
-                    <div class="xp-bar-track">
-                        <div class="xp-bar-fill" data-progress="{{ xp_percentage }}"></div>
-                    </div>
-                </div>
-            </div>
 
+            <!-- ZONE 1: GREETING & STREAK STATUS -->
+            <section class="dashboard-greeting-row" aria-label="Dashboard Overview">
+                <div class="greeting-text-block">
+                    <h1 class="dashboard-greeting-title">Welcome back, {{ request.user.username }}!</h1>
+                    <div class="dashboard-greeting-sub">
+                        <span class="greeting-tier-pill" style="--tier-color: {{ tier_info.color }};">
+                            {{ tier_info.icon }} {{ tier_info.name }} Tier
+                        </span>
+                        <span class="greeting-dot">·</span>
+                        <span class="greeting-level">Level {{ profile.current_level }}</span>
+                    </div>
+                </div>
+
+                <div class="streak-status-pill streak-{{ streak_status.status }}">
+                    <span class="streak-icon">{{ streak_status.icon }}</span>
+                    <span class="streak-message">{{ streak_status.message }}</span>
+                </div>
+            </section>
+
+            <!-- ZONE 2: PRIMARY ACTION STAGE -->
             <div class="dashboard-grid">
                 <div class="dashboard-primary">
-                    {% if recent_course %}
-                        <div class="card resume-card">
-                            <div class="section-tag">CONTINUE LEARNING</div>
-                            <div class="resume-body">
-                                <div>
-                                    <h2>{{ recent_course.title }}</h2>
-                                    <p class="subtitle">{{ recent_course.description|default:"AI-generated learning path based on your uploaded materials."|truncatechars:80 }}</p>
+
+                    <!-- Next in Your Course Card -->
+                    <div class="next-action-card state-{{ next_action.state }}">
+                        <div class="next-action-eyebrow">
+                            <span>{{ next_action.eyebrow }}</span>
+                        </div>
+
+                        <div class="next-action-content">
+                            <div class="next-action-header">
+                                <h2 class="next-course-title">{{ next_action.title }}</h2>
+                                {% if next_action.subtitle %}
+                                    <div class="next-chapter-subtitle">{{ next_action.subtitle }}</div>
+                                {% endif %}
+                            </div>
+
+                            {% if next_action.total_chapters > 0 %}
+                                <div class="course-progress-block">
+                                    <div class="course-progress-summary">
+                                        <div class="course-progress-copy">
+                                            <strong>{{ next_action.completed_chapters }} of {{ next_action.total_chapters }} chapter{{ next_action.total_chapters|pluralize }} completed</strong>
+                                            <span>{{ next_action.progress_pct }}% course progress</span>
+                                        </div>
+                                        <strong class="course-progress-percentage">{{ next_action.progress_pct }}%</strong>
+                                    </div>
+                                    <div class="course-progress-track" role="progressbar" aria-label="Course progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ next_action.progress_pct }}">
+                                        <div class="course-progress-fill" style="width: {{ next_action.progress_pct }}%;"></div>
+                                    </div>
                                 </div>
-                                <a href="{% url 'courses:course_detail' recent_course.pk %}" class="btn btn-primary btn-chunky">
-                                    <span class="resume-label-full">Open Learning Path &rarr;</span>
-                                    <span class="resume-label-short">Open Course &rarr;</span>
+                            {% endif %}
+
+                            <div class="next-status-callout">
+                                <span class="callout-icon">💡</span>
+                                <span class="callout-text">{{ next_action.status_text }}</span>
+                            </div>
+
+                            <div class="next-action-buttons">
+                                {% if next_action.primary_button_url %}
+                                    <a href="{{ next_action.primary_button_url }}"
+                                       class="btn btn-primary btn-chunky {% if '/quiz/' in next_action.primary_button_url %}prequiz-trigger{% endif %}"
+                                       {% if '/quiz/' in next_action.primary_button_url %}
+                                           data-quiz-url="{{ next_action.primary_button_url }}"
+                                           data-lesson-completed="{{ next_action.lesson_completed|yesno:'true,false' }}"
+                                           {% if next_action.chapter %}data-chapter-id="{{ next_action.chapter.pk }}"{% endif %}
+                                           {% if next_action.review_url %}data-review-url="{{ next_action.review_url }}"{% endif %}
+                                       {% endif %}>
+                                        {{ next_action.primary_button_label }}
+                                    </a>
+                                {% endif %}
+
+                                {% if next_action.secondary_button_label %}
+                                    {% if next_action.secondary_button_disabled %}
+                                        <button type="button" class="btn btn-outline btn-sm btn-locked" disabled aria-describedby="quiz-lock-message" title="{{ next_action.lock_reason }}">
+                                            {{ next_action.secondary_button_label }} <span aria-hidden="true">🔒</span>
+                                        </button>
+                                    {% elif next_action.secondary_button_url %}
+                                        <a href="{{ next_action.secondary_button_url }}"
+                                           class="btn btn-outline btn-sm {% if '/quiz/' in next_action.secondary_button_url %}prequiz-trigger{% endif %}"
+                                           {% if '/quiz/' in next_action.secondary_button_url %}
+                                               data-quiz-url="{{ next_action.secondary_button_url }}"
+                                               data-lesson-completed="{{ next_action.lesson_completed|yesno:'true,false' }}"
+                                               {% if next_action.chapter %}data-chapter-id="{{ next_action.chapter.pk }}"{% endif %}
+                                               {% if next_action.review_url %}data-review-url="{{ next_action.review_url }}"{% endif %}
+                                           {% endif %}>
+                                            {{ next_action.secondary_button_label }}
+                                        </a>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            {% if next_action.secondary_button_disabled and next_action.lock_reason %}
+                                <div id="quiz-lock-message" class="action-lock-hint">
+                                    <span aria-hidden="true">🔒</span> {{ next_action.lock_reason }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- ZONE 3: RECENT COURSES (Excluding Featured Course) -->
+                    {% if recent_courses %}
+                        <section class="dashboard-recent-courses-section" aria-label="Recent Courses">
+                            <div class="recent-courses-header">
+                                <div>
+                                    <h2 class="recent-section-title">Recent Courses</h2>
+                                    <p class="recent-section-sub">Continue studying or review other active learning paths</p>
+                                </div>
+                                <a href="{% url 'courses:course_list' %}" class="btn btn-ghost btn-sm">
+                                    Manage Library →
                                 </a>
                             </div>
-                        </div>
+
+                            <div class="recent-courses-grid dashboard-recent-grid">
+                                {% for course in recent_courses %}
+                                    <a href="{% url 'courses:course_detail' course.pk %}" class="recent-course-card">
+                                        <div class="recent-course-card-top">
+                                            <strong class="recent-course-name">{{ course.title }}</strong>
+                                            <span class="recent-course-badge {% if course.is_complete %}badge-complete{% endif %}">
+                                                {% if course.is_complete %}Complete{% else %}{{ course.progress_pct }}%{% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="recent-course-meta">
+                                            {{ course.completed_chapter_count }} of {{ course.total_chapter_count }} Chapter{{ course.total_chapter_count|pluralize }} completed
+                                        </div>
+                                        <div class="recent-course-bar">
+                                            <div class="recent-course-fill" style="width: {{ course.progress_pct }}%;"></div>
+                                        </div>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </section>
                     {% endif %}
-
-                    <div class="section-header">
-                        <h2>Course Progress</h2>
-                        <a href="{% url 'courses:course_list' %}" class="btn btn-ghost btn-sm">Manage Library &rarr;</a>
-                    </div>
-
-                    <div class="progress-card-grid">
-                        {% for course in courses %}
-                            <a href="{% url 'courses:course_detail' course.pk %}" class="card trajectory-card">
-                                <div class="trajectory-header">
-                                    <h3>{{ course.title }}</h3>
-                                    <span class="trajectory-pct">{{ course.progress_pct }}%</span>
-                                </div>
-                                <p class="subtitle">{{ course.chapters.count }} Chapter{{ course.chapters.count|pluralize }} generated</p>
-                                <div class="trajectory-track">
-                                    <div class="trajectory-fill" data-progress="{{ course.progress_pct }}"></div>
-                                </div>
-                            </a>
-                        {% endfor %}
-                    </div>
 
                     <!-- Compact Mobile Sponsor Strip -->
                     {% if profile.plan == 'free' %}
@@ -580,93 +1107,75 @@
                     {% endif %}
                 </div>
 
-                <!-- Internal Dashboard Sidebar -->
+                <!-- Internal Dashboard Sidebar: Weekly Momentum & Next Achievement -->
                 <aside class="dashboard-sidebar">
-                    <div class="card side-card">
-                        <div class="side-card-header">
-                            <h3>Daily Goals</h3>
-                            <span class="chip chip-gold">+40 XP Total</span>
+                    <!-- This Week's Momentum -->
+                    <div class="dashboard-mini-card">
+                        <div class="mini-card-header">
+                            <h3>⚡ This Week</h3>
+                            <span class="mini-card-sub">Weekly Activity</span>
                         </div>
-                        <ul class="quest-task-list">
-                            <li class="quest-item">
-                                <span class="quest-checkbox done">✓</span>
-                                <div class="quest-item-text">
-                                    <div class="quest-headline">
-                                        <strong>Daily Login Bonus</strong>
-                                        <span class="xp-bounty">+5 XP</span>
-                                    </div>
-                                    <small>Sign in and check your dashboard</small>
-                                </div>
-                            </li>
-                            <li class="quest-item">
-                                <span class="quest-checkbox"></span>
-                                <div class="quest-item-text">
-                                    <div class="quest-headline">
-                                        <strong>Quiz Master</strong>
-                                        <span class="xp-bounty">+20 XP</span>
-                                    </div>
-                                    <small>Score 80%+ on any chapter quiz</small>
-                                </div>
-                            </li>
-                            <li class="quest-item">
-                                <span class="quest-checkbox"></span>
-                                <div class="quest-item-text">
-                                    <div class="quest-headline">
-                                        <strong>Review Specialist</strong>
-                                        <span class="xp-bounty">+15 XP</span>
-                                    </div>
-                                    <small>Read through 1 generated summary</small>
-                                </div>
-                            </li>
-                        </ul>
+                        <div class="weekly-metrics-list">
+                            <div class="weekly-metric-row">
+                                <span class="metric-label">XP Earned</span>
+                                <strong class="metric-val" style="color: var(--gold);">⚡ +{{ weekly_momentum.weekly_xp|default:0 }}</strong>
+                            </div>
+                            <div class="weekly-metric-row">
+                                <span class="metric-label">Quizzes Passed</span>
+                                <strong class="metric-val" style="color: var(--accent);">📝 {{ weekly_momentum.quizzes_passed|default:0 }}</strong>
+                            </div>
+                            <div class="weekly-metric-row">
+                                <span class="metric-label">Chapters Completed</span>
+                                <strong class="metric-val" style="color: var(--primary);">📖 {{ weekly_momentum.chapters_read|default:0 }}</strong>
+                            </div>
+                        </div>
+                        <a href="{% url 'courses:leaderboard' %}" class="btn btn-ghost btn-sm btn-fullwidth">
+                            View Rank &amp; Tiers →
+                        </a>
                     </div>
 
-                    <div class="card side-card">
-                        <div class="side-card-header">
-                            <h3>Achievements</h3>
-                            <span class="chip">{{ unlocked_count }}/4 Unlocked</span>
-                        </div>
-                        <div class="badge-shelf">
-                            <div class="badge-item {% if courses %}unlocked{% else %}locked{% endif %}">
-                                <span class="badge-icon">📜</span>
-                                <div class="badge-info">
-                                    <strong>First Course Created</strong>
-                                    <small>{% if courses %}First course created{% else %}🔒 Create 1 course{% endif %}</small>
-                                </div>
+                    <!-- Next Achievement Preview -->
+                    {% if achievement_preview %}
+                        <div class="dashboard-mini-card achievement-preview-card">
+                            <div class="mini-card-header">
+                                <h3>{% if achievement_preview.is_earned %}🏆 Recent Achievement{% else %}🎯 Next Achievement{% endif %}</h3>
+                                <span class="mini-card-sub">Milestone</span>
                             </div>
-                            <div class="badge-item {% if profile.total_xp >= 20 %}unlocked{% else %}locked{% endif %}">
-                                <span class="badge-icon">⚡</span>
-                                <div class="badge-info">
-                                    <strong>Quiz Master</strong>
-                                    <small>{% if profile.total_xp >= 20 %}First quiz cleared{% else %}🔒 Complete 1 quiz{% endif %}</small>
+                            <div class="achievement-preview-body">
+                                <div class="achievement-preview-top">
+                                    <div class="achievement-preview-icon">{{ achievement_preview.icon }}</div>
+                                    <div class="achievement-preview-meta">
+                                        <strong class="achievement-preview-name">{{ achievement_preview.name }}</strong>
+                                        <p class="achievement-preview-instruction">{{ achievement_preview.instruction }}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="badge-item {% if profile.streak_days >= 7 %}unlocked{% else %}locked{% endif %}">
-                                <span class="badge-icon">🔥</span>
-                                <div class="badge-info">
-                                    <strong>Unstoppable</strong>
-                                    <small>{% if profile.streak_days >= 7 %}7-day streak maintained{% else %}🔒 7-day streak{% endif %}</small>
-                                </div>
-                            </div>
-                            <div class="badge-item {% if profile.current_level >= 5 %}unlocked{% else %}locked{% endif %}">
-                                <span class="badge-icon">⭐</span>
-                                <div class="badge-info">
-                                    <strong>Dedicated Scholar</strong>
-                                    <small>{% if profile.current_level >= 5 %}Reached Level 5{% else %}🔒 Reach Level 5{% endif %}</small>
-                                </div>
+                                {% if not achievement_preview.is_all_unlocked %}
+                                    <div class="achievement-progress-wrap">
+                                        <div class="achievement-progress-header">
+                                            <span>{{ achievement_preview.progress_pct }}% progress</span>
+                                            <span class="achievement-remaining">{{ achievement_preview.remaining_text }}</span>
+                                        </div>
+                                        <div class="achievement-progress-track">
+                                            <div class="achievement-progress-fill" style="width: {{ achievement_preview.progress_pct }}%;"></div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                                <a href="{% url 'courses:profile' %}" class="btn btn-ghost btn-sm btn-fullwidth">
+                                    View Achievements Shelf →
+                                </a>
                             </div>
                         </div>
-                    </div>
+                    {% endif %}
                 </aside>
             </div>
         </div>
 
-        <!-- External Right Sponsor Rail (Desktop Only) -->
-        <aside class="dashboard-ad-rail">
-            {% if profile.plan == 'free' %}
+        {% if profile.plan == 'free' %}
+            <!-- External Right Sponsor Rail (Desktop Only) -->
+            <aside class="dashboard-ad-rail">
                 {% include 'courses/components/mock_sponsor_card.html' %}
-            {% endif %}
-        </aside>
+            </aside>
+        {% endif %}
     </div>
 
 {% else %}

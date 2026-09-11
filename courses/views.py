@@ -27,7 +27,23 @@ from .models import (
     Question,
     Quiz,
     QuizAttempt,
+    UserCourseCompletion,
     UserProfile,
+)
+from .dashboard_service import (
+    get_dashboard_next_action,
+    get_recent_active_courses,
+    get_streak_status,
+)
+from .gamification import (
+    get_achievement_preview,
+    get_active_course_progress,
+    get_leaderboard_standings,
+    get_level_progress,
+    get_tier_info,
+    get_tier_progress,
+    get_user_achievements,
+    get_weekly_momentum,
 )
 from .schemas import GenerationPreferences
 from .services import CourseGenerationError, generate_course_journey, SourceBundleError
@@ -224,41 +240,24 @@ def auth_portal(request):
 @login_required
 def dashboard(request):
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
-    courses = list(
-        Course.objects.filter(user=request.user, status="active").prefetch_related(
-            "chapters", "chapters__quiz", "chapters__quiz__attempts"
-        )
-    )
-
-    xp_needed_next = profile.current_level * 100
-    xp_percentage = min(int((profile.total_xp / max(xp_needed_next, 1)) * 100), 100)
-
-    for course in courses:
-        progress = calculate_course_progress(request.user, course)
-        course.progress_pct = progress["percentage"]
-        course.completed_chapter_count = progress["completed_count"]
-        course.total_chapter_count = progress["total_chapters"]
-
-    recent_course = courses[0] if courses else None
+    tier_info = get_tier_info(profile.current_level)
+    streak_status = get_streak_status(profile)
+    next_action = get_dashboard_next_action(request.user)
+    featured_course_id = next_action["course"].pk if next_action.get("course") else None
+    recent_courses = get_recent_active_courses(request.user, limit=3, exclude_course_id=featured_course_id)
+    weekly_momentum = get_weekly_momentum(request.user)
+    achievement_preview = get_achievement_preview(request.user)
     eligibility = get_generation_eligibility(profile)
-
-    unlocked_count = 0
-    if courses:
-        unlocked_count += 1
-    if profile.total_xp >= 20:
-        unlocked_count += 1
-    if profile.streak_days >= 7:
-        unlocked_count += 1
-    if profile.current_level >= 5:
-        unlocked_count += 1
 
     return render(request, "courses/dashboard.html", {
         "profile": profile,
-        "courses": courses,
-        "xp_needed_next": xp_needed_next,
-        "xp_percentage": xp_percentage,
-        "recent_course": recent_course,
-        "unlocked_count": unlocked_count,
+        "tier_info": tier_info,
+        "streak_status": streak_status,
+        "next_action": next_action,
+        "recent_courses": recent_courses,
+        "courses": recent_courses,
+        "weekly_momentum": weekly_momentum,
+        "achievement_preview": achievement_preview,
         "eligibility": eligibility,
     })
 
@@ -514,6 +513,12 @@ def chapter_review(request, pk):
     chapter = get_object_or_404(Chapter, pk=pk, course__user=request.user)
     course = chapter.course
 
+    profile = getattr(request.user, "userprofile", None)
+    if profile:
+        profile.last_opened_course = course
+        profile.last_opened_chapter = chapter
+        profile.save(update_fields=["last_opened_course", "last_opened_chapter"])
+
     chapter_status = get_chapter_status(request.user, chapter)
     if chapter_status == "locked":
         previous_chapter = get_previous_chapter(chapter)
@@ -683,6 +688,12 @@ def chapter_rename(request, pk):
 @login_required
 def chapter_quiz(request, pk):
     chapter = get_object_or_404(Chapter, pk=pk, course__user=request.user)
+
+    profile = getattr(request.user, "userprofile", None)
+    if profile:
+        profile.last_opened_course = chapter.course
+        profile.last_opened_chapter = chapter
+        profile.save(update_fields=["last_opened_course", "last_opened_chapter"])
     if get_chapter_status(request.user, chapter) == "locked":
         previous_chapter = get_previous_chapter(chapter)
         return render(request, "courses/chapter_locked.html", {
@@ -1020,3 +1031,46 @@ def submit_quiz(request, pk=None, chapter_id=None):
         "review_items": review_items,
         "results": review_items,
     })
+
+
+# --------------------------------------------------
+# 6. GAMIFICATION: PROFILE & RANK/TIER LEADERBOARD
+# --------------------------------------------------
+@login_required
+def profile_view(request):
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    level_progress = get_level_progress(profile.total_xp, profile.current_level)
+    tier_progress = get_tier_progress(profile.current_level, profile.total_xp)
+    completed_courses_count = UserCourseCompletion.objects.filter(user=request.user).count()
+    active_courses = get_active_course_progress(request.user, limit=6)
+    achievements = get_user_achievements(request.user)
+
+    context = {
+        "profile": profile,
+        "level_progress": level_progress,
+        "tier_progress": tier_progress,
+        "completed_courses_count": completed_courses_count,
+        "active_courses": active_courses,
+        "achievements": achievements,
+    }
+    return render(request, "courses/profile.html", context)
+
+
+@login_required
+def leaderboard_view(request):
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    tier_progress = get_tier_progress(profile.current_level, profile.total_xp)
+    level_progress = get_level_progress(profile.total_xp, profile.current_level)
+    weekly_momentum = get_weekly_momentum(request.user)
+    standings_data = get_leaderboard_standings(request.user, limit=25)
+
+    context = {
+        "profile": profile,
+        "tier_progress": tier_progress,
+        "level_progress": level_progress,
+        "weekly_momentum": weekly_momentum,
+        "standings": standings_data["standings"],
+        "current_user_rank": standings_data["current_user_rank"],
+        "total_learners": standings_data["total_learners"],
+    }
+    return render(request, "courses/leaderboard.html", context)

@@ -1,0 +1,665 @@
+{% extends "courses/base.html" %}
+{% load static %}
+
+{% block title %}Rank &amp; Tiers · Leaderboard — StudyQuest{% endblock %}
+
+{% block page_class %}leaderboard-page-canvas{% endblock %}
+
+{% block content %}
+<div class="leaderboard-container">
+
+    <!-- HEADER TITLE -->
+    <header class="leaderboard-header">
+        <div class="leaderboard-title-group">
+            <h1 class="leaderboard-title">🏆 Academic Ranks &amp; Tiers</h1>
+            <p class="leaderboard-subtitle">
+                Track your milestone tier progression, weekly study momentum, and authentic standings across StudyQuest.
+            </p>
+        </div>
+        <div class="leaderboard-header-actions">
+            <a href="{% url 'courses:profile' %}" class="btn btn-outline btn-sm">
+                👤 My Profile
+            </a>
+            <a href="{% url 'courses:dashboard' %}" class="btn btn-ghost btn-sm">
+                ← Back to Dashboard
+            </a>
+        </div>
+    </header>
+
+    <!-- 1. TIER PROGRESSION ROADMAP -->
+    <section class="leaderboard-card" aria-label="Tier Progression Roadmap">
+        <div class="tier-card-header">
+            <div>
+                <h2 class="section-title">🌟 Tier Progression Track</h2>
+                <p class="section-sub">Academic tiers advance as your level increases through study and assessments</p>
+            </div>
+            <span class="current-tier-chip" style="--tier-color: {{ tier_progress.current_tier.color }};">
+                {{ tier_progress.current_tier.icon }} Current: {{ tier_progress.current_tier.name }} Tier
+            </span>
+        </div>
+
+        <!-- Visual Milestone Stepper -->
+        <div class="tier-stepper">
+            {% for tier in tier_progress.all_tiers %}
+                <div class="tier-step tier-step-{{ tier.status }}" style="--tier-color: {{ tier.color }};">
+                    <div class="tier-step-icon-wrap">
+                        <span class="tier-step-icon">{{ tier.icon }}</span>
+                        {% if tier.status == 'completed' %}
+                            <span class="tier-step-badge badge-done">✓</span>
+                        {% elif tier.status == 'current' %}
+                            <span class="tier-step-badge badge-curr">●</span>
+                        {% else %}
+                            <span class="tier-step-badge badge-lock">🔒</span>
+                        {% endif %}
+                    </div>
+                    <div class="tier-step-info">
+                        <strong class="tier-step-name">{{ tier.name }}</strong>
+                        <span class="tier-step-range">
+                            {% if tier.max_level %}
+                                Lv. {{ tier.min_level }}–{{ tier.max_level }}
+                            {% else %}
+                                Lv. {{ tier.min_level }}+
+                            {% endif %}
+                        </span>
+                        <span class="tier-step-status-tag">
+                            {% if tier.status == 'completed' %}Unlocked
+                            {% elif tier.status == 'current' %}Current Tier
+                            {% else %}Locked{% endif %}
+                        </span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Next Tier Progress Bar -->
+        <div class="tier-progress-status-box">
+            {% if tier_progress.next_tier %}
+                <div class="tier-status-text-row">
+                    <span>
+                        Next Milestone: <strong>{{ tier_progress.next_tier.icon }} {{ tier_progress.next_tier.name }} Tier</strong>
+                        (Level {{ tier_progress.next_tier.min_level }})
+                    </span>
+                    <span class="tier-xp-needed">
+                        <strong>{{ tier_progress.xp_to_next_tier }} XP</strong> ({{ tier_progress.levels_to_next }} level{{ tier_progress.levels_to_next|pluralize }}) remaining
+                    </span>
+                </div>
+                <div class="tier-track-bar">
+                    <div class="tier-track-fill" style="width: {{ tier_progress.tier_progress_pct }}%; --next-tier-color: {{ tier_progress.next_tier.color }};"></div>
+                </div>
+            {% else %}
+                <div class="tier-max-celebration">
+                    💎 <strong>Maximum Academic Tier Achieved!</strong> You have reached the pinnacle of StudyQuest mastery.
+                </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- 2. THIS WEEK'S MOMENTUM ROW -->
+    <section class="leaderboard-momentum-card" aria-label="Weekly Momentum">
+        <div class="momentum-header">
+            <h2 class="section-title">⚡ This Week's Momentum</h2>
+            <span class="momentum-cycle-label">
+                Week cycle resets Mondays · Verified Ledger Activity
+            </span>
+        </div>
+
+        <div class="momentum-stats-row">
+            <div class="momentum-stat-item">
+                <div class="momentum-icon" style="color: var(--gold);">⚡</div>
+                <div class="momentum-val">{{ weekly_momentum.weekly_xp|default:0 }}</div>
+                <div class="momentum-lbl">XP Earned This Week</div>
+            </div>
+
+            <div class="momentum-stat-item">
+                <div class="momentum-icon" style="color: var(--accent);">📝</div>
+                <div class="momentum-val">{{ weekly_momentum.quizzes_passed|default:0 }}</div>
+                <div class="momentum-lbl">Quizzes Passed (≥ 75%)</div>
+            </div>
+
+            <div class="momentum-stat-item">
+                <div class="momentum-icon" style="color: var(--primary);">📖</div>
+                <div class="momentum-val">{{ weekly_momentum.chapters_read|default:0 }}</div>
+                <div class="momentum-lbl">Chapters Mastered</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. AUTHENTIC COMMUNITY STANDINGS -->
+    <section class="leaderboard-card" aria-label="Community Standings">
+        <div class="tier-card-header">
+            <div>
+                <h2 class="section-title">🎖️ All-Time Standings</h2>
+                <p class="section-sub">
+                    Verified lifetime rankings of active learners in this StudyQuest community sorted by total XP.
+                </p>
+            </div>
+            <div class="user-rank-chip">
+                Your Rank: <strong>#{{ current_user_rank }}</strong> of {{ total_learners }}
+            </div>
+        </div>
+
+        <div class="standings-table-wrap">
+            <table class="standings-table">
+                <thead>
+                    <tr>
+                        <th class="col-rank">Rank</th>
+                        <th class="col-user">Learner</th>
+                        <th class="col-tier">Academic Tier</th>
+                        <th class="col-level">Level</th>
+                        <th class="col-xp">Total XP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in standings %}
+                        <tr class="standings-row {% if row.is_current_user %}is-you{% endif %}">
+                            <td class="col-rank">
+                                {% if row.rank == 1 %}
+                                    <span class="medal-rank medal-1" title="1st Place">🥇 1</span>
+                                {% elif row.rank == 2 %}
+                                    <span class="medal-rank medal-2" title="2nd Place">🥈 2</span>
+                                {% elif row.rank == 3 %}
+                                    <span class="medal-rank medal-3" title="3rd Place">🥉 3</span>
+                                {% else %}
+                                    <span class="numeric-rank">#{{ row.rank }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="col-user">
+                                <div class="standings-user-cell">
+                                    <div class="standings-avatar" style="--tier-color: {{ row.tier.color }};">
+                                        {{ row.avatar_initial }}
+                                    </div>
+                                    <div class="standings-user-names">
+                                        <strong class="standings-username">{{ row.username }}</strong>
+                                        {% if row.is_current_user %}
+                                            <span class="you-badge">You</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="col-tier">
+                                <span class="table-tier-pill" style="--tier-color: {{ row.tier.color }};">
+                                    {{ row.tier.icon }} {{ row.tier.name }}
+                                </span>
+                            </td>
+                            <td class="col-level">
+                                <strong class="level-cell">Lv. {{ row.level }}</strong>
+                            </td>
+                            <td class="col-xp">
+                                <span class="xp-cell">⚡ {{ row.total_xp }} XP</span>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 32px; color: var(--muted);">
+                                No learner standings found yet. Complete a quiz to establish your rank!
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <p class="standings-footer-note">
+            💡 Standings are computed strictly from verified XP ledger activity. No synthetic bots or simulated competitors are ever shown.
+        </p>
+    </section>
+
+</div>
+
+<style>
+/* =========================================================
+   LEADERBOARD & RANK/TIER COMPONENT STYLES
+   ========================================================= */
+.leaderboard-page-canvas {
+    padding: 32px 20px 60px;
+}
+
+.leaderboard-container {
+    max-width: 1080px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Header */
+.leaderboard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.leaderboard-title {
+    font-size: 1.7rem;
+    font-weight: 900;
+    color: var(--ink);
+    margin: 0 0 4px 0;
+}
+
+.leaderboard-subtitle {
+    font-size: 0.86rem;
+    color: var(--muted);
+    margin: 0;
+    max-width: 640px;
+    line-height: 1.45;
+}
+
+.leaderboard-header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Shared Card */
+.leaderboard-card,
+.leaderboard-momentum-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    box-shadow: var(--shadow);
+}
+
+.tier-card-header,
+.momentum-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.section-title {
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: var(--ink);
+    margin: 0 0 2px 0;
+}
+
+.section-sub {
+    font-size: 0.76rem;
+    color: var(--muted);
+    margin: 0;
+}
+
+.current-tier-chip {
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--tier-color, var(--primary));
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--tier-color, var(--primary));
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.user-rank-chip {
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: rgba(108, 92, 231, 0.12);
+    border: 1px solid rgba(108, 92, 231, 0.28);
+    color: var(--primary);
+    font-size: 0.8rem;
+}
+
+.user-rank-chip strong {
+    font-weight: 900;
+}
+
+/* 1. Visual Milestone Stepper */
+.tier-stepper {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.tier-step {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    background: var(--surface-glass);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    position: relative;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.tier-step-current {
+    border-color: var(--tier-color, var(--primary));
+    background: rgba(108, 92, 231, 0.06);
+    box-shadow: 0 0 16px rgba(108, 92, 231, 0.12);
+}
+
+.tier-step-completed {
+    border-color: rgba(0, 194, 168, 0.35);
+    background: rgba(0, 194, 168, 0.03);
+}
+
+.tier-step-locked {
+    opacity: 0.65;
+}
+
+.tier-step-icon-wrap {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tier-step-current .tier-step-icon-wrap {
+    border-color: var(--tier-color, var(--primary));
+    box-shadow: 0 0 12px var(--tier-color, var(--primary));
+}
+
+.tier-step-icon {
+    font-size: 1.6rem;
+}
+
+.tier-step-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    font-size: 0.65rem;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.badge-done {
+    background: var(--accent);
+    color: #ffffff;
+}
+
+.badge-curr {
+    background: var(--primary);
+    color: #ffffff;
+}
+
+.badge-lock {
+    background: var(--muted);
+    color: #ffffff;
+    font-size: 0.55rem;
+}
+
+.tier-step-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.tier-step-name {
+    font-size: 0.95rem;
+    color: var(--ink);
+}
+
+.tier-step-range {
+    font-size: 0.72rem;
+    color: var(--muted);
+}
+
+.tier-step-status-tag {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 4px;
+}
+
+.tier-step-current .tier-step-status-tag {
+    color: var(--primary);
+}
+
+.tier-step-completed .tier-step-status-tag {
+    color: var(--accent);
+}
+
+.tier-step-locked .tier-step-status-tag {
+    color: var(--muted);
+}
+
+/* Tier Progress Box */
+.tier-progress-status-box {
+    background: rgba(108, 92, 231, 0.04);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+}
+
+.tier-status-text-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+}
+
+.tier-status-text-row strong {
+    color: var(--ink);
+}
+
+.tier-xp-needed strong {
+    color: var(--primary);
+}
+
+.tier-track-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(108, 92, 231, 0.12);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.tier-track-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--next-tier-color, var(--accent)) 100%);
+    border-radius: 999px;
+    transition: width 0.4s ease;
+}
+
+.tier-max-celebration {
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+/* 2. Momentum Row */
+.momentum-cycle-label {
+    font-size: 0.74rem;
+    color: var(--muted);
+}
+
+.momentum-stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.momentum-stat-item {
+    background: var(--surface-glass);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 4px;
+}
+
+.momentum-icon {
+    font-size: 1.6rem;
+    margin-bottom: 2px;
+}
+
+.momentum-val {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: var(--ink);
+    line-height: 1.1;
+}
+
+.momentum-lbl {
+    font-size: 0.74rem;
+    color: var(--muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* 3. Standings Table */
+.standings-table-wrap {
+    overflow-x: auto;
+    margin-bottom: 12px;
+}
+
+.standings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.standings-table th {
+    text-align: left;
+    padding: 12px 14px;
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid var(--border);
+}
+
+.standings-table td {
+    padding: 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--ink);
+    vertical-align: middle;
+}
+
+.standings-row {
+    transition: background 0.15s ease;
+}
+
+.standings-row:hover {
+    background: rgba(108, 92, 231, 0.03);
+}
+
+.standings-row.is-you {
+    background: rgba(108, 92, 231, 0.08);
+    font-weight: 700;
+}
+
+.medal-rank {
+    font-weight: 900;
+    font-size: 0.95rem;
+}
+
+.numeric-rank {
+    font-weight: 800;
+    color: var(--muted);
+}
+
+.standings-user-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.standings-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 0.85rem;
+    border: 2px solid var(--tier-color, var(--primary));
+    flex-shrink: 0;
+}
+
+.standings-user-names {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.standings-username {
+    font-size: 0.9rem;
+    color: var(--ink);
+}
+
+.you-badge {
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: var(--primary);
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.table-tier-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--tier-color, var(--primary));
+    color: var(--tier-color, var(--primary));
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.level-cell {
+    font-size: 0.84rem;
+    color: var(--ink);
+}
+
+.xp-cell {
+    font-weight: 800;
+    color: var(--primary);
+}
+
+.standings-footer-note {
+    font-size: 0.74rem;
+    color: var(--muted);
+    margin: 4px 0 0 0;
+    line-height: 1.4;
+}
+
+/* Responsive */
+@media (max-width: 800px) {
+    .tier-stepper {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .momentum-stats-row {
+        grid-template-columns: 1fr;
+    }
+    .leaderboard-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+</style>
+{% endblock %}
+

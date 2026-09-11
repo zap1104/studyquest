@@ -19,4 +19,6 @@ urlpatterns = [
     path("chapters/<int:pk>/quiz/", views.chapter_quiz, name="chapter_quiz"),
     path("chapters/<int:pk>/quiz/check/", views.check_quiz_answer, name="check_quiz_answer"),
     path("chapters/<int:pk>/quiz/submit/", views.submit_quiz, name="submit_quiz"),
+    path("profile/", views.profile_view, name="profile"),
+    path("leaderboard/", views.leaderboard_view, name="leaderboard"),
 ]

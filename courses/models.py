@@ -22,6 +22,13 @@ class UserProfile(models.Model):
     plan = models.CharField(max_length=20, choices=PLAN_CHOICES, default="free")
     last_course_generated_at = models.DateTimeField(null=True, blank=True)
     bonus_course_credits = models.PositiveIntegerField(default=0)
+    best_streak_days = models.IntegerField(default=0)
+    last_opened_course = models.ForeignKey(
+        "Course", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    last_opened_chapter = models.ForeignKey(
+        "Chapter", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
 
     def award_xp(self, amount, reason):
         XPTransaction.objects.create(user=self.user, amount=amount, reason=reason)
@@ -40,8 +47,12 @@ class UserProfile(models.Model):
             self.streak_days += 1
         else:
             self.streak_days = 1
+
+        if self.streak_days > self.best_streak_days:
+            self.best_streak_days = self.streak_days
+
         self.last_study_date = today
-        self.save(update_fields=['streak_days', 'last_study_date'])
+        self.save(update_fields=['streak_days', 'last_study_date', 'best_streak_days'])
 
     def record_study_activity(self):
         self.update_streak()

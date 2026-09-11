@@ -22,6 +22,9 @@
         .plan-menu-heading span { color:var(--ink); font-size:.95rem; font-weight:900; }
         .plan-menu-heading strong { color:var(--accent); font-size:.68rem; text-transform:uppercase; }
         .plan-menu-copy { margin:0 0 12px; color:var(--muted); font-size:.76rem; line-height:1.5; }
+        .topbar-profile-link { display:inline-flex; align-items:center; gap:7px; padding:3px 10px 3px 4px; border-radius:999px; background:rgba(108,92,231,.1); border:1px solid rgba(108,92,231,.25); color:var(--ink); text-decoration:none; font-size:.78rem; font-weight:700; transition:all .2s ease; }
+        .topbar-profile-link:hover { background:rgba(108,92,231,.18); border-color:var(--primary); }
+        .profile-chip-avatar { width:22px; height:22px; border-radius:50%; background:var(--primary); color:#ffffff; display:flex; align-items:center; justify-content:center; font-size:.68rem; font-weight:900; }
     </style>
 </head>
 <body>
@@ -40,9 +43,14 @@
                 <a href="{% url 'courses:dashboard' %}" class="topbar-link">Dashboard</a>
                 <a href="{% url 'courses:course_list' %}" class="topbar-link">Course Library</a>
                 <a href="{% url 'courses:course_create' %}" class="topbar-link">Create Course</a>
+                <a href="{% url 'courses:leaderboard' %}" class="topbar-link">Rank &amp; Tiers</a>
             </nav>
 
             <div class="stats topbar-desktop-stats">
+                <a href="{% url 'courses:profile' %}" class="topbar-profile-link" title="View Profile">
+                    <span class="profile-chip-avatar">{{ user.username|first|upper }}</span>
+                    <span class="profile-chip-name">{{ user.username }}</span>
+                </a>
                 <div class="topbar-plan">
                     <button type="button" class="topbar-plan-chip {% if user.userprofile.plan == 'plus' %}is-plus{% endif %}" id="topbar-plan-btn" aria-expanded="false" aria-controls="topbar-plan-menu"><span class="plan-dot"></span>{% if user.userprofile.plan == 'plus' %}Plus{% else %}Free{% endif %}<span aria-hidden="true">▾</span></button>
                     <div class="topbar-plan-menu" id="topbar-plan-menu" hidden>
@@ -51,9 +59,127 @@
                         <button type="button" class="btn btn-primary btn-sm" id="topbar-compare-plans">Compare Plans</button>
                     </div>
                 </div>
-                <span class="stat" title="Level">🏅 Lv. {{ user.userprofile.current_level|default:1 }}</span>
-                <span class="stat" title="XP">⭐ {{ user.userprofile.total_xp|default:0 }} XP</span>
-                <span class="stat" title="Streak">🔥 {{ user.userprofile.streak_days|default:0 }} day streak</span>
+                <!-- LEVEL POPOVER -->
+                <div class="topbar-popover-anchor">
+                    <button type="button" class="stat topbar-stat-btn" data-stat="level" id="topbar-level-btn" aria-expanded="false" aria-controls="topbar-level-popover" title="View Level Details">
+                        🏅 Lv. {{ topbar_stats.level_progress.current_level|default:user.userprofile.current_level|default:1 }}
+                    </button>
+                    <div class="topbar-menu-popover level-popover" id="topbar-level-popover" hidden>
+                        <div class="popover-header">
+                            <div class="popover-title-group">
+                                <span class="popover-icon">{{ topbar_stats.tier.icon|default:"🥉" }}</span>
+                                <strong>{{ topbar_stats.tier.name|default:"Bronze" }} Tier</strong>
+                            </div>
+                            <span class="popover-badge">Level {{ topbar_stats.level_progress.current_level|default:user.userprofile.current_level|default:1 }}</span>
+                        </div>
+
+                        <div class="popover-progress-block">
+                            <div class="popover-progress-labels">
+                                <span>{{ topbar_stats.level_progress.xp_into_level|default:0 }} / 100 XP</span>
+                                <span class="popover-highlight">{{ topbar_stats.level_progress.xp_needed_for_next|default:100 }} XP to Lv. {{ topbar_stats.level_progress.next_level|default:2 }}</span>
+                            </div>
+                            <div class="popover-progress-track">
+                                <div class="popover-progress-fill" style="width: {{ topbar_stats.level_progress.progress_pct|default:0 }}%;"></div>
+                            </div>
+                        </div>
+
+                        <p class="popover-copy">
+                            Earn XP by passing chapter quizzes and reading course modules to advance your academic rank.
+                        </p>
+
+                        <a href="{% url 'courses:leaderboard' %}" class="popover-action-link">
+                            🏆 View Rank &amp; Tiers Roadmap &rarr;
+                        </a>
+                    </div>
+                </div>
+
+                <!-- XP POPOVER -->
+                <div class="topbar-popover-anchor">
+                    <button type="button" class="stat topbar-stat-btn" data-stat="xp" id="topbar-xp-btn" aria-expanded="false" aria-controls="topbar-xp-popover" title="View XP Breakdown">
+                        ⭐ {{ user.userprofile.total_xp|default:0 }} XP
+                    </button>
+                    <div class="topbar-menu-popover xp-popover" id="topbar-xp-popover" hidden>
+                        <div class="popover-header">
+                            <div class="popover-title-group">
+                                <span class="popover-icon">⭐</span>
+                                <strong>XP Breakdown</strong>
+                            </div>
+                            <span class="popover-badge xp-badge-gold">{{ user.userprofile.total_xp|default:0 }} Total XP</span>
+                        </div>
+
+                        <div class="xp-velocity-banner">
+                            <span class="velocity-label">This Week's Momentum:</span>
+                            <strong class="velocity-value">⚡ +{{ topbar_stats.weekly_xp|default:0 }} XP</strong>
+                        </div>
+
+                        <div class="recent-xp-section">
+                            <span class="recent-xp-heading">Recent Awards</span>
+                            {% if topbar_stats.recent_xp %}
+                                <ul class="recent-xp-list">
+                                    {% for tx in topbar_stats.recent_xp %}
+                                        <li class="recent-xp-item">
+                                            <span class="xp-tx-amount">+{{ tx.amount }} XP</span>
+                                            <span class="xp-tx-reason" title="{{ tx.reason }}">{{ tx.reason }}</span>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="popover-copy-muted">Complete study chapters or pass quizzes to earn your first XP!</p>
+                            {% endif %}
+                        </div>
+
+                        <a href="{% url 'courses:profile' %}" class="popover-action-link">
+                            👤 View Full Profile &amp; Ledger &rarr;
+                        </a>
+                    </div>
+                </div>
+
+                <!-- STREAK POPOVER -->
+                <div class="topbar-popover-anchor">
+                    <button type="button" class="stat topbar-stat-btn" data-stat="streak" id="topbar-streak-btn" aria-expanded="false" aria-controls="topbar-streak-popover" title="View Streak Calendar">
+                        🔥 {{ user.userprofile.streak_days|default:0 }} day{{ user.userprofile.streak_days|default:0|pluralize }} streak
+                    </button>
+                    <div class="topbar-menu-popover streak-popover" id="topbar-streak-popover" hidden>
+                        <div class="popover-header">
+                            <div class="popover-title-group">
+                                <span class="popover-icon">🔥</span>
+                                <strong>{{ user.userprofile.streak_days|default:0 }}-Day Streak</strong>
+                            </div>
+                            <span class="popover-badge">Best: {{ topbar_stats.best_streak_days|default:user.userprofile.best_streak_days|default:0 }}d</span>
+                        </div>
+
+                        <!-- 7-Day Rolling Mon-Sun Calendar -->
+                        <div class="streak-calendar-strip" role="group" aria-label="7-Day Streak Calendar">
+                            {% for day in topbar_stats.streak_week %}
+                                <div class="streak-day {{ day.status }}{% if day.is_today %} is-today{% endif %}" title="{{ day.label }} {{ day.date|date:'M j' }}: {% if day.status == 'done' %}Completed{% elif day.status == 'today_done' %}Secured for Today!{% elif day.status == 'today_pending' %}Today (Pending Activity){% elif day.status == 'upcoming' %}Upcoming{% else %}No Activity{% endif %}">
+                                    <span class="day-letter">{{ day.label }}</span>
+                                    <div class="day-node">
+                                        {% if day.status == 'done' %}✓
+                                        {% elif day.status == 'today_done' %}🔥
+                                        {% elif day.status == 'today_pending' %}🔥
+                                        {% else %}&middot;{% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="streak-status-footer">
+                            {% if topbar_stats.streak_status.studied_today %}
+                                <p class="popover-copy-success">
+                                    🎉 <strong>Streak secured for today!</strong> Awesome work keeping your momentum alive.
+                                </p>
+                            {% else %}
+                                <p class="popover-copy">
+                                    Complete a chapter reading or pass a quiz today to keep your streak alive.
+                                </p>
+                            {% endif %}
+                        </div>
+
+                        <a href="{% url 'courses:dashboard' %}" class="popover-action-link">
+                            ⚡ Go to Today's Learning Quest &rarr;
+                        </a>
+                    </div>
+                </div>
                 <form method="post" action="{% url 'logout' %}" style="display:inline; margin:0;">
                     {% csrf_token %}
                     <button type="submit" class="btn btn-ghost" style="padding: 4px 10px; font-size: 0.8rem;">Log Out</button>
@@ -68,12 +194,14 @@
                 <a href="{% url 'courses:dashboard' %}">📊 Dashboard</a>
                 <a href="{% url 'courses:course_list' %}">📚 Course Library</a>
                 <a href="{% url 'courses:course_create' %}">⚡ Create Course</a>
+                <a href="{% url 'courses:leaderboard' %}">🏆 Rank &amp; Tiers</a>
+                <a href="{% url 'courses:profile' %}">👤 My Profile</a>
             </div>
 
             <div class="mobile-nav-stats">
-                <span class="stat">🏅 Level {{ user.userprofile.current_level|default:1 }}</span>
-                <span class="stat">⭐ {{ user.userprofile.total_xp|default:0 }} XP</span>
-                <span class="stat">🔥 {{ user.userprofile.streak_days|default:0 }} Day Streak</span>
+                <a href="{% url 'courses:leaderboard' %}" class="stat" style="text-decoration: none;">🏅 Level {{ user.userprofile.current_level|default:1 }}</a>
+                <a href="{% url 'courses:profile' %}" class="stat" style="text-decoration: none;">⭐ {{ user.userprofile.total_xp|default:0 }} XP</a>
+                <a href="{% url 'courses:dashboard' %}" class="stat" style="text-decoration: none;">🔥 {{ user.userprofile.streak_days|default:0 }} Day Streak</a>
             </div>
 
             <form method="post" action="{% url 'logout' %}" style="margin-top: 16px;">
@@ -122,19 +250,57 @@
         })();
     </script>
     <script>
+        // Unified Topbar Popovers Controller
         (() => {
-            const button = document.getElementById('topbar-plan-btn');
-            const menu = document.getElementById('topbar-plan-menu');
-            if (!button || !menu) return;
-            button.addEventListener('click', () => {
-                const open = menu.hidden;
-                menu.hidden = !open;
-                button.setAttribute('aria-expanded', String(open));
+            const anchors = document.querySelectorAll('.topbar-popover-anchor, .topbar-plan');
+            if (!anchors.length) return;
+
+            function closeAllPopovers() {
+                document.querySelectorAll('.topbar-menu-popover, .topbar-plan-menu').forEach(pop => {
+                    pop.hidden = true;
+                });
+                document.querySelectorAll('.topbar-stat-btn, .topbar-plan-chip').forEach(btn => {
+                    btn.setAttribute('aria-expanded', 'false');
+                });
+            }
+
+            anchors.forEach(anchor => {
+                const btn = anchor.querySelector('.topbar-stat-btn, .topbar-plan-chip');
+                const pop = anchor.querySelector('.topbar-menu-popover, .topbar-plan-menu');
+                if (!btn || !pop) return;
+
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const willOpen = pop.hidden;
+                    closeAllPopovers();
+                    if (willOpen) {
+                        pop.hidden = false;
+                        btn.setAttribute('aria-expanded', 'true');
+                    }
+                });
             });
+
+            // Close on outside click
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.topbar-popover-anchor') && !e.target.closest('.topbar-plan')) {
+                    closeAllPopovers();
+                }
+            });
+
+            // Close on Escape key and return focus
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const openBtn = document.querySelector('.topbar-stat-btn[aria-expanded="true"], .topbar-plan-chip[aria-expanded="true"]');
+                    closeAllPopovers();
+                    if (openBtn) openBtn.focus();
+                }
+            });
+
+            // Compare plans modal trigger
             document.getElementById('topbar-compare-plans')?.addEventListener('click', () => {
+                closeAllPopovers();
                 const modal = document.getElementById('plus-preview-modal');
                 if (modal) {
-                    menu.hidden = true;
                     modal.hidden = false;
                     modal.setAttribute('aria-hidden', 'false');
                     document.documentElement.classList.add('modal-open');
@@ -142,9 +308,6 @@
                 } else {
                     window.location.href = '{% url "courses:dashboard" %}';
                 }
-            });
-            document.addEventListener('click', (event) => {
-                if (!event.target.closest('.topbar-plan')) menu.hidden = true;
             });
         })();
     </script>
@@ -198,5 +361,6 @@
         });
 
     </script>
+    {% include 'courses/components/quiz_launch_modal.html' %}
 </body>
 </html>

@@ -1,0 +1,688 @@
+{% extends "courses/base.html" %}
+{% load static %}
+
+{% block title %}{{ user.username }} · Profile — StudyQuest{% endblock %}
+
+{% block page_class %}profile-page-canvas{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+
+    <!-- 1. IDENTITY HERO CARD -->
+    <section class="profile-hero-card" aria-label="User Profile Overview">
+        <div class="profile-hero-left">
+            <div class="profile-avatar-wrapper" style="--tier-color: {{ tier_progress.current_tier.color }};">
+                <div class="profile-avatar-initial">{{ user.username|first|upper }}</div>
+                <div class="profile-avatar-badge" title="{{ tier_progress.current_tier.name }} Tier">
+                    {{ tier_progress.current_tier.icon }}
+                </div>
+            </div>
+
+            <div class="profile-meta">
+                <div class="profile-title-row">
+                    <h1 class="profile-username">{{ user.username }}</h1>
+                    <span class="tier-pill" style="--tier-color: {{ tier_progress.current_tier.color }};">
+                        {{ tier_progress.current_tier.icon }} {{ tier_progress.current_tier.name }} Tier
+                    </span>
+                    <span class="plan-pill {% if profile.plan == 'plus' %}is-plus{% endif %}">
+                        {% if profile.plan == 'plus' %}StudyQuest Plus{% else %}Free Plan{% endif %}
+                    </span>
+                </div>
+                <p class="profile-joined-text">
+                    Academic Scholar · Member since {{ user.date_joined|date:"F Y" }}
+                </p>
+
+                <!-- Level Progress Indicator -->
+                <div class="level-progress-block">
+                    <div class="level-progress-labels">
+                        <span class="level-label"><strong>Level {{ profile.current_level }}</strong></span>
+                        <span class="xp-remaining-label">
+                            <strong>{{ level_progress.xp_into_level }}</strong> / 100 XP to Level {{ level_progress.next_level }}
+                        </span>
+                    </div>
+                    <div class="level-progress-track">
+                        <div class="level-progress-fill" style="width: {{ level_progress.progress_pct }}%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="profile-hero-right">
+            <a href="{% url 'courses:leaderboard' %}" class="btn btn-outline btn-sm">
+                🏆 View Rank &amp; Tiers
+            </a>
+            <a href="{% url 'courses:course_create' %}" class="btn btn-primary btn-sm">
+                ⚡ New Course
+            </a>
+        </div>
+    </section>
+
+    <!-- 2. FOUR-STAT METRICS ROW -->
+    <section class="profile-stats-grid" aria-label="Learning Metrics">
+        <div class="stat-box">
+            <div class="stat-icon-wrap" style="color: var(--gold);">⚡</div>
+            <div class="stat-body">
+                <div class="stat-number">{{ profile.total_xp|default:0 }}</div>
+                <div class="stat-caption">Total XP Earned</div>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-icon-wrap" style="color: var(--danger);">🔥</div>
+            <div class="stat-body">
+                <div class="stat-number">{{ profile.streak_days|default:0 }}</div>
+                <div class="stat-caption">Current Streak</div>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-icon-wrap" style="color: #ff9f43;">🏆</div>
+            <div class="stat-body">
+                <div class="stat-number">{{ profile.best_streak_days|default:0 }}</div>
+                <div class="stat-caption">Best Streak (Days)</div>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="stat-icon-wrap" style="color: var(--accent);">🎓</div>
+            <div class="stat-body">
+                <div class="stat-number">{{ completed_courses_count|default:0 }}</div>
+                <div class="stat-caption">Courses Completed</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. TWO-COLUMN WORKBENCH: Active Courses & Achievements -->
+    <div class="profile-workbench-grid">
+
+        <!-- Column A: Active Course Progress -->
+        <section class="profile-card" aria-label="Active Courses">
+            <div class="profile-card-header">
+                <div>
+                    <h2 class="profile-card-title">📚 Active Courses</h2>
+                    <p class="profile-card-sub">Your ongoing study journeys and chapter completion</p>
+                </div>
+                <a href="{% url 'courses:course_list' %}" class="btn btn-ghost btn-sm">
+                    View All →
+                </a>
+            </div>
+
+            <div class="profile-course-list">
+                {% for item in active_courses %}
+                    <a href="{% url 'courses:course_detail' item.course.pk %}" class="profile-course-item">
+                        <div class="profile-course-info">
+                            <div class="profile-course-name">{{ item.course.title }}</div>
+                            <div class="profile-course-status">
+                                {{ item.completed_chapters }} of {{ item.total_chapters }} chapters completed · {{ item.progress_pct }}%
+                            </div>
+                        </div>
+                        <div class="profile-course-bar-wrap">
+                            <div class="profile-course-bar-fill" style="width: {{ item.progress_pct }}%;"></div>
+                        </div>
+                    </a>
+                {% empty %}
+                    <div class="profile-empty-state">
+                        <span class="empty-icon">📖</span>
+                        <p class="empty-text">No active courses yet. Transform your study materials into your first review journey!</p>
+                        <a href="{% url 'courses:course_create' %}" class="btn btn-primary btn-sm">
+                            Create First Course
+                        </a>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- Column B: Academic Achievements Shelf -->
+        <section class="profile-card" aria-label="Academic Achievements">
+            <div class="profile-card-header">
+                <div>
+                    <h2 class="profile-card-title">🏅 Achievements</h2>
+                    <p class="profile-card-sub">Academic milestones derived from verified study activities</p>
+                </div>
+                <span class="achievement-counter-badge">
+                    {{ achievements.unlocked_count }} / {{ achievements.total_count }}
+                </span>
+            </div>
+
+            <div class="achievement-items-grid">
+                {% for ach in achievements.list %}
+                    <div class="achievement-tile {% if ach.unlocked %}is-unlocked{% else %}is-locked{% endif %}" title="{{ ach.description }}">
+                        <div class="achievement-icon">{{ ach.icon }}</div>
+                        <div class="achievement-info">
+                            <div class="achievement-name-row">
+                                <strong class="achievement-name">{{ ach.name }}</strong>
+                                {% if ach.unlocked %}
+                                    <span class="badge-status-tag tag-unlocked">✓ Earned</span>
+                                {% else %}
+                                    <span class="badge-status-tag tag-locked">🔒 Locked</span>
+                                {% endif %}
+                            </div>
+                            <p class="achievement-desc">{{ ach.description }}</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+    </div>
+
+</div>
+
+<style>
+/* =========================================================
+   PROFILE PAGE COMPONENT STYLES
+   ========================================================= */
+.profile-page-canvas {
+    padding: 32px 20px 60px;
+}
+
+.profile-container {
+    max-width: 1160px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* 1. Identity Hero Card */
+.profile-hero-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    box-shadow: var(--shadow);
+}
+
+.profile-hero-left {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex: 1;
+}
+
+.profile-avatar-wrapper {
+    position: relative;
+    width: 88px;
+    height: 88px;
+    flex-shrink: 0;
+}
+
+.profile-avatar-initial {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: #ffffff;
+    box-shadow: 0 0 0 4px var(--tier-color, var(--primary)), 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.profile-avatar-badge {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.profile-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.profile-title-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.profile-username {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--ink);
+    margin: 0;
+}
+
+.tier-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--tier-color, var(--primary));
+    color: var(--tier-color, var(--primary));
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.plan-pill {
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(108, 92, 231, 0.12);
+    border: 1px solid rgba(108, 92, 231, 0.28);
+    color: var(--primary);
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.plan-pill.is-plus {
+    background: rgba(255, 184, 0, 0.14);
+    border-color: rgba(255, 184, 0, 0.35);
+    color: var(--gold);
+}
+
+.profile-joined-text {
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin: 0 0 14px 0;
+}
+
+.level-progress-block {
+    max-width: 480px;
+}
+
+.level-progress-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+
+.level-label strong {
+    color: var(--ink);
+}
+
+.xp-remaining-label strong {
+    color: var(--primary);
+}
+
+.level-progress-track {
+    width: 100%;
+    height: 8px;
+    background: rgba(108, 92, 231, 0.12);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.level-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+    border-radius: 999px;
+    transition: width 0.4s ease;
+}
+
+.profile-hero-right {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.profile-hero-right .btn {
+    white-space: nowrap;
+    text-align: center;
+    justify-content: center;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    min-height: 38px;
+    padding: 8px 18px;
+    box-shadow: 0 3px 0 rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.12);
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.profile-hero-right .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 0 rgba(0, 0, 0, 0.2), 0 8px 18px rgba(0, 0, 0, 0.22);
+}
+.profile-hero-right .btn:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+.profile-hero-right .btn-primary {
+    background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 0 #3730a3, 0 6px 18px rgba(108, 92, 231, 0.4);
+}
+.profile-hero-right .btn-primary:hover {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    box-shadow: 0 5px 0 #3730a3, 0 8px 22px rgba(108, 92, 231, 0.55);
+}
+.profile-hero-right .btn-outline {
+    background: rgba(108, 92, 231, 0.12);
+    border: 1.5px solid rgba(129, 140, 248, 0.45);
+    color: #c7d2fe;
+    box-shadow: 0 3px 0 rgba(108, 92, 231, 0.25), 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.profile-hero-right .btn-outline:hover {
+    background: rgba(108, 92, 231, 0.22);
+    border-color: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 4px 0 rgba(108, 92, 231, 0.35), 0 0 16px rgba(108, 92, 231, 0.3);
+}
+
+/* 2. Four-Stat Grid */
+.profile-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.stat-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.stat-box:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary);
+}
+
+.stat-icon-wrap {
+    font-size: 1.8rem;
+    line-height: 1;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+}
+
+.stat-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.stat-number {
+    font-size: 1.55rem;
+    font-weight: 900;
+    color: var(--ink);
+    line-height: 1.1;
+    margin-bottom: 2px;
+}
+
+.stat-caption {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* 3. Two-Column Workbench */
+.profile-workbench-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.profile-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.profile-card-title {
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: var(--ink);
+    margin: 0 0 2px 0;
+}
+
+.profile-card-sub {
+    font-size: 0.76rem;
+    color: var(--muted);
+    margin: 0;
+}
+
+.achievement-counter-badge {
+    padding: 4px 10px;
+    background: rgba(108, 92, 231, 0.12);
+    border: 1px solid rgba(108, 92, 231, 0.25);
+    color: var(--primary);
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+/* Course Progress List */
+.profile-course-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+
+.profile-course-item {
+    display: block;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-glass);
+    text-decoration: none;
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.profile-course-item:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary);
+    background: rgba(108, 92, 231, 0.04);
+}
+
+.profile-course-info {
+    margin-bottom: 8px;
+}
+
+.profile-course-name {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: var(--ink);
+    margin-bottom: 2px;
+}
+
+.profile-course-status {
+    font-size: 0.74rem;
+    color: var(--muted);
+}
+
+.profile-course-bar-wrap {
+    width: 100%;
+    height: 6px;
+    background: rgba(108, 92, 231, 0.1);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.profile-course-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+
+.profile-empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.empty-icon {
+    font-size: 2.5rem;
+}
+
+.empty-text {
+    font-size: 0.85rem;
+    color: var(--muted);
+    max-width: 320px;
+    margin: 0;
+}
+
+/* Achievements Grid */
+.achievement-items-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+}
+
+.achievement-tile {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface-glass);
+    transition: border-color 0.2s ease;
+}
+
+.achievement-tile.is-unlocked {
+    border-color: rgba(0, 194, 168, 0.35);
+    background: rgba(0, 194, 168, 0.04);
+}
+
+.achievement-tile.is-locked {
+    opacity: 0.65;
+}
+
+.achievement-icon {
+    font-size: 1.6rem;
+    line-height: 1;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.achievement-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.achievement-name-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.achievement-name {
+    font-size: 0.86rem;
+    color: var(--ink);
+}
+
+.achievement-desc {
+    font-size: 0.74rem;
+    color: var(--muted);
+    margin: 0;
+    line-height: 1.4;
+}
+
+.badge-status-tag {
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+}
+
+.tag-unlocked {
+    background: rgba(0, 194, 168, 0.15);
+    color: var(--accent);
+}
+
+.tag-locked {
+    background: rgba(148, 163, 184, 0.15);
+    color: var(--muted);
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+    .profile-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .profile-workbench-grid {
+        grid-template-columns: 1fr;
+    }
+    .profile-hero-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .profile-hero-right {
+        flex-direction: row;
+    }
+}
+
+@media (max-width: 600px) {
+    .profile-stats-grid {
+        grid-template-columns: 1fr;
+    }
+    .profile-hero-left {
+        flex-direction: column;
+        text-align: center;
+    }
+    .profile-title-row {
+        justify-content: center;
+    }
+    .level-progress-block {
+        margin: 0 auto;
+    }
+    .profile-hero-right {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
+
