@@ -202,3 +202,9 @@ ICON_SIZE = TILE_SIZE // 2
 # Integer-only upscaling, so pixel art never lands on a fractional edge.
 MIN_BOARD_SCALE = 1
 MAX_BOARD_SCALE = 3
+
+# Vertical space the page spends on everything that is not the board (top bar,
+# page heading, panel padding, caption, D-pad). The renderer subtracts this from
+# the viewport height before choosing a scale, so the whole room stays on screen
+# instead of running off the bottom.
+BOARD_VERTICAL_RESERVE = 260

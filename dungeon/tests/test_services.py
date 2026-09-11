@@ -663,3 +663,26 @@ class SerializationSafetyTests(DungeonTestCase):
         self.assertIn("correct_choice_text", result["feedback"])
         self.assertTrue(result["feedback"]["correct_choice_text"])
         self.assertTrue(result["feedback"]["explanation"])
+
+
+class ChoiceOrderingTests(DungeonTestCase):
+    """The fixtures always create the correct choice first. If the serializer
+    passed DB order through, position alone would give the answer away."""
+
+    def test_choice_order_is_shuffled_per_run(self):
+        run = self.start()
+        correct_first = 0
+        questions = list(run.quiz.questions.prefetch_related("choices"))
+
+        for question in questions:
+            payload = services.serialize_question(run, question)
+            first_id = payload["choices"][0]["id"]
+            if first_id == correct_choice_id(question.id):
+                correct_first += 1
+
+        self.assertLess(
+            correct_first,
+            len(questions),
+            "every correct choice was served first - ordering leaks the answer",
+        )
+        self.assertGreater(len(questions), 0)

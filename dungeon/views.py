@@ -13,6 +13,7 @@ import json
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.templatetags.static import static
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
@@ -98,9 +99,22 @@ def room(request, pk):
     display = services.display_settings()
     return render(request, "dungeon/room.html", {
         "run": run,
-        "state": services.serialize_run(run),
         "tile_size": display["tile_size"],
         "icon_size": display["icon_size"],
+        # One JSON payload for the client: the run state plus every endpoint it
+        # may call. Rendered through json_script, so it is escaped, not inlined.
+        "bootstrap": {
+            "state": services.serialize_run(run),
+            "urls": {
+                "sprites": static("courses/dungeon/sprites.json"),
+                "state": reverse("dungeon:state", args=[run.pk]),
+                "move": reverse("dungeon:move", args=[run.pk]),
+                "answer": reverse("dungeon:answer", args=[run.pk]),
+                "use_item": reverse("dungeon:use_item", args=[run.pk]),
+                "exit_room": reverse("dungeon:exit_room", args=[run.pk]),
+                "summary": reverse("dungeon:summary", args=[run.pk]),
+            },
+        },
     })
 
 

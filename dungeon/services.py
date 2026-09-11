@@ -23,6 +23,7 @@ from courses.models import Course, Question, Quiz
 
 from . import rooms
 from .combat_config import (
+    BOARD_VERTICAL_RESERVE,
     DAMAGE_PER_CORRECT_ANSWER,
     FORCED_ENCOUNTER_ON_ENEMY_TILE,
     ICON_SIZE,
@@ -688,6 +689,7 @@ def display_settings():
         "icon_size": ICON_SIZE,
         "min_scale": MIN_BOARD_SCALE,
         "max_scale": MAX_BOARD_SCALE,
+        "vertical_reserve": BOARD_VERTICAL_RESERVE,
     }
 
 

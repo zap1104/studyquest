@@ -1,0 +1,120 @@
+{% extends 'courses/base.html' %}
+{% load static %}
+
+{% block title %}Dungeon Quest — StudyQuest{% endblock %}
+{% block page_class %}dungeon-page{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'courses/dungeon/css/dungeon.css' %}">
+
+<div class="page-header">
+    <div>
+        <h1>🗝️ Dungeon Quest</h1>
+        <p class="subtitle">Pick a quiz. Its questions become the monsters.</p>
+    </div>
+</div>
+
+{% if launch_error %}
+    <p class="dungeon-alert" role="alert">{{ launch_error }}</p>
+{% endif %}
+
+<div class="dungeon-intro">
+    <div class="dungeon-card">
+        <h2 class="dungeon-hud-title">How a run works</h2>
+        <ul class="dungeon-rules-list">
+            <li>Walk the room with the arrow keys, WASD, or the on-screen pad.</li>
+            <li>Tall grass hides enemies. Step into it and something may jump you.</li>
+            <li>Each enemy asks five questions from your quiz. Right answers wound it; wrong answers wound you.</li>
+            <li>Every enemy you beat drops a key piece — and sometimes a potion.</li>
+            <li>Collect every piece to assemble the key, then walk out through the door for XP.</li>
+            <li>Run out of hearts and the run ends where it stands.</li>
+        </ul>
+    </div>
+
+    <div class="dungeon-card">
+        <h2 class="dungeon-hud-title">Your delver</h2>
+        <div class="dungeon-stat-row">
+            <span class="dungeon-stat">❤️ {{ user.userprofile.plan|default:"free"|capfirst }} plan</span>
+            <span class="dungeon-stat">🏅 Level {{ user.userprofile.current_level|default:1 }}</span>
+            <span class="dungeon-stat">🔥 {{ user.userprofile.streak_days|default:0 }} day streak</span>
+        </div>
+        {% if recent_runs %}
+            <h2 class="dungeon-hud-title" style="margin-top:18px;">Recent runs</h2>
+            <ul class="dungeon-run-history">
+                {% for run in recent_runs %}
+                    <li>
+                        <span class="dungeon-status-tag" data-status="{{ run.status }}">{{ run.get_status_display }}</span>
+                        <a href="{% url 'dungeon:summary' run.pk %}">{{ run.quiz.chapter.title }}</a>
+                        {% if run.xp_awarded %}— {{ run.xp_awarded }} XP{% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+</div>
+
+{% if active_runs %}
+    <div class="dungeon-course-group">
+        <h2>Runs in progress</h2>
+        <ul class="dungeon-quiz-list">
+            {% for run in active_runs %}
+                <li class="dungeon-quiz-row">
+                    <div>
+                        <div class="dungeon-quiz-name">{{ run.quiz.chapter.title }}</div>
+                        <p class="dungeon-quiz-meta">
+                            {{ run.quiz.chapter.course.title }} · {{ run.current_hp }}/{{ run.max_hp }} HP left
+                        </p>
+                    </div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <a class="btn btn-primary btn-sm" href="{% url 'dungeon:room' run.pk %}">Resume run</a>
+                        <form method="post" action="{% url 'dungeon:abandon' run.pk %}" style="margin:0;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-ghost btn-sm">Abandon</button>
+                        </form>
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}
+
+<h2>Choose your dungeon</h2>
+
+{% for group in catalog %}
+    <section class="dungeon-course-group">
+        <h2>{{ group.course.title }}</h2>
+        <ul class="dungeon-quiz-list">
+            {% for entry in group.entries %}
+                <li class="dungeon-quiz-row" data-playable="{{ entry.is_playable|yesno:'true,false' }}">
+                    <div>
+                        <div class="dungeon-quiz-name">{{ entry.chapter.title }}</div>
+                        <p class="dungeon-quiz-meta">
+                            {{ entry.question_count }} question{{ entry.question_count|pluralize }}
+                            {% if entry.is_playable %}
+                                · {{ entry.enemy_count }} enem{{ entry.enemy_count|pluralize:"y,ies" }} to clear
+                            {% else %}
+                                · needs at least {{ entry.minimum_questions }} to run
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% if entry.is_playable %}
+                        <form method="post" action="{% url 'dungeon:start_run' %}" style="margin:0;">
+                            {% csrf_token %}
+                            <input type="hidden" name="quiz_id" value="{{ entry.quiz.pk }}">
+                            <button type="submit" class="btn btn-primary btn-sm">Enter dungeon</button>
+                        </form>
+                    {% else %}
+                        <button type="button" class="btn btn-ghost btn-sm" disabled
+                                title="This quiz is too short for a dungeon run.">Too short</button>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    </section>
+{% empty %}
+    <div class="dungeon-card">
+        <p style="margin:0 0 12px;">You don't have any quizzes yet. Generate a course first and its chapter quizzes become dungeons.</p>
+        <a class="btn btn-primary btn-sm" href="{% url 'courses:course_create' %}">Create a course</a>
+    </div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,658 @@
+/* =========================================================
+   Dungeon Quest
+   Built entirely on the StudyQuest theme tokens (--ink, --surface,
+   --border, --muted, --accent, --primary, --gold, --danger) so the page
+   follows the light/dark toggle with no palette of its own.
+
+   Pixel sizes come from the server: dungeon/combat_config.py publishes
+   TILE_SIZE and ICON_SIZE, the template writes them onto .dungeon-page as
+   --dq-tile / --dq-icon, and everything here is expressed in those.
+   ========================================================= */
+
+.dungeon-page {
+    --dq-gap: 16px;
+    --dq-panel-radius: 14px;
+    /* Icons are drawn at 1x but shown at 2x: still a whole-number scale, and
+       legible next to body text. Both numbers derive from config. */
+    --dq-icon-display: calc(var(--dq-icon, 16px) * 2);
+    max-width: 1100px;
+}
+
+/* The run needs width: the board only steps up to the next whole-number scale
+   when the column is wide enough to hold it. */
+.dungeon-run-page { max-width: 1400px; }
+
+.dungeon-page h1 { margin: 0 0 4px; }
+
+/* The shared .btn sets `display: inline-block`, which out-specifies the
+   browser's [hidden] rule - so a hidden button would still show. The game
+   toggles visibility with .hidden throughout, so make the attribute win. */
+.dungeon-page [hidden] { display: none !important; }
+
+/* ---------------------------------------------------------
+   1. LAUNCH SCREEN
+   --------------------------------------------------------- */
+.dungeon-intro {
+    display: grid;
+    gap: var(--dq-gap);
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    align-items: start;
+    margin-bottom: 28px;
+}
+
+@media (max-width: 780px) {
+    .dungeon-intro { grid-template-columns: 1fr; }
+}
+
+.dungeon-card {
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--dq-panel-radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.dungeon-rules-list {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.7;
+}
+
+.dungeon-stat-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.dungeon-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.dungeon-alert {
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    border: 1px solid var(--danger);
+    border-left-width: 4px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
+    color: var(--ink);
+    font-size: 0.9rem;
+}
+
+.dungeon-course-group { margin-bottom: 26px; }
+
+.dungeon-course-group h2 {
+    margin: 0 0 10px;
+    font-size: 1.05rem;
+}
+
+.dungeon-quiz-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.dungeon-quiz-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+}
+
+.dungeon-quiz-row[data-playable="false"] { opacity: 0.72; }
+
+.dungeon-quiz-name {
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.dungeon-quiz-meta {
+    margin: 3px 0 0;
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+
+.dungeon-run-history {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    color: var(--muted);
+    font-size: 0.84rem;
+    line-height: 1.9;
+}
+
+.dungeon-status-tag {
+    display: inline-block;
+    min-width: 74px;
+    margin-right: 8px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--muted) 18%, transparent);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.dungeon-status-tag[data-status="cleared"] {
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--accent);
+}
+
+.dungeon-status-tag[data-status="failed"] {
+    background: color-mix(in srgb, var(--danger) 20%, transparent);
+    color: var(--danger);
+}
+
+.dungeon-status-tag[data-status="in_progress"] {
+    background: color-mix(in srgb, var(--gold) 24%, transparent);
+    color: var(--gold);
+}
+
+/* ---------------------------------------------------------
+   2. RUN LAYOUT
+   --------------------------------------------------------- */
+.dungeon-run-layout {
+    display: grid;
+    gap: var(--dq-gap);
+    grid-template-columns: 1fr;
+    align-items: start;
+}
+
+/* A grid item defaults to min-width:auto, so the canvas's natural width would
+   stop the column from ever shrinking and push the whole page wider than a
+   phone screen. */
+.dungeon-run-layout > * { min-width: 0; }
+
+/* Side-by-side only once both the board (at 2x) and the HUD genuinely fit.
+   Below that the board takes the full width, which buys it a bigger scale. */
+@media (min-width: 1400px) {
+    .dungeon-run-layout { grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); }
+}
+
+.dungeon-board-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--dq-panel-radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.dungeon-board-frame {
+    /* Must stretch, not shrink-wrap: the renderer measures this element to pick
+       the board's whole-number scale, and a shrink-wrapped parent would report
+       the canvas's own (pre-sizing) width and pin the board at 1x forever. */
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: auto;
+    text-align: center;
+}
+
+#dungeon-board {
+    display: inline-block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    background: var(--bg);
+    /* Pixel art must never be interpolated. */
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+.dungeon-board-caption {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+    text-align: center;
+}
+
+/* ---------------------------------------------------------
+   3. HUD: HEARTS, KEYS, ITEMS
+   --------------------------------------------------------- */
+.dungeon-hud {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    align-items: start;
+    gap: 14px 22px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--dq-panel-radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.dungeon-hud-title {
+    margin: 0;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.dungeon-hearts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-top: 6px;
+}
+
+.dungeon-hearts img {
+    width: var(--dq-icon-display);
+    height: var(--dq-icon-display);
+    image-rendering: pixelated;
+}
+
+.dungeon-hp-readout {
+    margin: 6px 0 0;
+    color: var(--ink);
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.dungeon-keys {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.dungeon-keys img {
+    width: var(--dq-icon-display);
+    height: var(--dq-icon-display);
+    image-rendering: pixelated;
+}
+
+.dungeon-keys img[data-collected="false"] { opacity: 0.28; }
+
+.dungeon-key-note {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.dungeon-key-note[data-unlocked="true"] {
+    color: var(--gold);
+    font-weight: 800;
+}
+
+.dungeon-items {
+    display: grid;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.dungeon-item-button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.84rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.dungeon-item-button img {
+    width: var(--dq-icon-display);
+    height: var(--dq-icon-display);
+    image-rendering: pixelated;
+}
+
+.dungeon-item-button:hover:not(:disabled) { border-color: var(--accent); }
+
+.dungeon-item-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.dungeon-item-count {
+    margin-left: auto;
+    font-weight: 900;
+    color: var(--muted);
+}
+
+.dungeon-hud-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+/* ---------------------------------------------------------
+   4. BATTLE PANEL
+   --------------------------------------------------------- */
+.dungeon-battle {
+    margin-top: var(--dq-gap);
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--dq-panel-radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.dungeon-battle[hidden] { display: none; }
+
+.dungeon-battle-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.dungeon-battle-title {
+    margin: 0;
+    font-size: 1rem;
+}
+
+/* The panel takes focus when a battle opens so screen readers land on it;
+   that shouldn't paint a focus ring for sighted mouse users. */
+.dungeon-battle-title:focus { outline: none; }
+.dungeon-battle-title:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+.dungeon-enemy-hp {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.dungeon-enemy-bar {
+    width: 120px;
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--muted) 25%, transparent);
+}
+
+.dungeon-enemy-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--danger);
+    transition: width 0.25s ease;
+}
+
+.dungeon-question-prompt {
+    margin: 0 0 14px;
+    color: var(--ink);
+    font-size: 1.02rem;
+    line-height: 1.5;
+}
+
+.dungeon-answer-fields {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 14px;
+    padding: 0;
+    border: 0;
+}
+
+.dungeon-answer-fields legend {
+    padding: 0;
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.dungeon-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--ink);
+    font-size: 0.92rem;
+    cursor: pointer;
+}
+
+.dungeon-choice:hover { border-color: var(--accent); }
+
+.dungeon-choice input { margin-top: 3px; }
+
+.dungeon-choice:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.dungeon-text-answer,
+.dungeon-enum-answer {
+    width: 100%;
+    padding: 11px 13px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.92rem;
+}
+
+.dungeon-text-answer:focus,
+.dungeon-enum-answer:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.dungeon-battle-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.dungeon-feedback {
+    margin: 14px 0 0;
+    padding: 12px 14px;
+    border-left: 4px solid var(--muted);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--muted) 10%, transparent);
+    color: var(--ink);
+    font-size: 0.88rem;
+    line-height: 1.55;
+}
+
+.dungeon-feedback[hidden] { display: none; }
+.dungeon-feedback[data-outcome="correct"] { border-left-color: var(--accent); }
+.dungeon-feedback[data-outcome="incorrect"] { border-left-color: var(--danger); }
+.dungeon-feedback[data-outcome="partial"],
+.dungeon-feedback[data-outcome="skipped"] { border-left-color: var(--gold); }
+
+.dungeon-feedback-headline {
+    margin: 0 0 4px;
+    font-weight: 900;
+}
+
+/* ---------------------------------------------------------
+   5. D-PAD (touch) + SHARED CONTROLS
+   --------------------------------------------------------- */
+.dungeon-dpad {
+    display: none;
+    grid-template-areas:
+        ". up ."
+        "left wait right"
+        ". down .";
+    gap: 8px;
+    justify-content: center;
+}
+
+/* Touch pointers and phone-width screens always get the pad; the engine can
+   also switch it on explicitly for touch-capable desktops. */
+@media (pointer: coarse), (max-width: 780px) {
+    .dungeon-dpad { display: grid; }
+}
+
+.dungeon-dpad[data-visible="true"] { display: grid; }
+
+.dungeon-dpad button {
+    width: calc(var(--dq-tile) * 1.75);
+    height: calc(var(--dq-tile) * 1.75);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 1.2rem;
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+}
+
+.dungeon-dpad button:active { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); }
+.dungeon-dpad [data-direction="up"] { grid-area: up; }
+.dungeon-dpad [data-direction="left"] { grid-area: left; }
+.dungeon-dpad [data-direction="right"] { grid-area: right; }
+.dungeon-dpad [data-direction="down"] { grid-area: down; }
+
+.dungeon-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 18px;
+    transform: translateX(-50%);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    color: var(--ink);
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.dungeon-toast[hidden] { display: none; }
+
+.dungeon-toast img {
+    width: var(--dq-icon-display);
+    height: var(--dq-icon-display);
+    image-rendering: pixelated;
+}
+
+/* Screen-reader-only: the battle flow and board description stay usable
+   without ever looking at the canvas. */
+.dungeon-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ---------------------------------------------------------
+   6. SUMMARY
+   --------------------------------------------------------- */
+.dungeon-summary-hero {
+    padding: 28px 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--dq-panel-radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    text-align: center;
+}
+
+.dungeon-summary-verdict {
+    margin: 0 0 6px;
+    font-family: 'Press Start 2P', 'Segoe UI', system-ui, sans-serif;
+    font-size: 1.05rem;
+    line-height: 1.6;
+}
+
+.dungeon-summary-verdict[data-status="cleared"] { color: var(--accent); }
+.dungeon-summary-verdict[data-status="failed"] { color: var(--danger); }
+
+.dungeon-summary-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    margin: 22px 0;
+}
+
+.dungeon-summary-stat {
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+
+.dungeon-summary-stat strong {
+    display: block;
+    font-size: 1.5rem;
+    color: var(--ink);
+}
+
+.dungeon-summary-stat span {
+    color: var(--muted);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.dungeon-summary-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+/* ---------------------------------------------------------
+   7. MOTION
+   Every animated affordance is opt-out. The tween is also disabled in JS,
+   so movement stays instant rather than merely un-animated.
+   --------------------------------------------------------- */
+@keyframes dungeon-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.dungeon-hit { animation: dungeon-shake 0.28s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+    .dungeon-hit { animation: none; }
+    .dungeon-enemy-bar span { transition: none; }
+    #dungeon-board { transition: none; }
+}
