@@ -31,7 +31,7 @@
         <div class="dungeon-run-columns" data-run-columns data-state="{% if run.active_enemy %}combat{% else %}roaming{% endif %}">
             <!-- 1. LEFT COLUMN: RUN STATUS -->
             <aside class="dungeon-info-column" aria-label="Run status">
-                <div class="dungeon-hud" data-hud data-panel-frame>
+                <div class="dungeon-hud" data-hud>
                     <div class="dungeon-hud-section">
                         <h2 class="dungeon-hud-title dq-type-label">Health</h2>
                         <div class="dungeon-hearts" data-hearts role="img" aria-hidden="true"></div>
@@ -131,7 +131,7 @@
             <!-- 3. RIGHT COLUMN: ENCOUNTER / BATTLE -->
             <section class="dungeon-battle-column" aria-label="Encounter">
                 <!-- Lightweight idle encounter card -->
-                <div class="dungeon-battle-idle" data-battle-idle data-panel-frame>
+                <div class="dungeon-battle-idle" data-battle-idle>
                     <div class="dungeon-idle-content">
                         <h2 class="dungeon-hud-title dq-type-label">No Active Encounter</h2>
                         <p class="dungeon-idle-note dq-type-body">Explore the grass to find an enemy.</p>
@@ -144,7 +144,7 @@
                 </div>
 
                 <!-- Active battle panel (3-row grid) -->
-                <section class="dungeon-battle" data-battle data-panel-frame hidden aria-labelledby="dungeon-battle-title">
+                <section class="dungeon-battle" data-battle hidden aria-labelledby="dungeon-battle-title">
                     <header class="dungeon-battle-header">
                         <h2 class="dungeon-battle-title dungeon-enemy-name dq-type-display" id="dungeon-battle-title"
                             data-battle-title tabindex="-1">Enemy</h2>

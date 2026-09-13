@@ -2475,10 +2475,11 @@ body.dungeon-live-run .footer,
 .dungeon-dpad [data-direction="right"] { grid-area: right; }
 .dungeon-dpad [data-direction="down"] { grid-area: down; }
 
-/* The ui.panel_frame sprite as a 9-slice border.
-   Scoped so dungeon-theme keeps its high-contrast, state-reactive two-border lines. */
-body.dungeon-theme [data-panel-frame][data-framed="true"] {
-    border-image: none;
+body.dungeon-theme [data-panel-frame][data-framed="true"],
+body.dungeon-theme [data-panel-frame] {
+    border-image: none !important;
+    border-width: 3px !important;
+    border-radius: 6px !important;
 }
 
 [data-panel-frame][data-framed="true"] {
