@@ -115,7 +115,7 @@
 
     Renderer.prototype.preload = function () {
         var self = this;
-        var groups = ['tiles', 'actors', 'items', 'ui'];
+        var groups = ['tiles', 'actors', 'items', 'ui', 'portraits'];
         var pending = [];
 
         groups.forEach(function (group) {

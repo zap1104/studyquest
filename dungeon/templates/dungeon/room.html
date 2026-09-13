@@ -146,9 +146,17 @@
                 <!-- Active battle panel (3-row grid) -->
                 <section class="dungeon-battle" data-battle hidden aria-labelledby="dungeon-battle-title">
                     <header class="dungeon-battle-header">
-                        <h2 class="dungeon-battle-title dungeon-enemy-name dq-type-display" id="dungeon-battle-title"
-                            data-battle-title tabindex="-1">Enemy</h2>
-                        <p class="dungeon-quiz-meta dungeon-question-counter dq-type-label" data-battle-counter></p>
+                        <div class="dungeon-battle-portrait-wrap" data-battle-portrait-wrap>
+                            <img class="dungeon-battle-portrait" data-battle-portrait alt="" src="" width="48" height="48" hidden>
+                        </div>
+                        <div class="dungeon-battle-meta-col">
+                            <div class="dungeon-battle-title-row">
+                                <h2 class="dungeon-battle-title dungeon-enemy-name dq-type-display" id="dungeon-battle-title"
+                                    data-battle-title tabindex="-1">Enemy</h2>
+                                <span class="dungeon-enemy-badge" data-enemy-badge hidden></span>
+                            </div>
+                            <p class="dungeon-quiz-meta dungeon-question-counter dq-type-label" data-battle-counter></p>
+                        </div>
                         <div class="dungeon-enemy-hp dungeon-enemy-health">
                             <span class="dungeon-enemy-bar"><span data-enemy-bar style="width:100%"></span></span>
                             <span class="dq-type-numeric" data-enemy-hp-text></span>

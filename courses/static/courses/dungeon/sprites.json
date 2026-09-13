@@ -15,13 +15,19 @@
     "player_up": { "file": "sprites/player_up.png", "frames": 4, "frame_width": 64, "frame_height": 64, "anchor": { "x": 0.5, "y": 0.875 } },
     "player_left": { "file": "sprites/player_left.png", "frames": 4, "frame_width": 64, "frame_height": 64, "anchor": { "x": 0.5, "y": 0.875 } },
     "player_right": { "file": "sprites/player_right.png", "frames": 4, "frame_width": 64, "frame_height": 64, "anchor": { "x": 0.5, "y": 0.875 } },
-    "enemy_default": "sprites/enemy_default.png"
+    "enemy_default": "sprites/enemy_default.png",
+    "enemy_grunt": { "file": "sprites/enemy_grunt.png", "frames": 4, "frame_width": 64, "frame_height": 64, "anchor": { "x": 0.5, "y": 0.875 } },
+    "enemy_guardian": { "file": "sprites/enemy_guardian.png", "frames": 4, "frame_width": 64, "frame_height": 64, "anchor": { "x": 0.5, "y": 0.875 } }
   },
   "items": {
     "key_piece": "sprites/key_piece.png",
     "final_key": "sprites/final_key.png",
     "skip_potion": "sprites/skip_potion.png",
     "health_potion": "sprites/health_potion.png"
+  },
+  "portraits": {
+    "enemy_grunt_portrait": "sprites/enemy_grunt_portrait.png",
+    "enemy_guardian_portrait": "sprites/enemy_guardian_portrait.png"
   },
   "ui": {
     "heart_full": "sprites/heart_full.png",

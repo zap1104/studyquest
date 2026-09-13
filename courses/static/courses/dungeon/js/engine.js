@@ -121,6 +121,7 @@
         this.battle = new DungeonQuest.Battle({
             root: document.querySelector('[data-battle]'),
             api: this.api,
+            renderer: this.renderer,
             announce: this.announce,
             reducedMotion: this.reducedMotion,
             onUpdated: this.applyTurn.bind(this),

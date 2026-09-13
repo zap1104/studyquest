@@ -22,11 +22,15 @@
     function Battle(options) {
         this.root = options.root;
         this.api = options.api;
+        this.renderer = options.renderer;
         this.announce = options.announce;
         this.onResolved = options.onResolved;
         this.onUpdated = options.onUpdated;
         this.reducedMotion = !!options.reducedMotion;
 
+        this.portraitWrapEl = this.root.querySelector('[data-battle-portrait-wrap]');
+        this.portraitEl = this.root.querySelector('[data-battle-portrait]');
+        this.badgeEl = this.root.querySelector('[data-enemy-badge]');
         this.titleEl = this.root.querySelector('[data-battle-title]');
         this.counterEl = this.root.querySelector('[data-battle-counter]');
         this.barEl = this.root.querySelector('[data-enemy-bar]');
@@ -98,7 +102,7 @@
         if (!state) {
             if (outcome === 'turn' || outcome === 'awaiting-answer') {
                 state = 'awaiting-answer';
-            } else if (outcome === 'correct' || outcome === 'power_strike' || outcome === 'incorrect' || outcome === 'partial' || outcome === 'skipped') {
+            } else if (outcome === 'correct' || outcome === 'power_strike' || outcome === 'armor_deflect' || outcome === 'armor_break' || outcome === 'incorrect' || outcome === 'partial' || outcome === 'skipped') {
                 state = 'graded';
             } else if (outcome === 'victory' || outcome === 'unlocked' || outcome === 'complete' || outcome === 'failed' || outcome === 'item') {
                 state = 'event';
@@ -296,8 +300,13 @@
 
         var count = (battle.combo && typeof battle.combo.count !== 'undefined') ? battle.combo.count : 0;
         var threshold = (battle.combo && battle.combo.threshold) || 3;
+        var enemy = battle.enemy;
+        var isGuardianArmored = enemy && enemy.role === 'guardian' && enemy.armor_active;
+
         var comboHint = 'Three consecutive correct answers trigger a Power Strike.';
-        if (count === 1) {
+        if (isGuardianArmored) {
+            comboHint = 'Guardian Armor deflects single hits! Chain 2 correct answers (or a Power Strike) to crack it.';
+        } else if (count === 1) {
             comboHint = 'Two more correct answers will trigger a Power Strike.';
         } else if (count === 2) {
             comboHint = 'One more correct answer will trigger a Power Strike!';
@@ -306,14 +315,16 @@
         this.renderCombatMessage({
             state: 'awaiting-answer',
             outcome: 'turn',
-            title: 'YOUR TURN',
+            title: isGuardianArmored ? 'ARMORED FOE' : 'YOUR TURN',
             combo: {
                 visible: true,
                 count: count,
                 threshold: threshold,
                 text: 'Combo ' + count + '/' + threshold
             },
-            primary: 'Choose an answer on the right, then attack.',
+            primary: isGuardianArmored
+                ? 'Guardian Armor is active. Build your streak to pierce it!'
+                : 'Choose an answer on the right, then attack.',
             status: comboHint,
             answer: '',
             explanation: '',
@@ -349,10 +360,38 @@
         if (!battle) { return; }
 
         var enemy = battle.enemy;
-        this.titleEl.textContent = 'Enemy ' + (enemy.index + 1);
+        this.titleEl.textContent = enemy.name || ('Enemy ' + (enemy.index + 1));
         this.counterEl.textContent = 'Question ' + battle.question_number + ' / ' + battle.questions_total;
         this.hpTextEl.textContent = enemy.hp + ' / ' + enemy.max_hp + ' HP';
         this.barEl.style.width = (enemy.max_hp ? (enemy.hp / enemy.max_hp) * 100 : 0) + '%';
+
+        if (this.portraitEl) {
+            var portraitUrl = '';
+            if (this.renderer && battle.portrait_key) {
+                portraitUrl = this.renderer.urlFor('portraits', battle.portrait_key);
+            }
+            if (portraitUrl) {
+                this.portraitEl.src = portraitUrl;
+                this.portraitEl.alt = enemy.name || 'Enemy';
+                this.portraitEl.hidden = false;
+            } else {
+                this.portraitEl.hidden = true;
+            }
+        }
+
+        if (this.badgeEl) {
+            if (enemy.role === 'guardian') {
+                this.badgeEl.hidden = false;
+                this.badgeEl.className = 'dungeon-enemy-badge dungeon-enemy-badge--guardian' + (enemy.armor_active ? ' dungeon-enemy-badge--armored' : '');
+                this.badgeEl.textContent = enemy.armor_active ? 'GUARDIAN [ARMOR]' : 'GUARDIAN';
+            } else if (enemy.role === 'grunt') {
+                this.badgeEl.hidden = false;
+                this.badgeEl.className = 'dungeon-enemy-badge dungeon-enemy-badge--grunt';
+                this.badgeEl.textContent = 'GRUNT';
+            } else {
+                this.badgeEl.hidden = true;
+            }
+        }
 
         this.renderCombo(battle.combo);
 
@@ -552,6 +591,19 @@
             this.hpTextEl.textContent = result.enemy.hp + ' / ' + result.enemy.max_hp + ' HP';
             this.barEl.style.width =
                 (result.enemy.max_hp ? (result.enemy.hp / result.enemy.max_hp) * 100 : 0) + '%';
+
+            if (this.badgeEl) {
+                var renemy = result.enemy;
+                if (renemy.role === 'guardian') {
+                    this.badgeEl.hidden = false;
+                    this.badgeEl.className = 'dungeon-enemy-badge dungeon-enemy-badge--guardian' + (renemy.armor_active ? ' dungeon-enemy-badge--armored' : '');
+                    this.badgeEl.textContent = renemy.armor_active ? 'GUARDIAN [ARMOR]' : 'GUARDIAN';
+                } else if (renemy.role === 'grunt') {
+                    this.badgeEl.hidden = false;
+                    this.badgeEl.className = 'dungeon-enemy-badge dungeon-enemy-badge--grunt';
+                    this.badgeEl.textContent = 'GRUNT';
+                }
+            }
         }
 
         if (result.combo) {
@@ -572,6 +624,20 @@
             panel.classList.add('dungeon-glance');
         }
 
+        if (result.combat_event && result.combat_event.code === 'armor_deflect' && !this.reducedMotion) {
+            var panel = this.root;
+            panel.classList.remove('dungeon-deflect');
+            void panel.offsetWidth;
+            panel.classList.add('dungeon-deflect');
+        }
+
+        if (result.combat_event && result.combat_event.code === 'armor_break' && !this.reducedMotion) {
+            var panel = this.root;
+            panel.classList.remove('dungeon-armor-break');
+            void panel.offsetWidth;
+            panel.classList.add('dungeon-armor-break');
+        }
+
         this.submitEl.hidden = true;
         this.continueEl.hidden = false;
         this.continueEl.textContent = result.enemy_defeated || result.run_over
@@ -587,6 +653,8 @@
         var feedback = result.feedback || {};
         var combatEvent = result.combat_event || {};
         var isPowerStrike = (combatEvent.code === 'power_strike') || (result.combo && result.combo.is_power_strike);
+        var isArmorDeflect = (combatEvent.code === 'armor_deflect');
+        var isArmorBreak = (combatEvent.code === 'armor_break');
         var isReviewRun = result.is_review_run || (this.battle && this.battle.is_review_run);
 
         var title = 'DIRECT HIT!';
@@ -597,7 +665,19 @@
         var status = '';
         var explanation = feedback.explanation || '';
 
-        if (isPowerStrike) {
+        if (isArmorDeflect) {
+            outcome = 'armor_deflect';
+            title = 'ARMOR DEFLECTED!';
+            meta = '0 DAMAGE';
+            primary = 'The Guardian deflected your attack with heavy armor!';
+        } else if (isArmorBreak) {
+            outcome = isPowerStrike ? 'power_strike' : 'armor_break';
+            title = isPowerStrike ? 'ARMOR SHATTERED! POWER STRIKE!' : 'GUARDIAN ARMOR BROKEN!';
+            meta = (combatEvent.damage || 1) + ' DAMAGE';
+            primary = isPowerStrike
+                ? 'The armor shattered! A devastating Power Strike lands!'
+                : 'Guardian armor cracked! Direct hit lands!';
+        } else if (isPowerStrike) {
             outcome = 'power_strike';
             title = 'POWER STRIKE!';
             meta = '2 DAMAGE';
@@ -653,13 +733,20 @@
         }
 
         if (isReviewRun) {
-            if (result.outcome === 'correct') {
+            if (isArmorDeflect) {
+                status = 'Remediation question correct, but armor absorbed the blow! 1 more to break it.';
+            } else if (result.outcome === 'correct') {
                 status = 'Remediation question mastered!';
             } else {
                 status = 'Remediation item not yet mastered.';
             }
         } else {
-            if (result.outcome === 'correct') {
+            if (isArmorDeflect) {
+                var count = (result.combo && typeof result.combo.count !== 'undefined') ? result.combo.count : 1;
+                status = 'Armor Streak ' + count + '/2. Answer 1 more correctly to crack through!';
+            } else if (isArmorBreak) {
+                status = 'Guardian defense destroyed! Normal damage will now be dealt.';
+            } else if (result.outcome === 'correct') {
                 if (isPowerStrike) {
                     status = 'Power Strike triggered!';
                 } else {
@@ -713,8 +800,13 @@
             this.render();
             var count = (this.battle.combo && typeof this.battle.combo.count !== 'undefined') ? this.battle.combo.count : 0;
             var threshold = (this.battle.combo && this.battle.combo.threshold) || 3;
+            var enemy = this.battle.enemy;
+            var isGuardianArmored = enemy && enemy.role === 'guardian' && enemy.armor_active;
+
             var comboHint = 'Three consecutive correct answers trigger a Power Strike.';
-            if (count === 1) {
+            if (isGuardianArmored) {
+                comboHint = 'Guardian Armor deflects single hits! Chain 2 correct answers (or a Power Strike) to crack it.';
+            } else if (count === 1) {
                 comboHint = 'Two more correct answers will trigger a Power Strike.';
             } else if (count === 2) {
                 comboHint = 'One more correct answer will trigger a Power Strike!';
@@ -723,14 +815,16 @@
             this.renderCombatMessage({
                 state: 'awaiting-answer',
                 outcome: 'turn',
-                title: 'YOUR TURN',
+                title: isGuardianArmored ? 'ARMORED FOE' : 'YOUR TURN',
                 combo: {
                     visible: true,
                     count: count,
                     threshold: threshold,
                     text: 'Combo ' + count + '/' + threshold
                 },
-                primary: 'Choose an answer on the right, then attack.',
+                primary: isGuardianArmored
+                    ? 'Guardian Armor is active. Build your streak to pierce it!'
+                    : 'Choose an answer on the right, then attack.',
                 status: comboHint,
                 answer: '',
                 explanation: '',

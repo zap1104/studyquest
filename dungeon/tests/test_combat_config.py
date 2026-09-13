@@ -229,7 +229,15 @@ class SpriteManifestContractTests(SimpleTestCase):
 
     TILE_KEYS = {
         "tiles": ["floor", "wall", "grass", "door_locked", "door_unlocked"],
-        "actors": ["player_down", "player_up", "player_left", "player_right", "enemy_default"],
+        "actors": [
+            "player_down",
+            "player_up",
+            "player_left",
+            "player_right",
+            "enemy_default",
+            "enemy_grunt",
+            "enemy_guardian",
+        ],
     }
     ICON_KEYS = {
         "items": ["key_piece", "final_key", "skip_potion", "health_potion"],
@@ -304,3 +312,12 @@ class SpriteManifestContractTests(SimpleTestCase):
         slice_size = entry["slice"]
         self.assertGreater(slice_size, 0)
         self.assertEqual(self.png_size(entry["file"]), (slice_size * 3, slice_size * 3))
+
+    def test_portraits_meet_portrait_contract(self):
+        portraits = self.manifest.get("portraits", {})
+        self.assertIn("enemy_grunt_portrait", portraits)
+        self.assertIn("enemy_guardian_portrait", portraits)
+        for key in ["enemy_grunt_portrait", "enemy_guardian_portrait"]:
+            width, height = self.png_size(portraits[key])
+            self.assertEqual((width, height), (combat_config.COMBAT_PORTRAIT_SIZE, combat_config.COMBAT_PORTRAIT_SIZE))
+

@@ -146,6 +146,17 @@ class DungeonEnemy(models.Model):
     question_ids = models.JSONField(default=list, blank=True)
     answered_question_ids = models.JSONField(default=list, blank=True)
 
+    ROLE_GRUNT = "grunt"
+    ROLE_GUARDIAN = "guardian"
+    ROLE_CHOICES = [
+        (ROLE_GRUNT, "Grunt"),
+        (ROLE_GUARDIAN, "Guardian"),
+    ]
+
+    role = models.CharField(max_length=20, default=ROLE_GRUNT, choices=ROLE_CHOICES)
+    name = models.CharField(max_length=50, default="Grunt")
+    armor_active = models.BooleanField(default=False)
+
     # Streak of consecutive correct answers against this enemy. Resets on wrong answer,
     # and resets to 0 after triggering a combo strike.
     current_combo = models.PositiveSmallIntegerField(default=0)

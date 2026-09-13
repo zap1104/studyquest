@@ -107,6 +107,10 @@ COMBO_RESETS_ON_PARTIAL: bool = False
 COMBO_RESETS_ON_SKIP: bool = False
 COMBO_RESETS_ON_NEW_ENEMY: bool = True
 
+# Guardian Armor mechanics (server-authoritative)
+# A Guardian deflects damage until the player achieves this consecutive streak or a Power Strike
+GUARDIAN_ARMOR_REQUIRED_STREAK: int = 2
+
 # Enumeration questions can be partially right. A partial answer is treated as
 # a glancing blow: the question is spent, but neither side takes damage.
 PARTIAL_ANSWER_DAMAGES_ENEMY = False
