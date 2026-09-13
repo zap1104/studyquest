@@ -1595,7 +1595,7 @@ body.dungeon-live-run .footer,
     overscroll-behavior: contain;
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE / legacy Edge */
-    padding-right: 44px; /* Ensure message content never overlaps the stepper buttons */
+    padding-right: 70px; /* Ensure message content never overlaps the larger stepper buttons */
 }
 
 .dungeon-message-body::-webkit-scrollbar {
@@ -1704,11 +1704,11 @@ body.dungeon-live-run .footer,
 /* Accessible Message Scroll Controls (Stacked Retro Stepper) */
 .dungeon-message-scroll-controls {
     position: absolute;
-    right: 14px;
-    top: 40px;
+    right: 20px;
+    top: 44px;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
     z-index: 3;
 }
 
@@ -1717,20 +1717,20 @@ body.dungeon-live-run .footer,
 }
 
 .dungeon-message-scroll-btn {
-    width: 24px;
-    height: 22px;
+    width: 40px;
+    height: 36px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 0;
     background: rgba(26, 21, 16, 0.94);
-    border: 1px solid rgba(232, 163, 61, 0.45);
-    border-radius: 4px;
+    border: 2px solid rgba(232, 163, 61, 0.50);
+    border-radius: 5px;
     color: #ffd75a;
-    font-size: 10px;
+    font-size: 14px;
     line-height: 1;
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
     transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.1s ease;
 }
 
