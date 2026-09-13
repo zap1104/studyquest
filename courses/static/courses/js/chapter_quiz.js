@@ -333,6 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 dropdownWrap?.classList.remove('open');
             }
             renderQuestion();
+        });
     }
 
     if (forgetBtn) {
