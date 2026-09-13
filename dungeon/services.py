@@ -15,7 +15,8 @@ Two invariants hold throughout:
 
 from random import Random
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
+from django.db.models import F
 from django.utils import timezone
 
 from courses.grading import _grade_question
@@ -82,6 +83,10 @@ def get_owned_quiz(user, quiz_id):
     Returns ``None`` for someone else's quiz so the view can 404 rather than
     403 - a 403 would confirm the quiz exists.
     """
+    try:
+        quiz_id = int(quiz_id)
+    except (TypeError, ValueError):
+        return None
     return (
         Quiz.objects.select_related("chapter__course")
         .filter(pk=quiz_id, chapter__course__user=user)
@@ -136,13 +141,7 @@ def start_or_resume_run(user, quiz, *, seed=None):
     Resuming is deliberate: an abandoned browser tab must not become a way to
     re-roll the room or restore lost HP.
     """
-    existing = (
-        DungeonRun.objects.filter(
-            user=user, quiz=quiz, status=DungeonRun.STATUS_IN_PROGRESS
-        )
-        .select_related("quiz")
-        .first()
-    )
+    existing = _find_active_run(user, quiz)
     if existing is not None:
         return existing
 
@@ -169,6 +168,27 @@ def start_or_resume_run(user, quiz, *, seed=None):
     seed = seed if seed is not None else Random().randrange(1, 2 ** 31 - 1)
     room_data = _build_room_for(user, seed=seed, enemy_count=enemy_count)
 
+    try:
+        with transaction.atomic():
+            return _create_run(user, quiz, rules, room_data, question_ids, enemy_count, seed)
+    except IntegrityError:
+        # A concurrent request created the run between our check and our insert;
+        # the partial unique constraint rejected the duplicate. Resume theirs.
+        existing = _find_active_run(user, quiz)
+        if existing is None:
+            raise
+        return existing
+
+
+def _find_active_run(user, quiz):
+    return (
+        DungeonRun.objects.filter(user=user, quiz=quiz, status=DungeonRun.STATUS_IN_PROGRESS)
+        .select_related("quiz")
+        .first()
+    )
+
+
+def _create_run(user, quiz, rules, room_data, question_ids, enemy_count, seed):
     run = DungeonRun.objects.create(
         user=user,
         quiz=quiz,
@@ -223,14 +243,16 @@ def _deal_questions(question_ids, enemy_count, rules, seed):
 # --------------------------------------------------
 # 2. MOVEMENT & ENCOUNTERS
 # --------------------------------------------------
+@transaction.atomic
 def move_player(run, direction, *, rng=None):
     """Attempt one grid step. Returns what the client should render."""
+    _lock(run)
     _require_active(run)
 
     if run.active_enemy_id:
         raise DungeonError("You can't walk away mid-battle.")
 
-    if direction not in DIRECTIONS:
+    if not isinstance(direction, str) or direction not in DIRECTIONS:
         raise DungeonError("Unknown direction.")
 
     grid = _grid(run)
@@ -307,12 +329,14 @@ def current_question(enemy):
     return Question.objects.prefetch_related("choices").filter(pk=remaining[0]).first()
 
 
+@transaction.atomic
 def answer_question(run, question_id, submitted_answer):
     """Grade one answer and apply its consequences.
 
     Grading runs through the shared ``courses.grading`` helper, so a dungeon
     answer is judged by exactly the rules the chapter quiz uses.
     """
+    _lock(run)
     _require_active(run)
     enemy = _require_battle(run)
 
@@ -419,9 +443,11 @@ def _award_drops(run, enemy):
     The roll is seeded off the run so a given run's loot is reproducible.
     """
     rules = rules_for(run)
-    inventory = _inventory(run)
+    bag = DungeonInventory.objects.filter(run=run)
 
-    inventory.key_pieces += KEY_PIECES_PER_ENEMY
+    # F() increments happen in the database, so they can never be computed
+    # from a count this request read before another request wrote.
+    bag.update(key_pieces=F("key_pieces") + KEY_PIECES_PER_ENEMY)
 
     rng = Random(f"{run.seed}:{run.pk}:{enemy.enemy_index}")
     rolled = roll_item_drop(rng)
@@ -430,13 +456,16 @@ def _award_drops(run, enemy):
     wasted_at_cap = False
     field = POTION_FIELDS.get(rolled)
     if field:
-        if getattr(inventory, field) >= rules.max_potions_held:
-            wasted_at_cap = True
-        else:
-            setattr(inventory, field, getattr(inventory, field) + 1)
+        # The cap is part of the same UPDATE, so it holds under concurrency too.
+        added = bag.filter(**{f"{field}__lt": rules.max_potions_held}).update(
+            **{field: F(field) + 1}
+        )
+        if added:
             granted = rolled
+        else:
+            wasted_at_cap = True
 
-    inventory.save()
+    run.inventory.refresh_from_db()
 
     return {
         "key_pieces": KEY_PIECES_PER_ENEMY,
@@ -446,8 +475,10 @@ def _award_drops(run, enemy):
     }
 
 
+@transaction.atomic
 def use_item(run, item_key):
     """Spend a potion. Both effects are resolved and persisted server-side."""
+    _lock(run)
     _require_active(run)
     rules = rules_for(run)
     inventory = _inventory(run)
@@ -509,12 +540,20 @@ def required_key_pieces(run):
 
 
 def is_door_unlocked(run):
-    """The door opens only once every enemy has dropped its piece."""
+    """The door opens only once every enemy is down *and* every piece is held.
+
+    Checking the enemies directly, not just the key counter, means no bug or
+    race that inflates the counter can ever open the door early.
+    """
     required = required_key_pieces(run)
-    return required > 0 and _inventory(run).key_pieces >= required
+    if required <= 0 or run.enemies.filter(is_defeated=False).exists():
+        return False
+    return _inventory(run).key_pieces >= required
 
 
+@transaction.atomic
 def attempt_exit(run):
+    _lock(run)
     _require_active(run)
 
     if not is_door_unlocked(run):
@@ -572,7 +611,9 @@ def finish_run(run, *, cleared):
     }
 
 
+@transaction.atomic
 def abandon_run(run):
+    _lock(run)
     if not run.is_active:
         return run
     run.status = DungeonRun.STATUS_ABANDONED
@@ -715,6 +756,20 @@ def _inventory(run):
         inventory = DungeonInventory.objects.create(run=run)
         run.inventory = inventory
     return inventory
+
+
+def _lock(run):
+    """Take this run's row lock for the rest of the enclosing transaction, then
+    reload it.
+
+    Two requests for one run (a double-click, a replayed POST) can both load it
+    before either writes. Locking and reloading makes the second one wait and
+    then act on what the first committed, instead of on its stale copy. On
+    databases without row locks (SQLite) the lock is a no-op, but the reload
+    still discards stale state and SQLite serialises the writes.
+    """
+    DungeonRun.objects.select_for_update().filter(pk=run.pk).values_list("pk").first()
+    run.refresh_from_db()
 
 
 def _require_active(run):

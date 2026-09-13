@@ -13,7 +13,7 @@ from dungeon.combat_config import (
     MAX_ENEMIES,
     resolve_combat_rules,
 )
-from dungeon.models import DungeonInventory, DungeonRun
+from dungeon.models import DungeonEnemy, DungeonInventory, DungeonRun
 
 
 class AlwaysEncounter(Random):
@@ -686,3 +686,64 @@ class ChoiceOrderingTests(DungeonTestCase):
             "every correct choice was served first - ordering leaks the answer",
         )
         self.assertGreater(len(questions), 0)
+
+
+class ConcurrencyTests(DungeonTestCase):
+    """Two requests for the same run can load it before either one writes. The
+    second must act on fresh state, not on what it read before the first
+    committed - otherwise a double-submitted final blow pays out twice."""
+
+    def test_racing_the_final_blow_cannot_duplicate_a_key_piece(self):
+        run = self.start(question_count=10)  # two enemies, so two pieces needed
+        self.engage(run)
+        DungeonEnemy.objects.filter(pk=run.active_enemy_id).update(hp=1)
+
+        # Both "requests" load the run and its enemy before either answers.
+        first = self.reload(run)
+        second = self.reload(run)
+        first_enemy = first.active_enemy
+        second_enemy = second.active_enemy
+        question_id = services.current_question(second_enemy).id
+        answer = {"choice_id": correct_choice_id(question_id)}
+        self.assertEqual(services.current_question(first_enemy).id, question_id)
+
+        services.answer_question(first, question_id, answer)
+        try:
+            services.answer_question(second, question_id, answer)
+        except services.DungeonError:
+            pass  # rejecting the stale request is the correct outcome
+
+        self.assertEqual(DungeonInventory.objects.get(run=run).key_pieces, 1)
+        self.assertFalse(services.is_door_unlocked(self.reload(run)))
+
+    def test_door_stays_sealed_while_any_enemy_lives_whatever_the_key_count(self):
+        """Defence in depth: even an inflated key count cannot open the door."""
+        run = self.start(question_count=10)
+        self.defeat(run)
+        run = self.set_inventory(run, key_pieces=99)
+
+        self.assertTrue(run.enemies.filter(is_defeated=False).exists())
+        self.assertFalse(services.is_door_unlocked(run))
+
+
+class ConcurrentLaunchTests(DungeonTestCase):
+    def test_a_launch_that_loses_the_race_resumes_the_winners_run(self):
+        """Simulate a second "Enter dungeon" request whose existence check ran
+        before the first request's insert landed."""
+        from unittest import mock
+
+        winner = self.start(question_count=10)
+        real_lookup = services._find_active_run
+        calls = {"count": 0}
+
+        def stale_then_real(user, quiz):
+            calls["count"] += 1
+            return None if calls["count"] == 1 else real_lookup(user, quiz)
+
+        with mock.patch.object(services, "_find_active_run", side_effect=stale_then_real):
+            loser = services.start_or_resume_run(self.user, winner.quiz)
+
+        self.assertEqual(loser.pk, winner.pk)
+        self.assertEqual(
+            DungeonRun.objects.filter(status=DungeonRun.STATUS_IN_PROGRESS).count(), 1
+        )

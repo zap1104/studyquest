@@ -33,10 +33,12 @@ def _get_run_or_404(request, pk):
 
 
 def _payload(request):
+    """The JSON body as a dict, or None for anything else (bad JSON, a list...)."""
     try:
-        return json.loads(request.body or b"{}")
-    except (json.JSONDecodeError, AttributeError):
+        payload = json.loads(request.body or b"{}")
+    except (json.JSONDecodeError, UnicodeDecodeError):
         return None
+    return payload if isinstance(payload, dict) else None
 
 
 def _service_call(handler):

@@ -381,3 +381,43 @@ class LaunchCopyTests(DungeonViewTestCase):
         self.assertContains(
             response, f"{resolve_combat_rules(plan='plus').base_player_hp} hearts"
         )
+
+
+class MalformedInputTests(DungeonViewTestCase):
+    """A hostile client can send anything. Garbage is a 4xx, never a 500."""
+
+    def test_json_that_is_not_an_object_is_a_400(self):
+        run = self.start_run()
+        for body in ("[1, 2]", '"up"', "42", "null"):
+            response = self.client.post(
+                reverse("dungeon:move", args=[run.pk]), data=body, content_type="application/json"
+            )
+            self.assertEqual(response.status_code, 400, body)
+
+    def test_non_string_direction_is_a_400(self):
+        run = self.start_run()
+        for direction in (["up"], {"x": 1}, 7, None):
+            response = self.post_json(reverse("dungeon:move", args=[run.pk]), {"direction": direction})
+            self.assertEqual(response.status_code, 400, direction)
+
+    def test_non_numeric_quiz_id_is_a_404(self):
+        for quiz_id in ("abc", "", "1; DROP TABLE"):
+            response = self.client.post(reverse("dungeon:start_run"), {"quiz_id": quiz_id})
+            self.assertEqual(response.status_code, 404, quiz_id)
+
+    def test_non_object_answer_is_graded_as_wrong_not_crashed(self):
+        run = self.start_run()
+        self.engage(run)
+        question = services.current_question(run.active_enemy)
+
+        response = self.post_json(reverse("dungeon:answer", args=[run.pk]), {
+            "question_id": question.id, "answer": ["not", "an", "object"],
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["result"]["outcome"], "incorrect")
+
+    def test_non_string_item_is_a_400(self):
+        run = self.start_run()
+        response = self.post_json(reverse("dungeon:use_item", args=[run.pk]), {"item": ["health_potion"]})
+        self.assertEqual(response.status_code, 400)
