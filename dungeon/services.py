@@ -66,6 +66,12 @@ POTION_FIELDS = {
 
 SEALED_DOOR_MESSAGE = "The door is sealed. Defeat every enemy to assemble the key."
 
+OBJECTIVE_RUN_FAILED = "run_failed"
+OBJECTIVE_RUN_COMPLETE = "run_complete"
+OBJECTIVE_DEFEAT_ENEMY = "defeat_enemy"
+OBJECTIVE_EXIT_UNLOCKED = "exit_unlocked"
+OBJECTIVE_EXPLORE = "explore"
+
 
 class DungeonError(Exception):
     """A rule said no. The message is safe to show the player."""
@@ -267,10 +273,16 @@ def move_player(run, direction, *, rng=None):
             "moved": False,
             "facing": direction,
             "blocked_reason": SEALED_DOOR_MESSAGE,
+            "objective": serialize_objective(run),
         }
 
     if not rooms.is_walkable(grid, target_x, target_y, door_unlocked=unlocked):
-        return {"moved": False, "facing": direction, "blocked_reason": None}
+        return {
+            "moved": False,
+            "facing": direction,
+            "blocked_reason": None,
+            "objective": serialize_objective(run),
+        }
 
     run.player_x, run.player_y = target_x, target_y
     run.save(update_fields=["player_x", "player_y"])
@@ -282,14 +294,17 @@ def move_player(run, direction, *, rng=None):
             "x": target_x,
             "y": target_y,
             "exit": finish_run(run, cleared=True),
+            "objective": serialize_objective(run),
         }
 
+    encounter = _roll_encounter(run, target_x, target_y, rng=rng)
     return {
         "moved": True,
         "facing": direction,
         "x": target_x,
         "y": target_y,
-        "encounter": _roll_encounter(run, target_x, target_y, rng=rng),
+        "encounter": encounter,
+        "objective": serialize_objective(run, run.active_enemy if encounter else None),
     }
 
 
@@ -426,10 +441,12 @@ def _resolve_turn(run, enemy, question, *, outcome, feedback):
         "door_unlocked": is_door_unlocked(run),
         "run_over": None,
         "battle": None,
+        "objective": serialize_objective(run, None if enemy_defeated else enemy),
     }
 
     if run.current_hp <= 0:
         payload["run_over"] = finish_run(run, cleared=False)
+        payload["objective"] = serialize_objective(run)
         return payload
 
     if not enemy_defeated:
@@ -505,6 +522,7 @@ def use_item(run, item_key):
             "battle": (
                 serialize_battle(run, run.active_enemy) if run.active_enemy_id else None
             ),
+            "objective": serialize_objective(run),
         }
 
     if item_key == ITEM_SKIP_POTION:
@@ -609,6 +627,7 @@ def finish_run(run, *, cleared):
         "xp_newly_awarded": bool(claimed) and xp > 0,
         "enemies_defeated": enemies_defeated,
         "hp_remaining": run.current_hp,
+        "objective": serialize_objective(run),
     }
 
 
@@ -654,6 +673,50 @@ def serialize_question(run, question):
     return payload
 
 
+def serialize_objective(run, battle_enemy=None):
+    """The authoritative current objective for this run.
+
+    Decided entirely on the server; the client renders what it receives and
+    never computes gameplay conditions or win/loss states independently.
+    """
+    if run.status in (DungeonRun.STATUS_FAILED, DungeonRun.STATUS_ABANDONED) or not run.is_alive:
+        return {
+            "code": OBJECTIVE_RUN_FAILED,
+            "label": "You have fallen",
+            "detail": "The dungeon claimed this run.",
+        }
+
+    if run.status == DungeonRun.STATUS_CLEARED:
+        return {
+            "code": OBJECTIVE_RUN_COMPLETE,
+            "label": "Dungeon cleared",
+            "detail": "You escaped through the exit door.",
+        }
+
+    enemy = battle_enemy or (run.active_enemy if run.active_enemy_id else None)
+    if enemy and not enemy.is_defeated:
+        return {
+            "code": OBJECTIVE_DEFEAT_ENEMY,
+            "label": f"Defeat Enemy {enemy.enemy_index + 1}",
+            "detail": f"{enemy.hp} of {enemy.max_hp} HP remaining",
+        }
+
+    if is_door_unlocked(run):
+        return {
+            "code": OBJECTIVE_EXIT_UNLOCKED,
+            "label": "Exit is open",
+            "detail": "Step onto the door to escape.",
+        }
+
+    living = run.enemies.filter(is_defeated=False).count()
+    plural = "enemy" if living == 1 else "enemies"
+    return {
+        "code": OBJECTIVE_EXPLORE,
+        "label": "Explore the room",
+        "detail": f"Search the tall grass ({living} {plural} remaining)",
+    }
+
+
 def serialize_enemy(enemy):
     return {
         "index": enemy.enemy_index,
@@ -676,6 +739,7 @@ def serialize_battle(run, enemy):
         "question": serialize_question(run, question) if question else None,
         "question_number": len(enemy.answered_question_ids or []) + 1,
         "questions_total": len(enemy.question_ids or []),
+        "objective": serialize_objective(run, enemy),
     }
 
 
@@ -715,6 +779,7 @@ def serialize_run(run):
         "enemies": [serialize_enemy(enemy) for enemy in run.enemies.all()],
         "inventory": serialize_inventory(run),
         "battle": serialize_battle(run, active),
+        "objective": serialize_objective(run, active),
         "display": display_settings(),
         "quiz": {
             "title": _quiz_title(run.quiz),

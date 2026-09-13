@@ -747,3 +747,79 @@ class ConcurrentLaunchTests(DungeonTestCase):
         self.assertEqual(
             DungeonRun.objects.filter(status=DungeonRun.STATUS_IN_PROGRESS).count(), 1
         )
+
+
+class AuthoritativeObjectiveTests(DungeonTestCase):
+    def test_fresh_run_has_explore_objective(self):
+        run = self.start(question_count=10)
+        obj = services.serialize_run(run)["objective"]
+        self.assertEqual(obj["code"], services.OBJECTIVE_EXPLORE)
+        self.assertEqual(obj["label"], "Explore the room")
+        self.assertIn("2 enemies remaining", obj["detail"])
+
+    def test_engaging_enemy_sets_defeat_enemy_objective(self):
+        run = self.start(question_count=10)
+        move_result = self.engage(run)
+        self.assertIn("objective", move_result)
+        self.assertEqual(move_result["objective"]["code"], services.OBJECTIVE_DEFEAT_ENEMY)
+
+        run = self.reload(run)
+        obj = services.serialize_run(run)["objective"]
+        self.assertEqual(obj["code"], services.OBJECTIVE_DEFEAT_ENEMY)
+        self.assertEqual(obj["label"], f"Defeat Enemy {run.active_enemy.enemy_index + 1}")
+        self.assertIn(f"{run.active_enemy.hp} of {run.active_enemy.max_hp} HP", obj["detail"])
+
+    def test_turn_result_payload_carries_objective(self):
+        run = self.start(question_count=10)
+        self.engage(run)
+        result = self.answer_correctly(run)
+        self.assertIn("objective", result)
+        self.assertEqual(result["objective"]["code"], services.OBJECTIVE_DEFEAT_ENEMY)
+        self.assertIn("4 of 5 HP", result["objective"]["detail"])
+
+    def test_all_enemies_defeated_sets_exit_unlocked_objective(self):
+        run = self.start(question_count=10)
+        self.clear_all_enemies(run)
+        run = self.reload(run)
+        self.assertTrue(services.is_door_unlocked(run))
+
+        obj = services.serialize_run(run)["objective"]
+        self.assertEqual(obj["code"], services.OBJECTIVE_EXIT_UNLOCKED)
+        self.assertEqual(obj["label"], "Exit is open")
+        self.assertEqual(obj["detail"], "Step onto the door to escape.")
+
+    def test_cleared_run_sets_run_complete_objective(self):
+        run = self.start(question_count=10)
+        self.clear_all_enemies(run)
+        self.walk_to_door(run)
+        exit_payload = services.attempt_exit(run)
+        self.assertIn("objective", exit_payload)
+        self.assertEqual(exit_payload["objective"]["code"], services.OBJECTIVE_RUN_COMPLETE)
+
+        run = self.reload(run)
+        obj = services.serialize_run(run)["objective"]
+        self.assertEqual(obj["code"], services.OBJECTIVE_RUN_COMPLETE)
+        self.assertEqual(obj["label"], "Dungeon cleared")
+
+    def test_zero_hp_sets_run_failed_objective(self):
+        run = self.start(question_count=5)
+        self.engage(run)
+        turn_result = None
+        while run.is_alive:
+            turn_result = self.answer_wrongly(run)
+            run = self.reload(run)
+
+        self.assertEqual(turn_result["objective"]["code"], services.OBJECTIVE_RUN_FAILED)
+        obj = services.serialize_run(run)["objective"]
+        self.assertEqual(obj["code"], services.OBJECTIVE_RUN_FAILED)
+        self.assertEqual(obj["label"], "You have fallen")
+
+    def test_health_potion_use_includes_objective(self):
+        run = self.start(question_count=10)
+        run.current_hp = 3
+        run.save(update_fields=["current_hp"])
+        self.set_inventory(run, health_potions=1)
+        result = services.use_item(run, ITEM_HEALTH_POTION)
+        self.assertIn("objective", result)
+        self.assertEqual(result["objective"]["code"], services.OBJECTIVE_EXPLORE)
+
