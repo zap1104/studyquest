@@ -1,0 +1,107 @@
+{% extends 'courses/base.html' %}
+{% load static %}
+
+{% block title %}{{ run.quiz.chapter.title }} — Dungeon Quest{% endblock %}
+{% block page_class %}dungeon-page dungeon-run-page{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'courses/dungeon/css/dungeon.css' %}">
+
+{# Pixel sizes come from dungeon/combat_config.py; the CSS and JS read them from here. #}
+<div class="dungeon-scale-root" style="--dq-tile: {{ tile_size }}px; --dq-icon: {{ icon_size }}px; --dq-ui-scale: {{ ui_scale }};">
+
+    <div class="page-header">
+        <div>
+            <h1>{{ run.quiz.chapter.title }}</h1>
+            <p class="subtitle">{{ run.quiz.chapter.course.title }} · Dungeon Quest</p>
+        </div>
+        <form method="post" action="{% url 'dungeon:abandon' run.pk %}" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-ghost btn-sm">Abandon run</button>
+        </form>
+    </div>
+
+    <div class="dungeon-run-layout">
+        <div class="dungeon-board-panel">
+            <div class="dungeon-board-frame">
+                <canvas id="dungeon-board" role="img"
+                        aria-label="Dungeon room. Loading."></canvas>
+            </div>
+
+            <p class="dungeon-board-caption" data-blocked-note hidden></p>
+
+            <nav class="dungeon-dpad" data-dpad aria-label="Movement controls">
+                <button type="button" data-direction="up" aria-label="Move north">▲</button>
+                <button type="button" data-direction="left" aria-label="Move west">◀</button>
+                <button type="button" data-direction="right" aria-label="Move east">▶</button>
+                <button type="button" data-direction="down" aria-label="Move south">▼</button>
+            </nav>
+
+            <p class="dungeon-board-caption">Arrow keys or WASD to move. Grass hides enemies.</p>
+            <p class="dungeon-sr-only" data-board-description></p>
+        </div>
+
+        <aside class="dungeon-hud" data-hud data-panel-frame aria-label="Run status">
+            <div>
+                <h2 class="dungeon-hud-title">Health</h2>
+                <div class="dungeon-hearts" data-hearts role="img" aria-hidden="true"></div>
+                <p class="dungeon-hp-readout" data-hp-text>—</p>
+            </div>
+
+            <div>
+                <h2 class="dungeon-hud-title">The key</h2>
+                <div class="dungeon-keys" data-keys></div>
+                <p class="dungeon-key-note" data-key-note data-unlocked="false">—</p>
+            </div>
+
+            <div>
+                <h2 class="dungeon-hud-title">Items</h2>
+                <div class="dungeon-items" data-items></div>
+            </div>
+        </aside>
+    </div>
+
+    <section class="dungeon-battle" data-battle data-panel-frame hidden aria-labelledby="dungeon-battle-title">
+        <header class="dungeon-battle-header">
+            <div>
+                <h2 class="dungeon-battle-title" id="dungeon-battle-title"
+                    data-battle-title tabindex="-1">Enemy</h2>
+                <p class="dungeon-quiz-meta" data-battle-counter></p>
+            </div>
+            <div class="dungeon-enemy-hp">
+                <span class="dungeon-enemy-bar"><span data-enemy-bar style="width:100%"></span></span>
+                <span data-enemy-hp-text></span>
+            </div>
+        </header>
+
+        <p class="dungeon-question-prompt" data-question-prompt></p>
+
+        <form data-battle-form novalidate>
+            <fieldset class="dungeon-answer-fields" data-answer-fields>
+                <legend data-answer-legend>Answer</legend>
+            </fieldset>
+
+            <div class="dungeon-battle-actions">
+                <button type="submit" class="btn btn-primary btn-sm" data-submit-answer>Attack</button>
+                <button type="button" class="btn btn-primary btn-sm" data-continue hidden>Next question</button>
+            </div>
+        </form>
+
+        <div class="dungeon-feedback" data-feedback hidden></div>
+    </section>
+
+    <div class="dungeon-toast" data-toast hidden></div>
+    <p class="dungeon-sr-only" data-live-region role="status" aria-live="polite"></p>
+</div>
+
+{# The run state and every endpoint the game talks to, escaped by json_script. #}
+{{ bootstrap|json_script:"dungeon-bootstrap" }}
+
+<script src="{% static 'courses/dungeon/js/renderer.js' %}"></script>
+<script src="{% static 'courses/dungeon/js/battle.js' %}"></script>
+<script src="{% static 'courses/dungeon/js/inventory.js' %}"></script>
+<script src="{% static 'courses/dungeon/js/engine.js' %}"></script>
+<script>
+    window.DungeonQuest.boot('dungeon-bootstrap');
+</script>
+{% endblock %}

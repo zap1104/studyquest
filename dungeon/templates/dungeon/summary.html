@@ -1,0 +1,57 @@
+{% extends 'courses/base.html' %}
+{% load static %}
+
+{% block title %}Run summary — Dungeon Quest{% endblock %}
+{% block page_class %}dungeon-page{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{% static 'courses/dungeon/css/dungeon.css' %}">
+
+<div class="dungeon-summary-hero">
+    {% if run.status == 'cleared' %}
+        <p class="dungeon-summary-verdict" data-status="cleared">DUNGEON CLEARED</p>
+        <p class="subtitle">You assembled the key and walked out of {{ run.quiz.chapter.title }}.</p>
+    {% elif run.status == 'failed' %}
+        <p class="dungeon-summary-verdict" data-status="failed">YOU FELL</p>
+        <p class="subtitle">The dungeon under {{ run.quiz.chapter.title }} keeps its key for now.</p>
+    {% else %}
+        <p class="dungeon-summary-verdict" data-status="abandoned">RUN ABANDONED</p>
+        <p class="subtitle">You left {{ run.quiz.chapter.title }} before the key was whole.</p>
+    {% endif %}
+
+    <div class="dungeon-summary-grid">
+        <div class="dungeon-summary-stat">
+            <strong>{{ run.xp_awarded|default:0 }}</strong>
+            <span>XP earned</span>
+        </div>
+        <div class="dungeon-summary-stat">
+            <strong>{{ enemies_defeated }}/{{ enemy_count }}</strong>
+            <span>Enemies down</span>
+        </div>
+        <div class="dungeon-summary-stat">
+            <strong>{{ questions_answered }}</strong>
+            <span>Questions faced</span>
+        </div>
+        <div class="dungeon-summary-stat">
+            <strong>{{ run.current_hp }}/{{ run.max_hp }}</strong>
+            <span>Hearts left</span>
+        </div>
+        <div class="dungeon-summary-stat">
+            <strong>{{ inventory.key_pieces }}/{{ inventory.key_pieces_required }}</strong>
+            <span>Key pieces</span>
+        </div>
+    </div>
+
+    {% if run.status == 'failed' %}
+        <p class="dungeon-quiz-meta" style="margin-bottom:18px;">
+            Every question you missed is still in the chapter review — read it back, then try the dungeon again.
+        </p>
+    {% endif %}
+
+    <div class="dungeon-summary-actions">
+        <a class="btn btn-primary btn-sm" href="{{ relaunch_url }}">Back to Dungeon Quest</a>
+        <a class="btn btn-secondary btn-sm" href="{% url 'courses:chapter_review' run.quiz.chapter.pk %}">Review the chapter</a>
+        <a class="btn btn-ghost btn-sm" href="{% url 'courses:course_detail' run.quiz.chapter.course.pk %}">Back to course</a>
+    </div>
+</div>
+{% endblock %}

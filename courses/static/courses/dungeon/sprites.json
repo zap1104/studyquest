@@ -1,0 +1,31 @@
+{
+  "_readme": "Sprite manifest for Dungeon Quest. Every image the game draws is resolved through this file - swapping art is a file drop plus (optionally) a path edit here, never a code edit. Paths are relative to this file. An entry may be a plain path string, or an object {\"file\": \"...\", \"frames\": n} for a horizontal animation strip. See ART_GUIDE.md for exact pixel dimensions.",
+  "tile_size": 32,
+  "icon_size": 16,
+  "frame_ms": 220,
+  "tiles": {
+    "floor": "sprites/floor.png",
+    "wall": "sprites/wall.png",
+    "grass": "sprites/grass.png",
+    "door_locked": "sprites/door_locked.png",
+    "door_unlocked": "sprites/door_unlocked.png"
+  },
+  "actors": {
+    "player_down": "sprites/player_down.png",
+    "player_up": "sprites/player_up.png",
+    "player_left": "sprites/player_left.png",
+    "player_right": "sprites/player_right.png",
+    "enemy_default": "sprites/enemy_default.png"
+  },
+  "items": {
+    "key_piece": "sprites/key_piece.png",
+    "final_key": "sprites/final_key.png",
+    "skip_potion": "sprites/skip_potion.png",
+    "health_potion": "sprites/health_potion.png"
+  },
+  "ui": {
+    "heart_full": "sprites/heart_full.png",
+    "heart_empty": "sprites/heart_empty.png",
+    "panel_frame": { "file": "sprites/panel_frame.png", "slice": 8 }
+  }
+}

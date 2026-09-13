@@ -23,5 +23,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('login/', course_views.auth_portal, name='login'),
     path('logout/', LogoutView.as_view(next_page='login'), name='logout'),
+    path('dungeon/', include('dungeon.urls')),
     path('', include('courses.urls')),
 ]
