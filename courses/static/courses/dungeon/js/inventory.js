@@ -24,6 +24,7 @@
         this.heartsEl = this.root.querySelector('[data-hearts]');
         this.hpTextEl = this.root.querySelector('[data-hp-text]');
         this.keysEl = this.root.querySelector('[data-keys]');
+        this.keyReadoutEl = this.root.querySelector('[data-key-readout]');
         this.keyNoteEl = this.root.querySelector('[data-key-note]');
         this.itemsEl = this.root.querySelector('[data-items]');
         this.toastEl = options.toast;
@@ -66,8 +67,13 @@
             key.alt = 'The assembled final key';
             key.dataset.collected = 'true';
             this.keysEl.appendChild(key);
-            this.keyNoteEl.textContent = 'The key is whole. The exit is open.';
-            this.keyNoteEl.dataset.unlocked = 'true';
+            if (this.keyReadoutEl) {
+                this.keyReadoutEl.textContent = 'KEY COMPLETE';
+            }
+            if (this.keyNoteEl) {
+                this.keyNoteEl.textContent = 'The key is whole. The exit is open.';
+                this.keyNoteEl.dataset.unlocked = 'true';
+            }
             return;
         }
 
@@ -80,9 +86,15 @@
             this.keysEl.appendChild(piece);
         }
 
-        this.keyNoteEl.dataset.unlocked = 'false';
-        this.keyNoteEl.textContent =
-            inventory.key_pieces + ' of ' + required + ' key pieces — the exit stays sealed.';
+        if (this.keyReadoutEl) {
+            this.keyReadoutEl.textContent =
+                inventory.key_pieces + ' / ' + required + ' KEY PIECES';
+        }
+        if (this.keyNoteEl) {
+            this.keyNoteEl.dataset.unlocked = 'false';
+            this.keyNoteEl.textContent =
+                inventory.key_pieces + ' of ' + required + ' key pieces. The exit stays sealed.';
+        }
     };
 
     Inventory.prototype.renderItems = function (inventory, hp) {
@@ -120,7 +132,7 @@
             label.textContent = definition.label;
 
             var count = document.createElement('span');
-            count.className = 'dungeon-item-count';
+            count.className = 'dungeon-item-count dq-type-numeric';
             count.textContent = '×' + definition.count;
 
             button.appendChild(icon);

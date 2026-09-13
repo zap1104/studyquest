@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Press+Start+2P&display=swap');
+
 /* =========================================================
    Dungeon Quest
    Built entirely on the StudyQuest theme tokens (--ink, --surface,
@@ -12,6 +14,10 @@
 .dungeon-page {
     --dq-gap: 16px;
     --dq-panel-radius: 14px;
+    --dq-font-impact: 'Press Start 2P', 'Pixelify Sans', ui-monospace, monospace;
+    --dq-font-interface: 'Pixelify Sans', 'Press Start 2P', ui-monospace, monospace;
+    --dq-font-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --dq-font-mono: ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace;
     max-width: 1100px;
 }
 
@@ -32,6 +38,78 @@
    browser's [hidden] rule - so a hidden button would still show. The game
    toggles visibility with .hidden throughout, so make the attribute win. */
 .dungeon-page [hidden] { display: none !important; }
+
+/* ---------------------------------------------------------
+   DUNGEON QUEST TYPOGRAPHY SYSTEM
+   1. Pixel display/interface font: short game-state info
+   2. Standard UI font: careful reading (questions, explanations)
+   3. Monospace font: technical hints (WASD, keys)
+   --------------------------------------------------------- */
+.dq-type-display {
+    font-family: var(--dq-font-interface);
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.dq-type-label {
+    font-family: var(--dq-font-interface);
+    font-size: 0.74rem;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.dq-type-impact {
+    font-family: var(--dq-font-impact);
+    font-size: 0.65rem;
+    line-height: 1.6;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.dq-type-numeric {
+    font-family: var(--dq-font-interface);
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0.04em;
+}
+
+.dq-type-body {
+    font-family: var(--dq-font-body);
+    line-height: 1.55;
+}
+
+.dq-type-question {
+    font-family: var(--dq-font-body);
+    font-size: 1.02rem;
+    font-weight: 600;
+    line-height: 1.55;
+}
+
+.dq-type-action {
+    font-family: var(--dq-font-interface);
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.dq-kbd {
+    font-family: var(--dq-font-mono);
+    font-size: 0.76rem;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--surface) 80%, transparent);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
 
 /* ---------------------------------------------------------
    1. LAUNCH SCREEN
@@ -315,13 +393,14 @@ body.dungeon-live-run .footer,
 .dungeon-objective-badge {
     display: inline-flex;
     align-items: center;
-    padding: 2px 8px;
+    padding: 3px 8px 2px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--accent) 18%, transparent);
     color: var(--accent);
-    font-size: 0.7rem;
-    font-weight: 800;
-    letter-spacing: 0.06em;
+    font-family: var(--dq-font-interface);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
     white-space: nowrap;
     flex-shrink: 0;
@@ -334,8 +413,11 @@ body.dungeon-live-run .footer,
 }
 
 .dungeon-objective-label {
-    font-size: 0.85rem;
-    font-weight: 800;
+    font-family: var(--dq-font-interface);
+    font-size: 0.86rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
     color: var(--ink);
     line-height: 1.3;
     white-space: nowrap;
@@ -344,7 +426,9 @@ body.dungeon-live-run .footer,
 }
 
 .dungeon-objective-detail {
-    font-size: 0.75rem;
+    font-family: var(--dq-font-body);
+    font-size: 0.78rem;
+    font-weight: 400;
     color: var(--muted);
     line-height: 1.3;
     white-space: nowrap;
@@ -421,7 +505,7 @@ body.dungeon-live-run .footer,
    2b. RETRO BATTLE DIALOGUE / COMBAT MESSAGE (CENTER COLUMN)
    --------------------------------------------------------- */
 .pixel-font {
-    font-family: 'Press Start 2P', ui-monospace, monospace;
+    font-family: var(--dq-font-impact);
     letter-spacing: 0.04em;
 }
 
@@ -499,9 +583,11 @@ body.dungeon-live-run .footer,
 }
 
 .dungeon-message-title {
+    font-family: var(--dq-font-impact);
     color: #40e7ff;
     font-size: clamp(0.58rem, 0.7vw, 0.7rem);
     line-height: 1.6;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
 }
 
@@ -523,9 +609,11 @@ body.dungeon-live-run .footer,
 }
 
 .dungeon-message-meta {
+    font-family: var(--dq-font-impact);
     color: #ffd75a;
     font-size: clamp(0.52rem, 0.62vw, 0.64rem);
     line-height: 1.6;
+    letter-spacing: 0.04em;
     text-align: right;
     white-space: nowrap;
     text-transform: uppercase;
@@ -545,9 +633,12 @@ body.dungeon-live-run .footer,
     align-items: center;
     gap: 8px;
     color: #ffd75a;
+    font-family: var(--dq-font-impact);
     font-size: clamp(0.52rem, 0.62vw, 0.62rem);
+    letter-spacing: 0.04em;
     line-height: 1.5;
     white-space: nowrap;
+    text-transform: uppercase;
 }
 
 .dungeon-message-combo[hidden] {
@@ -593,10 +684,10 @@ body.dungeon-live-run .footer,
 .dungeon-message-primary {
     margin: 0;
     max-width: 94%;
-    color: #ffffff;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    font-size: 0.94rem;
-    font-weight: 700;
+    color: #f0f4fc;
+    font-family: var(--dq-font-body);
+    font-size: 0.88rem;
+    font-weight: 600;
     line-height: 1.5;
 }
 
@@ -604,9 +695,9 @@ body.dungeon-live-run .footer,
     margin: 0;
     max-width: 95%;
     color: #ffd75a;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: var(--dq-font-body);
     font-size: 0.84rem;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.45;
 }
 
@@ -617,9 +708,10 @@ body.dungeon-live-run .footer,
 .dungeon-message-secondary {
     margin: 0;
     max-width: 95%;
-    color: rgba(255, 255, 255, 0.82);
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: rgba(240, 244, 252, 0.82);
+    font-family: var(--dq-font-body);
     font-size: 0.82rem;
+    font-weight: 400;
     line-height: 1.5;
 }
 
@@ -703,9 +795,10 @@ body.dungeon-live-run .footer,
 
 .dungeon-hud-title {
     margin: 0;
-    font-size: 0.72rem;
-    font-weight: 900;
-    letter-spacing: 0.08em;
+    font-family: var(--dq-font-interface);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--muted);
 }
@@ -725,9 +818,11 @@ body.dungeon-live-run .footer,
 
 .dungeon-hp-readout {
     margin: 6px 0 0;
+    font-family: var(--dq-font-interface);
     color: var(--ink);
-    font-size: 0.85rem;
-    font-weight: 700;
+    font-size: 0.84rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
 }
 
 .dungeon-keys {
@@ -746,15 +841,27 @@ body.dungeon-live-run .footer,
 
 .dungeon-keys img[data-collected="false"] { opacity: 0.28; }
 
-.dungeon-key-note {
+.dungeon-key-readout {
     margin: 6px 0 0;
+    font-family: var(--dq-font-interface);
+    color: var(--ink);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.dungeon-key-note {
+    margin: 4px 0 0;
+    font-family: var(--dq-font-body);
     color: var(--muted);
     font-size: 0.78rem;
+    line-height: 1.45;
 }
 
 .dungeon-key-note[data-unlocked="true"] {
     color: var(--gold);
-    font-weight: 800;
+    font-weight: 700;
 }
 
 .dungeon-items {
@@ -773,8 +880,10 @@ body.dungeon-live-run .footer,
     border-radius: 10px;
     background: transparent;
     color: var(--ink);
-    font: inherit;
+    font-family: var(--dq-font-interface);
     font-size: 0.84rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
     text-align: left;
     cursor: pointer;
 }
@@ -794,7 +903,10 @@ body.dungeon-live-run .footer,
 
 .dungeon-item-count {
     margin-left: auto;
-    font-weight: 900;
+    font-family: var(--dq-font-interface);
+    font-size: 0.84rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
     color: var(--muted);
 }
 
@@ -833,18 +945,29 @@ body.dungeon-live-run .footer,
     max-width: 280px;
 }
 
+.dungeon-idle-content .dungeon-hud-title {
+    font-family: var(--dq-font-interface);
+    font-size: 0.82rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
 .dungeon-idle-note {
     margin: 0;
+    font-family: var(--dq-font-body);
     color: var(--muted);
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     line-height: 1.45;
 }
 
 .dungeon-idle-sub {
     margin: 4px 0 10px;
+    font-family: var(--dq-font-interface);
     color: var(--ink);
-    font-size: 0.85rem;
+    font-size: 0.78rem;
     font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
 }
 
 .dungeon-idle-actions-hint {
@@ -859,9 +982,11 @@ body.dungeon-live-run .footer,
 }
 
 .dungeon-idle-tag {
-    font-weight: 800;
+    font-family: var(--dq-font-interface);
+    font-size: 0.68rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.06em;
     color: var(--accent);
 }
 
@@ -904,8 +1029,11 @@ body.dungeon-live-run .footer,
 .dungeon-enemy-name {
     grid-area: enemy;
     margin: 0;
-    font-size: 1.05rem;
-    font-weight: 800;
+    font-family: var(--dq-font-interface);
+    font-size: 0.96rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
 }
 
 .dungeon-enemy-name:focus { outline: none; }
@@ -917,8 +1045,12 @@ body.dungeon-live-run .footer,
 .dungeon-question-counter {
     grid-area: counter;
     margin: 0;
+    font-family: var(--dq-font-interface);
     color: var(--muted);
-    font-size: 0.8rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
 }
 
 .dungeon-enemy-hp {
@@ -930,6 +1062,13 @@ body.dungeon-live-run .footer,
     color: var(--muted);
     font-size: 0.8rem;
     font-weight: 700;
+}
+
+.dungeon-enemy-hp span[data-enemy-hp-text] {
+    font-family: var(--dq-font-interface);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
 }
 
 .dungeon-enemy-bar {
@@ -964,8 +1103,10 @@ body.dungeon-live-run .footer,
 .dungeon-question-prompt {
     margin: 0 0 14px;
     color: var(--ink);
+    font-family: var(--dq-font-body);
     font-size: 1.02rem;
-    line-height: 1.5;
+    font-weight: 600;
+    line-height: 1.55;
 }
 
 .dungeon-answer-fields {
@@ -979,11 +1120,12 @@ body.dungeon-live-run .footer,
 .dungeon-answer-fields legend {
     padding: 0;
     margin-bottom: 14px;
+    font-family: var(--dq-font-interface);
     color: var(--muted);
-    font-size: 0.77rem;
-    font-weight: 900;
+    font-size: 0.74rem;
+    font-weight: 700;
     line-height: 1.4;
-    letter-spacing: 0.065em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 
@@ -996,6 +1138,7 @@ body.dungeon-live-run .footer,
     border: 1px solid var(--border);
     border-radius: 10px;
     color: var(--ink);
+    font-family: var(--dq-font-body);
     font-size: 0.92rem;
     cursor: pointer;
 }
@@ -1027,7 +1170,7 @@ body.dungeon-live-run .footer,
     border-radius: 12px;
     background: var(--bg);
     color: var(--ink);
-    font: inherit;
+    font-family: var(--dq-font-body);
     font-size: 0.92rem;
     box-sizing: border-box;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -1054,12 +1197,15 @@ body.dungeon-live-run .footer,
 .dungeon-battle-actions .btn {
     width: 100%;
     min-height: 52px;
-    font-size: 1rem;
-    font-weight: 800;
+    font-family: var(--dq-font-interface);
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.4;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    letter-spacing: 0.02em;
     border-radius: 10px;
 }
 
@@ -1121,7 +1267,7 @@ body.dungeon-live-run .footer,
     }
     .dungeon-battle-actions .btn {
         min-height: 44px;
-        font-size: 0.95rem;
+        font-size: 0.72rem;
     }
 }
 

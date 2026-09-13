@@ -212,7 +212,7 @@
 
         var enemy = battle.enemy;
         this.titleEl.textContent = 'Enemy ' + (enemy.index + 1);
-        this.counterEl.textContent = 'Question ' + battle.question_number + ' of ' + battle.questions_total;
+        this.counterEl.textContent = 'Question ' + battle.question_number + ' / ' + battle.questions_total;
         this.hpTextEl.textContent = enemy.hp + ' / ' + enemy.max_hp + ' HP';
         this.barEl.style.width = (enemy.max_hp ? (enemy.hp / enemy.max_hp) * 100 : 0) + '%';
 

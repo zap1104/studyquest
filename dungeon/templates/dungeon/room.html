@@ -35,19 +35,20 @@
             <aside class="dungeon-info-column" aria-label="Run status">
                 <div class="dungeon-hud" data-hud data-panel-frame>
                     <div class="dungeon-hud-section">
-                        <h2 class="dungeon-hud-title">Health</h2>
+                        <h2 class="dungeon-hud-title dq-type-label">Health</h2>
                         <div class="dungeon-hearts" data-hearts role="img" aria-hidden="true"></div>
-                        <p class="dungeon-hp-readout" data-hp-text>—</p>
+                        <p class="dungeon-hp-readout dq-type-numeric" data-hp-text>—</p>
                     </div>
 
                     <div class="dungeon-hud-section">
-                        <h2 class="dungeon-hud-title">The key</h2>
+                        <h2 class="dungeon-hud-title dq-type-label">The key</h2>
                         <div class="dungeon-keys" data-keys></div>
-                        <p class="dungeon-key-note" data-key-note data-unlocked="false">—</p>
+                        <p class="dungeon-key-readout dq-type-numeric" data-key-readout>0 / 2 KEY PIECES</p>
+                        <p class="dungeon-key-note dq-type-body" data-key-note data-unlocked="false">—</p>
                     </div>
 
                     <div class="dungeon-hud-section">
-                        <h2 class="dungeon-hud-title">Items</h2>
+                        <h2 class="dungeon-hud-title dq-type-label">Items</h2>
                         <div class="dungeon-items" data-items></div>
                     </div>
                 </div>
@@ -56,10 +57,10 @@
             <!-- 2. CENTER COLUMN: OBJECTIVE & ROOM -->
             <main class="dungeon-board-column" role="main">
                 <div class="dungeon-objective-bar" data-objective-bar role="status" aria-live="polite">
-                    <span class="dungeon-objective-badge" data-objective-badge>Objective</span>
+                    <span class="dungeon-objective-badge dq-type-label" data-objective-badge>Objective</span>
                     <div class="dungeon-objective-content">
-                        <strong class="dungeon-objective-label" data-objective-label>Loading objective...</strong>
-                        <span class="dungeon-objective-detail" data-objective-detail></span>
+                        <strong class="dungeon-objective-label dq-type-display" data-objective-label>Loading objective...</strong>
+                        <span class="dungeon-objective-detail dq-type-body" data-objective-detail></span>
                     </div>
                 </div>
 
@@ -69,7 +70,7 @@
                                 aria-label="Dungeon room. Loading."></canvas>
                     </div>
 
-                    <p class="dungeon-board-caption" data-blocked-note hidden></p>
+                    <p class="dungeon-board-caption dq-type-body" data-blocked-note hidden></p>
 
                     <nav class="dungeon-dpad" data-dpad aria-label="Movement controls">
                         <button type="button" data-direction="up" aria-label="Move north">▲</button>
@@ -78,14 +79,14 @@
                         <button type="button" data-direction="down" aria-label="Move south">▼</button>
                     </nav>
 
-                    <p class="dungeon-board-caption">Arrow keys or WASD to move. Grass hides enemies.</p>
+                    <p class="dungeon-board-caption dq-type-body">Arrow keys or <kbd class="dq-kbd">WASD</kbd> to move. Grass hides enemies.</p>
                     <p class="dungeon-sr-only" data-board-description></p>
                 </div>
 
                 <!-- Retro Battle Dialogue / Combat Message Box -->
                 <section class="dungeon-combat-message" data-combat-message data-state="roaming" aria-live="polite" aria-label="Combat message and dialogue log">
                     <header class="dungeon-message-header">
-                        <strong class="dungeon-message-title pixel-font" data-message-title>
+                        <strong class="dungeon-message-title dq-type-impact" data-message-title>
                             Exploring
                         </strong>
 
@@ -96,21 +97,21 @@
                                 <i></i>
                                 <i></i>
                             </span>
-                            <span class="dungeon-message-combo-text pixel-font" data-message-combo-text>
+                            <span class="dungeon-message-combo-text dq-type-impact" data-message-combo-text>
                                 Combo 0/3
                             </span>
                         </div>
 
-                        <span class="dungeon-message-meta pixel-font" data-message-meta hidden></span>
+                        <span class="dungeon-message-meta dq-type-impact" data-message-meta hidden></span>
                     </header>
 
                     <div class="dungeon-message-body">
-                        <p class="dungeon-message-primary" data-message-primary>
+                        <p class="dungeon-message-primary dq-type-body" data-message-primary>
                             Find an enemy in the tall grass.
                         </p>
 
-                        <p class="dungeon-message-answer" data-message-answer hidden></p>
-                        <p class="dungeon-message-secondary" data-message-explanation>
+                        <p class="dungeon-message-answer dq-type-body" data-message-answer hidden></p>
+                        <p class="dungeon-message-secondary dq-type-body" data-message-explanation>
                             Explore the room using movement keys or on-screen D-pad.
                         </p>
                     </div>
@@ -124,12 +125,12 @@
                 <!-- Lightweight idle encounter card -->
                 <div class="dungeon-battle-idle" data-battle-idle data-panel-frame>
                     <div class="dungeon-idle-content">
-                        <h2 class="dungeon-hud-title">No Active Encounter</h2>
-                        <p class="dungeon-idle-note">Explore the grass to find an enemy.</p>
-                        <p class="dungeon-idle-sub" data-enemies-remaining>Enemies remaining: —</p>
+                        <h2 class="dungeon-hud-title dq-type-label">No Active Encounter</h2>
+                        <p class="dungeon-idle-note dq-type-body">Explore the grass to find an enemy.</p>
+                        <p class="dungeon-idle-sub dq-type-numeric" data-enemies-remaining>Enemies remaining: —</p>
                         <div class="dungeon-idle-actions-hint">
-                            <span class="dungeon-idle-tag">Controls</span>
-                            <span>Arrow keys, WASD, or movement pad</span>
+                            <span class="dungeon-idle-tag dq-type-label">Controls</span>
+                            <span class="dq-type-body">Arrow keys, <kbd class="dq-kbd">WASD</kbd>, or movement pad</span>
                         </div>
                     </div>
                 </div>
@@ -137,26 +138,26 @@
                 <!-- Active battle panel (3-row grid) -->
                 <section class="dungeon-battle" data-battle data-panel-frame hidden aria-labelledby="dungeon-battle-title">
                     <header class="dungeon-battle-header">
-                        <h2 class="dungeon-battle-title dungeon-enemy-name" id="dungeon-battle-title"
+                        <h2 class="dungeon-battle-title dungeon-enemy-name dq-type-display" id="dungeon-battle-title"
                             data-battle-title tabindex="-1">Enemy</h2>
-                        <p class="dungeon-quiz-meta dungeon-question-counter" data-battle-counter></p>
+                        <p class="dungeon-quiz-meta dungeon-question-counter dq-type-label" data-battle-counter></p>
                         <div class="dungeon-enemy-hp dungeon-enemy-health">
                             <span class="dungeon-enemy-bar"><span data-enemy-bar style="width:100%"></span></span>
-                            <span data-enemy-hp-text></span>
+                            <span class="dq-type-numeric" data-enemy-hp-text></span>
                         </div>
                     </header>
 
                     <form data-battle-form class="dungeon-battle-form" novalidate>
                         <div class="dungeon-battle-body" data-battle-body>
-                            <p class="dungeon-question-prompt" data-question-prompt></p>
+                            <p class="dungeon-question-prompt dq-type-question" data-question-prompt></p>
                             <fieldset class="dungeon-answer-fields" data-answer-fields>
-                                <legend data-answer-legend>Answer</legend>
+                                <legend class="dq-type-label" data-answer-legend>Answer</legend>
                             </fieldset>
                         </div>
 
                         <div class="dungeon-battle-actions">
-                            <button type="submit" class="btn btn-primary" data-submit-answer>Attack</button>
-                            <button type="button" class="btn btn-primary" data-continue hidden>Next question</button>
+                            <button type="submit" class="btn btn-primary dq-type-action" data-submit-answer>Attack</button>
+                            <button type="button" class="btn btn-primary dq-type-action" data-continue hidden>Next question</button>
                         </div>
                     </form>
                 </section>
