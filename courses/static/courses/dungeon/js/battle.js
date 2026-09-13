@@ -365,7 +365,7 @@
         if (event && event.preventDefault) event.preventDefault();
         if (this.busy || !this.battle || !this.battle.question) { return; }
 
-        if (!this.feedbackEl.hidden) {
+        if ((this.continueEl && !this.continueEl.hidden) || (this.feedbackEl && !this.feedbackEl.hidden)) {
             this.continueAfterFeedback();
             return;
         }

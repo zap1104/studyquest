@@ -243,12 +243,13 @@
         (function() {
             const root = document.documentElement;
             const btn = document.getElementById('theme-toggle');
-            let current = localStorage.getItem('studyquest_theme') || 'light';
+            if (!btn) return;
 
             btn.addEventListener('click', () => {
-                current = current === 'light' ? 'dark' : 'light';
-                root.setAttribute('data-theme', current);
-                localStorage.setItem('studyquest_theme', current);
+                const isDark = root.getAttribute('data-theme') === 'dark';
+                const nextTheme = isDark ? 'light' : 'dark';
+                root.setAttribute('data-theme', nextTheme);
+                localStorage.setItem('studyquest_theme', nextTheme);
             });
         })();
     </script>
