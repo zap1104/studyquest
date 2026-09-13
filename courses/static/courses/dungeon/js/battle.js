@@ -154,8 +154,18 @@
         return this.renderCombatMessage(options);
     };
 
+    Battle.prototype.setWorkspaceState = function (state) {
+        if (!this.columnsEl) {
+            this.columnsEl = document.querySelector('[data-run-columns]');
+        }
+        if (this.columnsEl) {
+            this.columnsEl.dataset.state = state;
+        }
+    };
+
     Battle.prototype.open = function (battle) {
         this.battle = battle;
+        this.setWorkspaceState('combat');
         this.root.hidden = false;
         if (this.idleEl) { this.idleEl.hidden = true; }
         this.render();
@@ -200,6 +210,7 @@
 
     Battle.prototype.close = function () {
         this.battle = null;
+        this.setWorkspaceState('roaming');
         this.root.hidden = true;
         if (this.feedbackEl) { this.feedbackEl.hidden = true; }
         if (this.idleEl) { this.idleEl.hidden = false; }
@@ -220,6 +231,7 @@
 
         if (this.feedbackEl) { this.feedbackEl.hidden = true; }
         this.submitEl.hidden = false;
+        this.submitEl.dataset.action = 'attack';
         this.continueEl.hidden = true;
 
         this.renderQuestion(battle.question);
@@ -438,6 +450,9 @@
         this.continueEl.textContent = result.enemy_defeated || result.run_over
             ? 'Continue'
             : 'Next question';
+        this.continueEl.dataset.action = result.enemy_defeated || result.run_over
+            ? 'continue'
+            : 'next';
         this.continueEl.focus();
     };
 

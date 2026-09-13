@@ -1,13 +1,11 @@
-{% extends 'courses/base.html' %}
+{% extends 'dungeon/base_dungeon.html' %}
 {% load static %}
 
 {% block title %}{{ run.quiz.chapter.title }} — Dungeon Quest{% endblock %}
 {% block page_class %}dungeon-page dungeon-run-page{% endblock %}
-{% block body_class %}dungeon-live-run{% endblock %}
+{% block dungeon_body_class %}dungeon-live-run{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'courses/dungeon/css/dungeon.css' %}">
-
 {# Pixel sizes come from dungeon/combat_config.py; the CSS and JS read them from here. #}
 <div class="dungeon-scale-root" style="
     --dq-tile: {{ presentation.tile_size|default:tile_size }}px;
@@ -30,7 +28,7 @@
             </form>
         </header>
 
-        <div class="dungeon-run-columns">
+        <div class="dungeon-run-columns" data-run-columns data-state="{% if run.active_enemy %}combat{% else %}roaming{% endif %}">
             <!-- 1. LEFT COLUMN: RUN STATUS -->
             <aside class="dungeon-info-column" aria-label="Run status">
                 <div class="dungeon-hud" data-hud data-panel-frame>
@@ -44,7 +42,7 @@
                         <h2 class="dungeon-hud-title dq-type-label">The key</h2>
                         <div class="dungeon-keys" data-keys></div>
                         <p class="dungeon-key-readout dq-type-numeric" data-key-readout>0 / 2 KEY PIECES</p>
-                        <p class="dungeon-key-note dq-type-body" data-key-note data-unlocked="false">—</p>
+                        <p class="dungeon-key-note dq-type-body" data-key-note hidden></p>
                     </div>
 
                     <div class="dungeon-hud-section">
@@ -156,8 +154,8 @@
                         </div>
 
                         <div class="dungeon-battle-actions">
-                            <button type="submit" class="btn btn-primary dq-type-action" data-submit-answer>Attack</button>
-                            <button type="button" class="btn btn-primary dq-type-action" data-continue hidden>Next question</button>
+                            <button type="submit" class="btn btn-primary dq-type-action dungeon-action-combat" data-action="attack" data-submit-answer>Attack</button>
+                            <button type="button" class="btn btn-primary dq-type-action dungeon-action-combat" data-action="next" data-continue hidden>Next question</button>
                         </div>
                     </form>
                 </section>

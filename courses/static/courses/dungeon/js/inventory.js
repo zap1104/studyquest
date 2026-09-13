@@ -36,7 +36,7 @@
     Inventory.prototype.render = function (state) {
         this.state = state;
         this.renderHearts(state.hp);
-        this.renderKeys(state.inventory);
+        this.renderKeys(state.inventory, state.room);
         this.renderItems(state.inventory, state.hp);
     };
 
@@ -57,9 +57,10 @@
         this.hpTextEl.textContent = hp.current + ' / ' + hp.max + ' HP';
     };
 
-    Inventory.prototype.renderKeys = function (inventory) {
+    Inventory.prototype.renderKeys = function (inventory, room) {
         this.keysEl.innerHTML = '';
         var required = inventory.key_pieces_required;
+        var exitUnlocked = !!(inventory.has_final_key || (room && room.door_unlocked));
 
         if (inventory.has_final_key) {
             var key = document.createElement('img');
@@ -70,30 +71,26 @@
             if (this.keyReadoutEl) {
                 this.keyReadoutEl.textContent = 'KEY COMPLETE';
             }
-            if (this.keyNoteEl) {
-                this.keyNoteEl.textContent = 'The key is whole. The exit is open.';
-                this.keyNoteEl.dataset.unlocked = 'true';
+        } else {
+            for (var index = 0; index < required; index += 1) {
+                var piece = document.createElement('img');
+                var collected = index < inventory.key_pieces;
+                piece.src = this.renderer.urlFor('items', 'key_piece');
+                piece.alt = collected ? 'Key piece collected' : 'Key piece still missing';
+                piece.dataset.collected = collected ? 'true' : 'false';
+                this.keysEl.appendChild(piece);
             }
-            return;
+
+            if (this.keyReadoutEl) {
+                this.keyReadoutEl.textContent =
+                    inventory.key_pieces + ' / ' + required + ' KEY PIECES';
+            }
         }
 
-        for (var index = 0; index < required; index += 1) {
-            var piece = document.createElement('img');
-            var collected = index < inventory.key_pieces;
-            piece.src = this.renderer.urlFor('items', 'key_piece');
-            piece.alt = collected ? 'Key piece collected' : 'Key piece still missing';
-            piece.dataset.collected = collected ? 'true' : 'false';
-            this.keysEl.appendChild(piece);
-        }
-
-        if (this.keyReadoutEl) {
-            this.keyReadoutEl.textContent =
-                inventory.key_pieces + ' / ' + required + ' KEY PIECES';
-        }
         if (this.keyNoteEl) {
-            this.keyNoteEl.dataset.unlocked = 'false';
-            this.keyNoteEl.textContent =
-                inventory.key_pieces + ' of ' + required + ' key pieces. The exit stays sealed.';
+            this.keyNoteEl.hidden = !exitUnlocked;
+            this.keyNoteEl.textContent = exitUnlocked ? 'The key is whole. The exit is open.' : '';
+            this.keyNoteEl.dataset.unlocked = exitUnlocked ? 'true' : 'false';
         }
     };
 
