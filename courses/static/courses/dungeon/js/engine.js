@@ -74,10 +74,33 @@
         this.canvas = document.getElementById('dungeon-board');
         this.dpad = document.querySelector('[data-dpad]');
         this.blockedEl = document.querySelector('[data-blocked-note]');
+        this.objectiveBar = document.querySelector('[data-objective-bar]');
+        this.objectiveLabel = document.querySelector('[data-objective-label]');
+        this.objectiveDetail = document.querySelector('[data-objective-detail]');
 
         this.moving = false;
         this.announce = this.announce.bind(this);
     }
+
+    Engine.prototype.renderObjective = function (objective) {
+        if (!this.objectiveBar || !objective) { return; }
+        this.objectiveBar.dataset.code = objective.code || '';
+        if (this.objectiveLabel) { this.objectiveLabel.textContent = objective.label || ''; }
+        if (this.objectiveDetail) { this.objectiveDetail.textContent = objective.detail || ''; }
+    };
+
+    Engine.prototype.setDpadActive = function (active) {
+        if (!this.dpad) { return; }
+        if (active) {
+            this.dpad.hidden = false;
+            this.dpad.removeAttribute('aria-hidden');
+            this.dpad.inert = false;
+        } else {
+            this.dpad.hidden = true;
+            this.dpad.setAttribute('aria-hidden', 'true');
+            this.dpad.inert = true;
+        }
+    };
 
     Engine.prototype.start = function () {
         var self = this;
@@ -114,7 +137,12 @@
             self.describeBoard();
             self.bindInput();
 
+            if (self.state.objective) {
+                self.renderObjective(self.state.objective);
+            }
+
             if (self.state.battle) {
+                self.setDpadActive(false);
                 self.battle.open(self.state.battle);
                 self.announce('A battle is already in progress.');
             }
@@ -196,6 +224,10 @@
         this.api.move(direction).then(function (response) {
             var result = response.result;
 
+            if (result.objective) {
+                self.renderObjective(result.objective);
+            }
+
             if (!result.moved) {
                 self.renderer.setState(self.state);
                 if (result.blocked_reason) {
@@ -221,6 +253,7 @@
 
                     if (result.encounter) {
                         self.state.battle = result.encounter;
+                        self.setDpadActive(false);
                         self.inventory.render(self.state);
                         self.battle.open(result.encounter);
                         self.announce(
@@ -246,6 +279,10 @@
         this.state.inventory = result.inventory;
         this.state.room.door_unlocked = result.door_unlocked;
 
+        if (result.objective) {
+            this.renderObjective(result.objective);
+        }
+
         if (result.enemy) {
             this.state.enemies = this.state.enemies.map(function (enemy) {
                 return enemy.index === result.enemy.index ? result.enemy : enemy;
@@ -265,6 +302,14 @@
     Engine.prototype.handleTurnResolved = function (result) {
         this.state.battle = result.battle || null;
         this.inventory.render(this.state);
+
+        if (!this.state.battle) {
+            this.setDpadActive(true);
+        }
+
+        if (result.objective) {
+            this.renderObjective(result.objective);
+        }
 
         if (result.run_over) {
             this.finish(result.run_over);
@@ -286,6 +331,10 @@
     };
 
     Engine.prototype.handleItemUsed = function (itemKey, result) {
+        if (result && result.objective) {
+            this.renderObjective(result.objective);
+        }
+
         if (itemKey === 'health_potion') {
             this.state.hp = result.hp;
             this.state.inventory = result.inventory;
@@ -302,7 +351,11 @@
 
     Engine.prototype.finish = function (outcome) {
         this.state.is_active = false;
+        this.setDpadActive(false);
         this.battle.close();
+        if (outcome && outcome.objective) {
+            this.renderObjective(outcome.objective);
+        }
         this.announce(
             outcome.cleared
                 ? 'Run complete. You earned ' + outcome.xp_awarded + ' XP.'

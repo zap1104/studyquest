@@ -55,12 +55,14 @@
         this.root.hidden = false;
         this.render();
 
-        // Bring the whole panel into view, then take focus without a second
-        // scroll - focusing alone would leave the panel half off-screen.
-        this.root.scrollIntoView({
-            block: 'start',
-            behavior: this.reducedMotion ? 'auto' : 'smooth'
-        });
+        // Bring the whole panel into view on mobile, then take focus without a second
+        // scroll - on desktop (>= 1024px), the panel is already docked side-by-side.
+        if (global.innerWidth < 1024) {
+            this.root.scrollIntoView({
+                block: 'start',
+                behavior: this.reducedMotion ? 'auto' : 'smooth'
+            });
+        }
 
         var heading = this.root.querySelector('[data-battle-title]');
         if (heading) { heading.focus({ preventScroll: true }); }

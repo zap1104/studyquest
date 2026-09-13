@@ -103,6 +103,7 @@ def room(request, pk):
     display = services.display_settings()
     return render(request, "dungeon/room.html", {
         "run": run,
+        "presentation": display,
         "tile_size": display["tile_size"],
         "icon_size": display["icon_size"],
         "ui_scale": display["ui_scale"],

@@ -187,10 +187,104 @@
    phone screen. */
 .dungeon-run-layout > * { min-width: 0; }
 
-/* Side-by-side only once both the board (at 2x) and the HUD genuinely fit.
-   Below that the board takes the full width, which buys it a bigger scale. */
-@media (min-width: 1400px) {
-    .dungeon-run-layout { grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); }
+.dungeon-sidebar-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--dq-gap);
+    min-width: 0;
+}
+
+/* Desktop single-viewport layout derived from:
+   15 room cols * 32px raw tile = 480px board + 32px panel padding = 512px board column
+   + 360px-420px sidebar column + 16px gap + 48px page padding = 936px-996px.
+   Activates cleanly at >= 1024px and locks height within 100dvh. */
+@media (min-width: 1024px) {
+    .dungeon-run-page {
+        max-height: 100dvh;
+        overflow-y: auto;
+    }
+    .dungeon-run-layout {
+        grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+        align-items: start;
+    }
+    .dungeon-sidebar-panel {
+        max-height: calc(100dvh - 120px);
+        overflow-y: auto;
+        scrollbar-width: thin;
+    }
+}
+
+.dungeon-objective-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface) 90%, transparent);
+    box-shadow: var(--shadow);
+    box-sizing: border-box;
+}
+
+.dungeon-objective-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--accent);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.dungeon-objective-content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.dungeon-objective-label {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dungeon-objective-detail {
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dungeon-objective-bar[data-code="defeat_enemy"] .dungeon-objective-badge {
+    background: color-mix(in srgb, var(--danger) 18%, transparent);
+    color: var(--danger);
+}
+
+.dungeon-objective-bar[data-code="exit_unlocked"] .dungeon-objective-badge {
+    background: color-mix(in srgb, var(--gold) 22%, transparent);
+    color: var(--gold);
+}
+
+.dungeon-objective-bar[data-code="run_complete"] .dungeon-objective-badge {
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    color: var(--accent);
+}
+
+.dungeon-objective-bar[data-code="run_failed"] .dungeon-objective-badge {
+    background: color-mix(in srgb, var(--danger) 22%, transparent);
+    color: var(--danger);
 }
 
 .dungeon-board-panel {
@@ -356,7 +450,7 @@
    4. BATTLE PANEL
    --------------------------------------------------------- */
 .dungeon-battle {
-    margin-top: var(--dq-gap);
+    margin-top: 0;
     padding: 18px;
     border: 1px solid var(--border);
     border-radius: var(--dq-panel-radius);
@@ -476,11 +570,22 @@
     outline-offset: 1px;
 }
 
+.dungeon-question-scroll {
+    max-height: clamp(180px, 35dvh, 320px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
+    margin-bottom: 8px;
+    scrollbar-width: thin;
+}
+
 .dungeon-battle-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
     align-items: center;
+    margin-top: auto;
+    padding-top: 6px;
 }
 
 .dungeon-feedback {
@@ -516,6 +621,7 @@
         ". down .";
     gap: 8px;
     justify-content: center;
+    touch-action: none;
 }
 
 /* Touch pointers and phone-width screens always get the pad; the engine can
