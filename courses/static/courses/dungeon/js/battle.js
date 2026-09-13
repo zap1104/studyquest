@@ -52,6 +52,7 @@
         this.messageToggleExplanationBtn = document.querySelector('[data-toggle-explanation]');
         this.messageExplanationEl = document.querySelector('[data-message-explanation]');
         this.messageBodyEl = document.querySelector('[data-dungeon-message-body]');
+        this.scrollControlsEl = document.querySelector('[data-message-scroll-controls]');
         this.scrollUpBtn = document.querySelector('[data-message-scroll-up]');
         this.scrollDownBtn = document.querySelector('[data-message-scroll-down]');
 
@@ -226,11 +227,18 @@
 
         body.tabIndex = hasOverflow ? 0 : -1;
 
+        if (this.scrollControlsEl) {
+            this.scrollControlsEl.hidden = !hasOverflow;
+        }
         if (this.scrollUpBtn) {
-            this.scrollUpBtn.hidden = !hasOverflow || isAtTop;
+            this.scrollUpBtn.hidden = !hasOverflow;
+            this.scrollUpBtn.disabled = isAtTop;
+            this.scrollUpBtn.setAttribute('aria-disabled', String(isAtTop));
         }
         if (this.scrollDownBtn) {
-            this.scrollDownBtn.hidden = !hasOverflow || isAtBottom;
+            this.scrollDownBtn.hidden = !hasOverflow;
+            this.scrollDownBtn.disabled = isAtBottom;
+            this.scrollDownBtn.setAttribute('aria-disabled', String(isAtBottom));
         }
     };
 
@@ -331,6 +339,7 @@
         this.root.hidden = true;
         if (this.feedbackEl) { this.feedbackEl.hidden = true; }
         if (this.idleEl) { this.idleEl.hidden = false; }
+        if (this.scrollControlsEl) { this.scrollControlsEl.hidden = true; }
         if (this.scrollUpBtn) { this.scrollUpBtn.hidden = true; }
         if (this.scrollDownBtn) { this.scrollDownBtn.hidden = true; }
     };

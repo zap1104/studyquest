@@ -1593,9 +1593,15 @@ body.dungeon-live-run .footer,
     gap: 6px;
     overflow-y: auto;
     overscroll-behavior: contain;
-    scrollbar-gutter: stable;
-    scrollbar-width: thin;
-    padding-right: 32px; /* Ensure message content never overlaps the scroll buttons */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE / legacy Edge */
+    padding-right: 44px; /* Ensure message content never overlaps the stepper buttons */
+}
+
+.dungeon-message-body::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, and modern Edge */
+    width: 0;
+    height: 0;
 }
 
 .dungeon-message-primary {
@@ -1695,46 +1701,59 @@ body.dungeon-live-run .footer,
     display: none;
 }
 
-/* Accessible Message Scroll Buttons (Shown only when overflow exists) */
-.dungeon-message-scroll-btn {
+/* Accessible Message Scroll Controls (Stacked Retro Stepper) */
+.dungeon-message-scroll-controls {
     position: absolute;
-    right: 8px;
-    width: 22px;
+    right: 14px;
+    top: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    z-index: 3;
+}
+
+.dungeon-message-scroll-controls[hidden] {
+    display: none;
+}
+
+.dungeon-message-scroll-btn {
+    width: 24px;
     height: 22px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 0;
-    background: rgba(26, 21, 16, 0.92);
-    border: 1px solid rgba(232, 163, 61, 0.40);
+    background: rgba(26, 21, 16, 0.94);
+    border: 1px solid rgba(232, 163, 61, 0.45);
     border-radius: 4px;
     color: #ffd75a;
     font-size: 10px;
     line-height: 1;
     cursor: pointer;
-    z-index: 3;
-    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.1s ease;
 }
 
-.dungeon-message-scroll-btn:hover {
+.dungeon-message-scroll-btn:hover:not(:disabled) {
     background: rgba(45, 36, 26, 0.98);
     border-color: #ffd75a;
 }
 
-.dungeon-message-scroll-btn:active {
+.dungeon-message-scroll-btn:active:not(:disabled) {
     transform: scale(0.92);
+}
+
+.dungeon-message-scroll-btn:disabled,
+.dungeon-message-scroll-btn[aria-disabled="true"] {
+    opacity: 0.25;
+    cursor: default;
+    border-color: rgba(232, 163, 61, 0.15);
+    color: rgba(255, 215, 90, 0.35);
+    pointer-events: none;
 }
 
 .dungeon-message-scroll-btn[hidden] {
     display: none;
-}
-
-.dungeon-message-scroll-up {
-    top: 44px;
-}
-
-.dungeon-message-scroll-down {
-    bottom: 12px;
 }
 
 #dungeon-board {
