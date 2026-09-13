@@ -2700,13 +2700,13 @@ body.quiz-completed .page.quiz-page {
     z-index: 1301;
 
     /* Scaled comfortably to occupy the center stage over results card */
-    width: min(780px, calc(100vw - 32px));
+    width: min(580px, calc(100vw - 32px));
     min-height: auto;
 
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    gap: clamp(14px, 2.2vw, 24px);
+    gap: 12px;
 
     opacity: 0;
     visibility: hidden;
@@ -2729,12 +2729,12 @@ body.show-result-mascot .result-presentation {
         visibility 0s;
 }
 
-/* Mascot Stage: Proportionate scaling to sit cleanly above results sheet */
+/* Mascot Stage: Enlarged so character presence is strong, cut legs tuck behind sheet */
 .result-mascot-stage {
     position: relative;
     width: auto;
-    height: clamp(155px, 21vh, 215px);
-    overflow: hidden;
+    height: clamp(230px, 34vh, 320px);
+    overflow: visible;
     flex-shrink: 0;
 
     display: flex;
@@ -2744,23 +2744,23 @@ body.show-result-mascot .result-presentation {
 
 .result-mascot-img {
     height: 100%;
-    max-height: clamp(155px, 21vh, 215px);
+    max-height: clamp(230px, 34vh, 320px);
     width: auto;
     display: block;
     object-fit: contain;
     object-position: center bottom;
-    filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.45));
+    filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.45));
 }
 
-/* Dialogue Speech Bubble: Scaled to match companion mascot */
+/* Dialogue Speech Bubble: Compact and elegant */
 .result-guidance {
     position: relative;
-    max-width: clamp(260px, 30vw, 360px);
-    margin-bottom: clamp(12px, 2vh, 24px);
+    max-width: clamp(210px, 25vw, 290px);
+    margin-bottom: clamp(32px, 6vh, 68px);
     margin-left: 0;
-    padding: clamp(12px, 1.6vh, 18px) clamp(16px, 1.8vw, 22px);
+    padding: 10px 14px;
     border: 1.5px solid rgba(108, 92, 231, 0.45);
-    border-radius: 16px;
+    border-radius: 14px;
     background: rgba(17, 26, 49, 0.96);
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(14px);
@@ -2776,8 +2776,8 @@ body.show-result-mascot .result-presentation {
     transform: translateY(-50%);
     width: 0;
     height: 0;
-    border-top: 11px solid transparent;
-    border-bottom: 11px solid transparent;
+    border-top: 9px solid transparent;
+    border-bottom: 9px solid transparent;
     border-right: 13px solid rgba(108, 92, 231, 0.45);
 }
 
@@ -2789,25 +2789,25 @@ body.show-result-mascot .result-presentation {
     transform: translateY(-50%);
     width: 0;
     height: 0;
-    border-top: 10px solid transparent;
-    border-bottom: 10px solid transparent;
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
     border-right: 12px solid rgba(17, 26, 49, 0.96);
 }
 
 .result-guidance-title {
     display: block;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
     color: #ffffff;
-    font-size: clamp(1.05rem, 1.35vw, 1.22rem);
+    font-size: clamp(0.92rem, 1.15vw, 1.05rem);
     font-weight: 900;
-    line-height: 1.25;
+    line-height: 1.2;
 }
 
 .result-guidance-message {
     margin: 0;
     color: rgba(255, 255, 255, 0.88);
-    font-size: clamp(0.84rem, 1.05vw, 0.94rem);
-    line-height: 1.5;
+    font-size: clamp(0.76rem, 0.92vw, 0.84rem);
+    line-height: 1.4;
 }
 
 .result-guidance-message b {
@@ -2817,21 +2817,21 @@ body.show-result-mascot .result-presentation {
 
 @media (max-height: 650px) {
     .result-mascot-stage {
-        height: clamp(120px, 18vh, 150px);
+        height: clamp(160px, 24vh, 200px);
     }
     .result-mascot-img {
-        max-height: clamp(120px, 18vh, 150px);
+        max-height: clamp(160px, 24vh, 200px);
     }
     .result-guidance {
-        margin-bottom: clamp(8px, 1.5vh, 16px);
-        padding: 10px 14px;
-        max-width: 290px;
+        margin-bottom: clamp(16px, 3vh, 32px);
+        padding: 8px 12px;
+        max-width: 250px;
     }
     .result-guidance-title {
-        font-size: 0.95rem;
+        font-size: 0.88rem;
     }
     .result-guidance-message {
-        font-size: 0.80rem;
+        font-size: 0.74rem;
     }
     .result-sheet {
         max-height: 65dvh;

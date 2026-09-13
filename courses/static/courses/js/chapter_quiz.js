@@ -410,8 +410,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!presentation || !resultSheet) return;
 
         const resultHeight = resultSheet.getBoundingClientRect().height;
-        const spacing = window.innerWidth <= 640 ? 6 : 10;
-        presentation.style.bottom = `${Math.round(resultHeight + spacing)}px`;
+        // Push below so the cut horizontal thighs tuck safely behind the result sheet
+        const overlap = window.innerWidth <= 640 ? 32 : 54;
+        presentation.style.bottom = `${Math.max(Math.round(resultHeight - overlap), 0)}px`;
     }
 
     function showResultPresentation(resultData, animate = true) {
