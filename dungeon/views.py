@@ -61,7 +61,7 @@ def _launch_context(request, launch_error=None):
         "active_runs": (
             DungeonRun.objects.filter(
                 user=request.user, status=DungeonRun.STATUS_IN_PROGRESS
-            ).select_related("quiz__chapter__course")
+            ).select_related("quiz__chapter__course", "active_enemy").prefetch_related("enemies")
         ),
         "recent_runs": (
             DungeonRun.objects.filter(user=request.user)
