@@ -35,6 +35,7 @@ from .combat_config import (
     COMBO_THRESHOLD,
     DAMAGE_PER_CORRECT_ANSWER,
     FORCED_ENCOUNTER_ON_ENEMY_TILE,
+    GUARDIAN_ARMOR_REQUIRED_STREAK,
     ICON_SIZE,
     ITEM_HEALTH_POTION,
     ITEM_NOTHING,
@@ -487,9 +488,15 @@ def _create_run(user, quiz, rules, room_data, question_ids, enemy_count, seed):
     hands = _deal_questions(question_ids, enemy_count, rules, seed)
     for index, assigned in enumerate(hands):
         position = room_data["enemy_positions"][index]
+        is_guardian = (enemy_count > 1 and index == enemy_count - 1)
+        role = DungeonEnemy.ROLE_GUARDIAN if is_guardian else DungeonEnemy.ROLE_GRUNT
+        name = "Guardian" if is_guardian else f"Grunt {chr(65 + index)}"
         DungeonEnemy.objects.create(
             run=run,
             enemy_index=index,
+            role=role,
+            name=name,
+            armor_active=is_guardian,
             x=position["x"],
             y=position["y"],
             hp=rules.enemy_hp,
@@ -526,9 +533,15 @@ def _create_review_run(user, quiz, rules, room_data, question_ids, specs, seed):
         assigned = shuffled_qids[cursor:cursor + spec["question_count"]]
         cursor += spec["question_count"]
         position = room_data["enemy_positions"][index]
+        is_guardian = (len(specs) > 1 and index == len(specs) - 1)
+        role = DungeonEnemy.ROLE_GUARDIAN if is_guardian else DungeonEnemy.ROLE_GRUNT
+        name = "Guardian" if is_guardian else f"Grunt {chr(65 + index)}"
         DungeonEnemy.objects.create(
             run=run,
             enemy_index=index,
+            role=role,
+            name=name,
+            armor_active=is_guardian,
             x=position["x"],
             y=position["y"],
             hp=spec["max_hp"],
@@ -721,25 +734,58 @@ def _resolve_turn(run, enemy, question, *, outcome, feedback):
 
     if outcome == OUTCOME_CORRECT:
         new_combo = (enemy.current_combo or 0) + 1
-        if new_combo >= COMBO_THRESHOLD:
-            damage_to_enemy = COMBO_DAMAGE
-            combat_event = {
-                "code": "power_strike",
-                "label": "Power Strike",
-                "damage": COMBO_DAMAGE,
-            }
-            if COMBO_RESETS_AFTER_STRIKE:
-                enemy.current_combo = 0
+        is_power_strike = new_combo >= COMBO_THRESHOLD
+
+        if enemy.role == DungeonEnemy.ROLE_GUARDIAN and enemy.armor_active:
+            if new_combo >= GUARDIAN_ARMOR_REQUIRED_STREAK or is_power_strike:
+                enemy.armor_active = False
+                if is_power_strike:
+                    damage_to_enemy = COMBO_DAMAGE
+                    combat_event = {
+                        "code": "power_strike",
+                        "label": "Armor Shattered! Power Strike!",
+                        "damage": COMBO_DAMAGE,
+                    }
+                    if COMBO_RESETS_AFTER_STRIKE:
+                        enemy.current_combo = 0
+                    else:
+                        enemy.current_combo = new_combo
+                else:
+                    damage_to_enemy = BASE_DAMAGE
+                    combat_event = {
+                        "code": "armor_break",
+                        "label": "Guardian Armor Cracked!",
+                        "damage": BASE_DAMAGE,
+                    }
+                    enemy.current_combo = new_combo
             else:
+                damage_to_enemy = 0
+                combat_event = {
+                    "code": "armor_deflect",
+                    "label": f"Armor Deflected! (Streak {new_combo}/{GUARDIAN_ARMOR_REQUIRED_STREAK})",
+                    "damage": 0,
+                }
                 enemy.current_combo = new_combo
         else:
-            damage_to_enemy = BASE_DAMAGE
-            combat_event = {
-                "code": "direct_hit",
-                "label": "Direct Hit",
-                "damage": BASE_DAMAGE,
-            }
-            enemy.current_combo = new_combo
+            if is_power_strike:
+                damage_to_enemy = COMBO_DAMAGE
+                combat_event = {
+                    "code": "power_strike",
+                    "label": "Power Strike",
+                    "damage": COMBO_DAMAGE,
+                }
+                if COMBO_RESETS_AFTER_STRIKE:
+                    enemy.current_combo = 0
+                else:
+                    enemy.current_combo = new_combo
+            else:
+                damage_to_enemy = BASE_DAMAGE
+                combat_event = {
+                    "code": "direct_hit",
+                    "label": "Direct Hit",
+                    "damage": BASE_DAMAGE,
+                }
+                enemy.current_combo = new_combo
 
         if run.is_review_run and question.id not in (run.review_mastered_question_ids or []):
             run.review_mastered_question_ids = list(run.review_mastered_question_ids or []) + [question.id]
@@ -775,7 +821,7 @@ def _resolve_turn(run, enemy, question, *, outcome, feedback):
         enemy.is_defeated = True
         enemy.current_combo = 0
 
-    enemy.save(update_fields=["hp", "is_defeated", "answered_question_ids", "current_combo"])
+    enemy.save(update_fields=["hp", "is_defeated", "answered_question_ids", "current_combo", "armor_active"])
     run.save(update_fields=["current_hp"])
 
     drops = None
@@ -785,7 +831,11 @@ def _resolve_turn(run, enemy, question, *, outcome, feedback):
         run.save(update_fields=["active_enemy"])
 
     is_power_strike = bool(combat_event and combat_event["code"] == "power_strike")
-    if is_power_strike:
+    if combat_event and combat_event["code"] == "armor_deflect":
+        feedback["combat_message"] = f"Armor deflected! 1 more correct answer to crack it."
+    elif combat_event and combat_event["code"] == "armor_break":
+        feedback["combat_message"] = "Guardian Armor cracked! Dealt 1 damage!"
+    elif is_power_strike:
         feedback["combat_message"] = "Power Strike! 2 damage!"
     elif damage_to_enemy > 0:
         feedback["combat_message"] = f"{damage_to_enemy} damage"
@@ -1152,6 +1202,8 @@ def serialize_objective(run, battle_enemy=None):
 
 
 def serialize_enemy(enemy):
+    role = getattr(enemy, "role", DungeonEnemy.ROLE_GRUNT)
+    name = getattr(enemy, "name", "Grunt" if role == DungeonEnemy.ROLE_GRUNT else "Guardian")
     return {
         "index": enemy.enemy_index,
         "x": enemy.x,
@@ -1162,6 +1214,9 @@ def serialize_enemy(enemy):
         "questions_total": len(enemy.question_ids or []),
         "questions_answered": len(enemy.answered_question_ids or []),
         "combo": enemy.current_combo,
+        "role": role,
+        "name": name,
+        "armor_active": getattr(enemy, "armor_active", False),
     }
 
 
@@ -1169,12 +1224,15 @@ def serialize_battle(run, enemy):
     if enemy is None:
         return None
     question = current_question(enemy)
+    role = getattr(enemy, "role", DungeonEnemy.ROLE_GRUNT)
+    portrait_key = f"enemy_{role}_portrait"
     return {
         "enemy": serialize_enemy(enemy),
         "question": serialize_question(run, question) if question else None,
         "question_number": len(enemy.answered_question_ids or []) + 1,
         "questions_total": len(enemy.question_ids or []),
         "objective": serialize_objective(run, enemy),
+        "portrait_key": portrait_key,
         "combo": {
             "count": enemy.current_combo or 0,
             "threshold": COMBO_THRESHOLD,

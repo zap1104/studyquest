@@ -80,10 +80,24 @@
         var section = (this.manifest && this.manifest[group]) || {};
         var value = section[key];
         if (!value) { return null; }
-        if (typeof value === 'string') { return { file: value, frames: 1 }; }
+        if (typeof value === 'string') {
+            return {
+                file: value,
+                frames: 1,
+                frame_width: null,
+                frame_height: null,
+                anchor: null,
+                render_scale: 1.0,
+                slice: 0
+            };
+        }
         return {
             file: value.file,
             frames: Math.max(parseInt(value.frames, 10) || 1, 1),
+            frame_width: parseInt(value.frame_width, 10) || null,
+            frame_height: parseInt(value.frame_height, 10) || null,
+            anchor: value.anchor || null,
+            render_scale: parseFloat(value.render_scale) || 1.0,
             slice: parseInt(value.slice, 10) || 0
         };
     };
@@ -101,7 +115,7 @@
 
     Renderer.prototype.preload = function () {
         var self = this;
-        var groups = ['tiles', 'actors', 'items', 'ui'];
+        var groups = ['tiles', 'actors', 'items', 'ui', 'portraits'];
         var pending = [];
 
         groups.forEach(function (group) {
@@ -148,17 +162,23 @@
         );
         scale = Math.min(Math.max(scale, this.minScale), this.maxScale);
 
-        var width = room.width * this.tileSize * scale;
-        var height = room.height * this.tileSize * scale;
+        var cssWidth = room.width * this.tileSize * scale;
+        var cssHeight = room.height * this.tileSize * scale;
+        var pixelRatio = Math.min(global.devicePixelRatio || 1, 2);
 
-        // Compare against the canvas itself, not just the remembered scale: a
-        // fresh canvas is 300x150 until it is sized, and at scale 1 that would
-        // otherwise look like "nothing to do" and leave the room clipped.
-        if (this.canvas.width === width && this.canvas.height === height) { return; }
+        var canvasWidth = Math.round(cssWidth * pixelRatio);
+        var canvasHeight = Math.round(cssHeight * pixelRatio);
+
+        if (this.canvas.width === canvasWidth && this.canvas.height === canvasHeight && this.scale === scale) { return; }
 
         this.scale = scale;
-        this.canvas.width = width;
-        this.canvas.height = height;
+        this.canvas.width = canvasWidth;
+        this.canvas.height = canvasHeight;
+        this.canvas.style.width = cssWidth + 'px';
+        this.canvas.style.height = cssHeight + 'px';
+
+        this.context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        this.context.imageSmoothingEnabled = false;
     };
 
     /* ----- drawing ------------------------------------------------- */
@@ -234,7 +254,11 @@
         var frame = 0;
 
         if (sprite.frames > 1 && !this.reducedMotion) {
-            frame = Math.floor((Date.now() - this.frameStartedAt) / this.frameMs) % sprite.frames;
+            if (key.indexOf('player_') === 0 && !this.tween) {
+                frame = 0;
+            } else {
+                frame = Math.floor((Date.now() - this.frameStartedAt) / this.frameMs) % sprite.frames;
+            }
         }
 
         this.context.drawImage(
@@ -247,14 +271,56 @@
         );
     };
 
+    Renderer.prototype.drawActor = function (group, key, tileX, tileY) {
+        var sprite = this.sprite(group, key);
+        var entry = this.entry(group, key);
+        if (!sprite || !entry) { return; }
+
+        var size = this.tileSize;
+        var scale = this.scale;
+        var renderedTileSize = size * scale;
+
+        var frameWidth = entry.frame_width || Math.round(sprite.image.width / sprite.frames);
+        var frameHeight = entry.frame_height || sprite.image.height;
+        var anchor = entry.anchor || { x: 0.5, y: 1.0 };
+        var renderScale = entry.render_scale || 1.0;
+
+        var frame = 0;
+        if (sprite.frames > 1 && !this.reducedMotion) {
+            if (key.indexOf('player_') === 0 && !this.tween) {
+                frame = 0;
+            } else {
+                frame = Math.floor((Date.now() - this.frameStartedAt) / this.frameMs) % sprite.frames;
+            }
+        }
+
+        var renderedActorWidth = Math.round((frameWidth / size) * renderedTileSize * renderScale);
+        var renderedActorHeight = Math.round((frameHeight / size) * renderedTileSize * renderScale);
+
+        var cellCenterX = tileX * renderedTileSize + (renderedTileSize / 2);
+        var cellBottomY = tileY * renderedTileSize + renderedTileSize;
+
+        var drawX = Math.round(cellCenterX - (renderedActorWidth * anchor.x));
+        var drawY = Math.round(cellBottomY - (renderedActorHeight * anchor.y));
+
+        this.context.drawImage(
+            sprite.image,
+            frame * frameWidth, 0, frameWidth, frameHeight,
+            drawX, drawY, renderedActorWidth, renderedActorHeight
+        );
+    };
+
     Renderer.prototype.draw = function () {
         var state = this.state;
         if (!state || !state.room || !state.room.grid.length) { return; }
 
         var context = this.context;
         context.imageSmoothingEnabled = false;
-        context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        var cssWidth = state.room.width * this.tileSize * this.scale;
+        var cssHeight = state.room.height * this.tileSize * this.scale;
+        context.clearRect(0, 0, cssWidth, cssHeight);
 
+        // 1. Terrain layer
         var grid = state.room.grid;
         for (var y = 0; y < grid.length; y += 1) {
             for (var x = 0; x < grid[y].length; x += 1) {
@@ -267,13 +333,36 @@
             }
         }
 
+        // 2. Y-Sorted actors layer
+        var actors = [];
         (state.enemies || []).forEach(function (enemy) {
-            if (!enemy.is_defeated) { this.blit('actors', 'enemy_default', enemy.x, enemy.y); }
-        }, this);
+            if (!enemy.is_defeated) {
+                actors.push({
+                    group: 'actors',
+                    key: enemy.role ? ('enemy_' + enemy.role) : 'enemy_default',
+                    x: enemy.x,
+                    y: enemy.y
+                });
+            }
+        });
 
         var position = this.playerPosition();
-        this.blit('actors', FACING_KEYS[state.player.facing] || 'player_down', position.x, position.y);
+        actors.push({
+            group: 'actors',
+            key: FACING_KEYS[state.player.facing] || 'player_down',
+            x: position.x,
+            y: position.y
+        });
 
+        actors.sort(function (a, b) {
+            return a.y - b.y;
+        });
+
+        actors.forEach(function (actor) {
+            this.drawActor(actor.group, actor.key, actor.x, actor.y);
+        }, this);
+
+        // 3. Effects / Overlays
         if (this.flashTile) {
             var size = this.tileSize * this.scale;
             var p = this.flashTile.progress || 0;
