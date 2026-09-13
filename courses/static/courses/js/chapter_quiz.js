@@ -500,7 +500,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const qStage = document.getElementById('quiz-question-stage');
         if (qStage) qStage.style.display = '';
         const ansBoard = document.getElementById('quiz-answer-board');
-        if (ansBoard) ansBoard.style.display = '';
+        if (ansBoard) {
+            ansBoard.style.display = '';
+            ansBoard.dataset.questionType = q.type;
+        }
 
         // Generate Question Body
         let bodyHtml = '';
@@ -523,11 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 extraClass = `qp-opt-${i % 4}`;
                             }
                         } else {
-                            if (isTF) {
-                                badge = c.text.trim().toLowerCase().startsWith('t') ? 'T' : 'F';
-                            } else {
-                                badge = letters[i] || '';
-                            }
+                            badge = letters[i] || '';
                         }
                         const isSelected = currentPick === c.id;
                         return `
