@@ -922,7 +922,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ================= KEYBOARD SHORTCUTS =================
     document.addEventListener('keydown', (event) => {
+        if (event.defaultPrevented) return;
+        if (event.isComposing) return;
         if (event.repeat) return;
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
 
         if (event.key === 'Escape') {
             if (reviewModal && !reviewModal.hidden) {
@@ -947,20 +950,31 @@ document.addEventListener('DOMContentLoaded', () => {
         const question = quiz.questions[currentIndex];
         if (!question) return;
 
-        const isSpace = event.key === ' ' || event.code === 'Space';
-        const isEnter = event.key === 'Enter';
-
-        if (!isSpace && !isEnter) return;
-
         const activeEl = document.activeElement;
-        const isTyping = Boolean(activeEl?.matches('input, textarea, select, [contenteditable="true"]'));
-        const isChoiceQuestion = question.type === 'multiple_choice' || question.type === 'true_false';
+        const isEnter = event.key === 'Enter';
+        const isSpace = event.key === ' ' || event.code === 'Space';
+
+        if (!isEnter && !isSpace) return;
+
+        const isButtonLike = activeEl?.matches(
+            'button, a[href], [role="button"]'
+        );
+        if (isButtonLike) return;
+
+        const isInput = activeEl?.matches(
+            'input, select, textarea, [contenteditable="true"]'
+        );
+        const isTextarea = activeEl?.matches('textarea');
+        const isChoiceQuestion = (
+            question.type === 'multiple_choice' ||
+            question.type === 'true_false'
+        );
 
         // 1. Before Grading (Submitting Answers)
         if (!isCurrentGraded) {
             // Space submits only Multiple Choice and True/False
             if (isSpace) {
-                if (isChoiceQuestion && !isTyping && !actionBtn.disabled) {
+                if (isChoiceQuestion && !isInput && !actionBtn.disabled) {
                     event.preventDefault();
                     event.stopPropagation();
                     if (activeEl && typeof activeEl.blur === 'function') activeEl.blur();
@@ -971,36 +985,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Enter submits when ready (advances fields like Tab for Enumeration)
             if (isEnter) {
-                if (question.type === 'enumeration' && isTyping) {
+                if (question.type === 'enumeration' && isInput) {
                     if (activeEl?.classList.contains('enumeration-input')) {
                         event.preventDefault();
                         event.stopPropagation();
 
-                        const enumInputs = Array.from(wrap.querySelectorAll('.enumeration-input'));
-                        const inputIdx = enumInputs.indexOf(activeEl);
+                        const inputs = Array.from(
+                            wrap.querySelectorAll('.enumeration-input:not(:disabled)')
+                        );
+                        const inputIdx = inputs.indexOf(activeEl);
+                        const nextInput = inputs[inputIdx + 1];
 
                         // If not on the last input, advance focus to the next field
-                        if (inputIdx !== -1 && inputIdx < enumInputs.length - 1) {
-                            enumInputs[inputIdx + 1].focus();
+                        if (nextInput) {
+                            nextInput.focus();
+                            nextInput.select?.();
                             return;
                         }
 
-                        // On the last input: submit if an answer is provided, otherwise blur
-                        if (inputIdx === enumInputs.length - 1) {
-                            if (!actionBtn.disabled) {
-                                activeEl.blur();
-                                handleCheckAnswer();
-                            }
-                            return;
+                        // On the last input: submit if an answer is provided and button is ready
+                        if (inputIdx === inputs.length - 1 && !actionBtn.disabled) {
+                            activeEl.blur();
+                            handleCheckAnswer();
                         }
+                        return;
                     }
+                    return;
+                }
+
+                if (isTextarea) {
                     return;
                 }
 
                 if (!actionBtn.disabled) {
                     event.preventDefault();
                     event.stopPropagation();
-                    if (isTyping && activeEl) activeEl.blur();
+                    if (isInput && activeEl) activeEl.blur();
                     handleCheckAnswer();
                 }
             }
@@ -1008,13 +1028,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 2. After Grading (Next Question / View Results)
-        if (isSpace || isEnter) {
-            if (isTyping) return;
+        if ((isEnter || isSpace) && !isInput) {
             event.preventDefault();
             event.stopPropagation();
             if (activeEl && typeof activeEl.blur === 'function') activeEl.blur();
             handleActionClick();
         }
+    });
+
+    document.querySelectorAll('.quiz-page-container form, #quiz-question-wrap form').forEach(form => {
+        form.addEventListener('submit', event => {
+            event.preventDefault();
+            if (isCurrentGraded) {
+                handleActionClick();
+                return;
+            }
+            if (!actionBtn.disabled) {
+                handleCheckAnswer();
+            }
+        });
     });
 
     window.addEventListener('resize', () => {

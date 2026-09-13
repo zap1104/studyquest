@@ -53,6 +53,7 @@
 
         this.formEl.addEventListener('submit', this.submit.bind(this));
         this.continueEl.addEventListener('click', this.continueAfterFeedback.bind(this));
+        this.root.addEventListener('keydown', this.handleKeydown.bind(this));
     }
 
     Battle.prototype.isOpen = function () {
@@ -104,18 +105,18 @@
         this.renderQuestion(battle.question);
     };
 
-    Battle.prototype.renderCombo = function (combo) {
+    Battle.prototype.renderCombo = function (combo, combatEvent) {
         if (!this.comboMeterEl) { return; }
-        combo = combo || { current: 0, threshold: 2, is_power_strike: false };
-        var current = combo.current || 0;
-        var threshold = combo.threshold || 2;
-        var isPowerStrike = !!combo.is_power_strike;
+        combo = combo || { count: 0, current: 0, threshold: 3, remaining: 3, is_power_strike: false };
+        var count = typeof combo.count !== 'undefined' ? combo.count : (combo.current || 0);
+        var threshold = combo.threshold || 3;
+        var isPowerStrike = (combatEvent && combatEvent.code === 'power_strike') || !!combo.is_power_strike;
 
-        this.comboMeterEl.classList.toggle('has-combo', current > 0 || isPowerStrike);
-        this.comboMeterEl.classList.toggle('is-ready', current >= threshold || isPowerStrike);
+        this.comboMeterEl.classList.toggle('has-combo', count > 0 || isPowerStrike);
+        this.comboMeterEl.classList.toggle('is-ready', count >= threshold - 1 || isPowerStrike);
 
         if (this.comboPips && this.comboPips.length) {
-            var activePips = isPowerStrike ? threshold : current;
+            var activePips = isPowerStrike ? threshold : count;
             this.comboPips.forEach(function (pip, index) {
                 var pipIndex = index + 1;
                 pip.classList.toggle('active', pipIndex <= activePips);
@@ -124,11 +125,13 @@
 
         if (this.comboTextEl) {
             if (isPowerStrike) {
-                this.comboTextEl.textContent = 'Power Strike!';
-            } else if (current >= threshold) {
-                this.comboTextEl.textContent = 'Power Strike Ready!';
+                this.comboTextEl.textContent = 'POWER STRIKE (2 DMG)';
+            } else if (count === 1) {
+                this.comboTextEl.textContent = 'Combo: 1/3 (2 to Strike)';
+            } else if (count === 2) {
+                this.comboTextEl.textContent = 'Combo: 2/3 (1 to Strike!)';
             } else {
-                this.comboTextEl.textContent = 'Combo: ' + current + '/' + threshold;
+                this.comboTextEl.textContent = 'Combo: 0/3';
             }
         }
 
@@ -237,8 +240,30 @@
     };
 
     Battle.prototype.submit = function (event) {
-        event.preventDefault();
+        if (event && event.preventDefault) event.preventDefault();
         if (this.busy || !this.battle || !this.battle.question) { return; }
+
+        if (!this.feedbackEl.hidden) {
+            this.continueAfterFeedback();
+            return;
+        }
+
+        // Prevent premature submit if user pressed Enter inside an enumeration field that isn't the last one
+        var activeEl = document.activeElement;
+        if (this.battle.question.type === 'enumeration' && activeEl && activeEl.classList && activeEl.classList.contains('dungeon-enum-answer')) {
+            var inputs = Array.prototype.slice.call(
+                this.fieldsEl.querySelectorAll('.dungeon-enum-answer:not(:disabled)')
+            );
+            var currentIndex = inputs.indexOf(activeEl);
+            if (currentIndex !== -1 && currentIndex < inputs.length - 1) {
+                var nextInput = inputs[currentIndex + 1];
+                if (nextInput) {
+                    nextInput.focus();
+                    if (typeof nextInput.select === 'function') nextInput.select();
+                }
+                return;
+            }
+        }
 
         var answer = this.collectAnswer();
         if (answer === null) {
@@ -281,7 +306,7 @@
         }
 
         if (result.combo) {
-            this.renderCombo(result.combo);
+            this.renderCombo(result.combo, result.combat_event);
         }
 
         if (result.damage_to_player > 0 && !this.reducedMotion) {
@@ -308,9 +333,10 @@
 
     Battle.prototype.showFeedback = function (result) {
         var feedback = result.feedback || {};
+        var combatEvent = result.combat_event || {};
         var lines = [];
 
-        if (result.combo && result.combo.is_power_strike) {
+        if (combatEvent.code === 'power_strike' || (result.combo && result.combo.is_power_strike)) {
             lines.push('Power Strike! 2 damage!');
         } else if (result.damage_to_enemy > 0) {
             lines.push(result.damage_to_enemy === 1 ? '1 damage' : 'The enemy takes ' + result.damage_to_enemy + ' damage.');
@@ -379,6 +405,92 @@
         }
 
         if (this.onResolved) { this.onResolved(result); }
+    };
+
+    Battle.prototype.handleKeydown = function (event) {
+        if (event.defaultPrevented) return;
+        if (event.isComposing) return;
+        if (event.repeat) return;
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+        var activeEl = document.activeElement;
+        var isEnter = event.key === 'Enter';
+        var isSpace = event.key === ' ' || event.code === 'Space';
+
+        if (!isEnter && !isSpace) return;
+
+        var isButtonLike = activeEl && activeEl.matches && activeEl.matches('button, a[href], [role="button"]');
+        if (isButtonLike) return;
+
+        var isInput = activeEl && activeEl.matches && activeEl.matches('input, select, textarea, [contenteditable="true"]');
+        var isTextarea = activeEl && activeEl.matches && activeEl.matches('textarea');
+
+        var isGraded = !this.feedbackEl.hidden;
+        var question = this.battle ? this.battle.question : null;
+
+        if (!isGraded) {
+            if (!question) return;
+
+            var isChoiceQuestion = (
+                question.type === 'multiple_choice' ||
+                question.type === 'true_false'
+            );
+
+            if (isSpace) {
+                if (isChoiceQuestion && !isInput && !this.submitEl.disabled && !this.busy) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.submit(event);
+                }
+                return;
+            }
+
+            if (isEnter && question.type === 'enumeration') {
+                if (activeEl && activeEl.classList && activeEl.classList.contains('dungeon-enum-answer')) {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    var inputs = Array.prototype.slice.call(
+                        this.fieldsEl.querySelectorAll('.dungeon-enum-answer:not(:disabled)')
+                    );
+                    var currentIndex = inputs.indexOf(activeEl);
+                    var nextInput = inputs[currentIndex + 1];
+
+                    if (nextInput) {
+                        nextInput.focus();
+                        if (typeof nextInput.select === 'function') nextInput.select();
+                        return;
+                    }
+
+                    if (currentIndex === inputs.length - 1 && !this.submitEl.disabled && !this.busy) {
+                        activeEl.blur();
+                        this.submit(event);
+                    }
+                    return;
+                }
+                return;
+            }
+
+            if (isEnter && isTextarea) {
+                return;
+            }
+
+            if (isEnter && !this.submitEl.disabled && !this.busy) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (isInput && typeof activeEl.blur === 'function') {
+                    activeEl.blur();
+                }
+                this.submit(event);
+            }
+            return;
+        }
+
+        if ((isEnter || isSpace) && !isInput) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.continueAfterFeedback();
+        }
     };
 
     DungeonQuest.Battle = Battle;

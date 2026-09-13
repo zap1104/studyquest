@@ -30,6 +30,7 @@ from .combat_config import (
     COMBO_RESETS_AFTER_STRIKE,
     COMBO_RESETS_ON_NEW_ENEMY,
     COMBO_RESETS_ON_PARTIAL,
+    COMBO_RESETS_ON_SKIP,
     COMBO_RESETS_ON_WRONG,
     COMBO_THRESHOLD,
     DAMAGE_PER_CORRECT_ANSWER,
@@ -411,24 +412,32 @@ def _resolve_turn(run, enemy, question, *, outcome, feedback):
 
     damage_to_enemy = 0
     damage_to_player = 0
-    is_power_strike = False
-    combo_current = enemy.current_combo or 0
+    combat_event = None
 
     if outcome == OUTCOME_CORRECT:
-        new_combo = combo_current + 1
+        new_combo = (enemy.current_combo or 0) + 1
         if new_combo >= COMBO_THRESHOLD:
-            is_power_strike = True
             damage_to_enemy = COMBO_DAMAGE
-            combo_current = COMBO_THRESHOLD
-            enemy.current_combo = 0 if COMBO_RESETS_AFTER_STRIKE else new_combo
+            combat_event = {
+                "code": "power_strike",
+                "label": "Power Strike",
+                "damage": COMBO_DAMAGE,
+            }
+            if COMBO_RESETS_AFTER_STRIKE:
+                enemy.current_combo = 0
+            else:
+                enemy.current_combo = new_combo
         else:
             damage_to_enemy = BASE_DAMAGE
-            combo_current = new_combo
+            combat_event = {
+                "code": "direct_hit",
+                "label": "Direct Hit",
+                "damage": BASE_DAMAGE,
+            }
             enemy.current_combo = new_combo
     elif outcome == OUTCOME_PARTIAL:
         if COMBO_RESETS_ON_PARTIAL:
             enemy.current_combo = 0
-            combo_current = 0
         damage_to_enemy = BASE_DAMAGE if PARTIAL_ANSWER_DAMAGES_ENEMY else 0
         damage_to_player = (
             rules.damage_per_wrong_answer if PARTIAL_ANSWER_DAMAGES_PLAYER else 0
@@ -436,10 +445,10 @@ def _resolve_turn(run, enemy, question, *, outcome, feedback):
     elif outcome == OUTCOME_INCORRECT:
         if COMBO_RESETS_ON_WRONG:
             enemy.current_combo = 0
-            combo_current = 0
         damage_to_player = rules.damage_per_wrong_answer
     elif outcome == OUTCOME_SKIPPED:
-        pass
+        if COMBO_RESETS_ON_SKIP:
+            enemy.current_combo = 0
 
     enemy.hp = max(enemy.hp - damage_to_enemy, 0)
     run.current_hp = max(run.current_hp - damage_to_player, 0)
@@ -460,14 +469,18 @@ def _resolve_turn(run, enemy, question, *, outcome, feedback):
         run.active_enemy = None
         run.save(update_fields=["active_enemy"])
 
+    is_power_strike = bool(combat_event and combat_event["code"] == "power_strike")
     if is_power_strike:
         feedback["combat_message"] = "Power Strike! 2 damage!"
     elif damage_to_enemy > 0:
         feedback["combat_message"] = f"{damage_to_enemy} damage"
 
+    stored_combo = enemy.current_combo or 0
     combo_payload = {
-        "current": combo_current,
+        "count": stored_combo,
         "threshold": COMBO_THRESHOLD,
+        "remaining": max(COMBO_THRESHOLD - stored_combo, 0),
+        "current": stored_combo,
         "is_power_strike": is_power_strike,
     }
 
@@ -476,6 +489,7 @@ def _resolve_turn(run, enemy, question, *, outcome, feedback):
         "damage_to_enemy": damage_to_enemy,
         "damage_to_player": damage_to_player,
         "damage_dealt": damage_to_enemy,
+        "combat_event": combat_event,
         "combo": combo_payload,
         "enemy_defeated": enemy_defeated,
         "drops": drops,
@@ -787,8 +801,10 @@ def serialize_battle(run, enemy):
         "questions_total": len(enemy.question_ids or []),
         "objective": serialize_objective(run, enemy),
         "combo": {
-            "current": enemy.current_combo,
+            "count": enemy.current_combo or 0,
             "threshold": COMBO_THRESHOLD,
+            "remaining": max(COMBO_THRESHOLD - (enemy.current_combo or 0), 0),
+            "current": enemy.current_combo or 0,
             "is_power_strike": False,
         },
     }
