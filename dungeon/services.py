@@ -1032,6 +1032,25 @@ def abandon_run(run):
     return run
 
 
+def get_run_verdict_code(run):
+    """Authoritative verdict classification for a completed or terminated DungeonRun."""
+    if run.status == DungeonRun.STATUS_ABANDONED:
+        return "abandoned"
+
+    if run.status == DungeonRun.STATUS_FAILED:
+        return "failed"
+
+    if run.run_type == DungeonRun.TYPE_REVIEW:
+        targeted = set(run.review_question_ids or [])
+        mastered = set(run.review_mastered_question_ids or [])
+        return "review_mastered" if (targeted and targeted <= mastered) else "review_incomplete"
+
+    if run.status == DungeonRun.STATUS_CLEARED:
+        return "cleared"
+
+    return "incomplete"
+
+
 # --------------------------------------------------
 # 5. SERIALIZATION (client-safe by construction)
 # --------------------------------------------------

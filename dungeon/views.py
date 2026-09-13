@@ -141,18 +141,36 @@ def summary(request, pk):
     enemies = list(run.enemies.all())
     targeted = run.targeted_count
     mastered = run.mastered_count
+    verdict_code = services.get_run_verdict_code(run)
+
+    unresolved_questions = services.get_unresolved_review_questions(request.user, run.quiz)
+    unresolved_count = len(unresolved_questions)
+
+    active_run = DungeonRun.objects.filter(
+        user=request.user,
+        quiz=run.quiz,
+        status=DungeonRun.STATUS_IN_PROGRESS,
+    ).exclude(pk=run.pk).first()
+
     return render(request, "dungeon/summary.html", {
         "run": run,
+        "verdict_code": verdict_code,
         "is_review_run": run.is_review_run,
         "is_mastered": run.is_mastered,
         "targeted_count": targeted,
         "mastered_count": mastered,
         "still_to_review_count": max(targeted - mastered, 0),
+        "unresolved_count": unresolved_count,
+        "active_run": active_run,
+        "active_run_url": reverse("dungeon:room", args=[active_run.pk]) if active_run else None,
+        "review_action_blocked": active_run is not None,
         "enemies_defeated": sum(1 for enemy in enemies if enemy.is_defeated),
         "enemy_count": len(enemies),
         "questions_answered": sum(len(e.answered_question_ids or []) for e in enemies),
         "inventory": services.serialize_inventory(run),
         "relaunch_url": reverse("dungeon:launch"),
+        "chapter_review_url": reverse("courses:chapter_review", args=[run.quiz.chapter.pk]),
+        "course_url": reverse("courses:course_detail", args=[run.quiz.chapter.course.pk]),
     })
 
 

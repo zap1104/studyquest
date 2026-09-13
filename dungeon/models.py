@@ -115,6 +115,20 @@ class DungeonRun(models.Model):
     def is_mastered(self):
         return self.is_review_run and self.targeted_count > 0 and self.mastered_count == self.targeted_count
 
+    @property
+    def verdict_code(self):
+        if self.status == self.STATUS_ABANDONED:
+            return "abandoned"
+        if self.status == self.STATUS_FAILED:
+            return "failed"
+        if self.run_type == self.TYPE_REVIEW:
+            targeted = set(self.review_question_ids or [])
+            mastered = set(self.review_mastered_question_ids or [])
+            return "review_mastered" if (targeted and targeted <= mastered) else "review_incomplete"
+        if self.status == self.STATUS_CLEARED:
+            return "cleared"
+        return "incomplete"
+
 
 class DungeonEnemy(models.Model):
     run = models.ForeignKey(DungeonRun, on_delete=models.CASCADE, related_name="enemies")
