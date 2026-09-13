@@ -43,10 +43,15 @@
             <h2 class="dungeon-hud-title" style="margin-top:18px;">Recent runs</h2>
             <ul class="dungeon-run-history">
                 {% for run in recent_runs %}
-                    <li>
-                        <span class="dungeon-status-tag" data-status="{{ run.status }}">{{ run.get_status_display }}</span>
-                        <a href="{% url 'dungeon:summary' run.pk %}">{{ run.quiz.chapter.title }}</a>
-                        {% if run.xp_awarded %}— {{ run.xp_awarded }} XP{% endif %}
+                    <li class="dungeon-run-history-row">
+                        <div class="dungeon-run-history-main">
+                            <span class="dungeon-status-tag" data-status="{{ run.status }}">{{ run.get_status_display }}</span>
+                            <span class="dungeon-run-history-title">{{ run.quiz.chapter.title }}</span>
+                            {% if run.xp_awarded %}
+                                <span class="dungeon-run-history-xp">+{{ run.xp_awarded }} XP</span>
+                            {% endif %}
+                        </div>
+                        <a class="btn btn-ghost btn-xs dungeon-history-action" href="{% url 'dungeon:summary' run.pk %}">View Summary</a>
                     </li>
                 {% endfor %}
             </ul>

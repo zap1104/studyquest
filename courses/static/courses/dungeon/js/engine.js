@@ -377,6 +377,12 @@
         var description = this.renderer.describeSurroundings();
         if (this.boardDescription) { this.boardDescription.textContent = description; }
         if (this.canvas) { this.canvas.setAttribute('aria-label', description); }
+
+        var living = (this.state.enemies || []).filter(function (e) { return !e.is_defeated; }).length;
+        var remainingEl = document.querySelector('[data-enemies-remaining]');
+        if (remainingEl) {
+            remainingEl.textContent = 'Enemies remaining: ' + living;
+        }
     };
 
     Engine.prototype.showBlocked = function (message) {

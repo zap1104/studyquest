@@ -31,6 +31,7 @@
         this.counterEl = this.root.querySelector('[data-battle-counter]');
         this.barEl = this.root.querySelector('[data-enemy-bar]');
         this.hpTextEl = this.root.querySelector('[data-enemy-hp-text]');
+        this.bodyEl = this.root.querySelector('[data-battle-body]');
         this.promptEl = this.root.querySelector('[data-question-prompt]');
         this.fieldsEl = this.root.querySelector('[data-answer-fields]');
         this.legendEl = this.root.querySelector('[data-answer-legend]');
@@ -38,6 +39,10 @@
         this.submitEl = this.root.querySelector('[data-submit-answer]');
         this.continueEl = this.root.querySelector('[data-continue]');
         this.feedbackEl = this.root.querySelector('[data-feedback]');
+
+        this.idleEl = this.root.parentElement
+            ? this.root.parentElement.querySelector('[data-battle-idle]')
+            : document.querySelector('[data-battle-idle]');
 
         this.battle = null;
         this.busy = false;
@@ -53,11 +58,12 @@
     Battle.prototype.open = function (battle) {
         this.battle = battle;
         this.root.hidden = false;
+        if (this.idleEl) { this.idleEl.hidden = true; }
         this.render();
 
-        // Bring the whole panel into view on mobile, then take focus without a second
-        // scroll - on desktop (>= 1024px), the panel is already docked side-by-side.
-        if (global.innerWidth < 1024) {
+        // Bring the battle sheet into view on mobile (< 768px). On desktop / tablet,
+        // it is already docked side-by-side or stacked without page scrolling.
+        if (global.innerWidth < 768) {
             this.root.scrollIntoView({
                 block: 'start',
                 behavior: this.reducedMotion ? 'auto' : 'smooth'
@@ -72,6 +78,7 @@
         this.battle = null;
         this.root.hidden = true;
         this.feedbackEl.hidden = true;
+        if (this.idleEl) { this.idleEl.hidden = false; }
     };
 
     Battle.prototype.render = function () {
@@ -302,6 +309,12 @@
 
         this.feedbackEl.hidden = false;
         this.announce(headline + ' ' + lines.join(' '));
+
+        this.feedbackEl.scrollIntoView({
+            behavior: this.reducedMotion ? 'auto' : 'smooth',
+            block: 'nearest',
+            inline: 'nearest'
+        });
     };
 
     Battle.prototype.continueAfterFeedback = function () {

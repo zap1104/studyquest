@@ -135,18 +135,61 @@
 }
 
 .dungeon-run-history {
-    margin: 0;
+    margin: 10px 0 0;
     padding: 0;
     list-style: none;
-    color: var(--muted);
-    font-size: 0.84rem;
-    line-height: 1.9;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dungeon-run-history-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface) 70%, transparent);
+}
+
+.dungeon-run-history-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.dungeon-run-history-title {
+    color: var(--ink);
+    font-size: 0.88rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dungeon-run-history-xp {
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.dungeon-history-action {
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+    text-decoration: none;
 }
 
 .dungeon-status-tag {
     display: inline-block;
     min-width: 74px;
-    margin-right: 8px;
     padding: 1px 8px;
     border-radius: 999px;
     background: color-mix(in srgb, var(--muted) 18%, transparent);
@@ -155,6 +198,7 @@
     letter-spacing: 0.04em;
     text-align: center;
     text-transform: uppercase;
+    flex-shrink: 0;
 }
 
 .dungeon-status-tag[data-status="cleared"] {
@@ -172,46 +216,86 @@
     color: var(--gold);
 }
 
-/* ---------------------------------------------------------
-   2. RUN LAYOUT
-   --------------------------------------------------------- */
-.dungeon-run-layout {
-    display: grid;
-    gap: var(--dq-gap);
-    grid-template-columns: 1fr;
-    align-items: start;
+.dungeon-status-tag[data-status="abandoned"] {
+    background: color-mix(in srgb, var(--muted) 24%, transparent);
+    color: var(--muted);
 }
 
-/* A grid item defaults to min-width:auto, so the canvas's natural width would
-   stop the column from ever shrinking and push the whole page wider than a
-   phone screen. */
-.dungeon-run-layout > * { min-width: 0; }
+/* /* Live run body hook: prevent page-level scrollbars on desktop and hide outer footer */
+body.dungeon-live-run {
+    overflow: hidden;
+}
 
-.dungeon-sidebar-panel {
+body.dungeon-live-run .footer,
+.dungeon-run-page ~ .footer {
+    display: none !important;
+}
+
+/* ---------------------------------------------------------
+   2. RUN LAYOUT (3-COLUMN WORKSPACE)
+   --------------------------------------------------------- */
+.dungeon-run-page {
+    height: calc(100dvh - var(--topbar-height, 70px));
+    max-height: calc(100dvh - var(--topbar-height, 70px));
+    padding: 12px 20px;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.dungeon-run-workspace {
+    height: 100%;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: var(--dq-gap);
-    min-width: 0;
+    gap: 12px;
 }
 
-/* Desktop single-viewport layout derived from:
-   15 room cols * 32px raw tile = 480px board + 32px panel padding = 512px board column
-   + 360px-420px sidebar column + 16px gap + 48px page padding = 936px-996px.
-   Activates cleanly at >= 1024px and locks height within 100dvh. */
-@media (min-width: 1024px) {
-    .dungeon-run-page {
-        max-height: 100dvh;
-        overflow-y: auto;
-    }
-    .dungeon-run-layout {
-        grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
-        align-items: start;
-    }
-    .dungeon-sidebar-panel {
-        max-height: calc(100dvh - 120px);
-        overflow-y: auto;
-        scrollbar-width: thin;
-    }
+.dungeon-header {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    flex-shrink: 0;
+}
+
+.dungeon-run-columns {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(220px, 270px) minmax(480px, 1fr) minmax(360px, 430px);
+    gap: 16px;
+    overflow: hidden;
+    align-items: stretch;
+}
+
+.dungeon-info-column,
+.dungeon-board-column,
+.dungeon-battle-column {
+    min-width: 0;
+    min-height: 0;
+}
+
+.dungeon-info-column {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.dungeon-board-column {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.dungeon-battle-column {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .dungeon-objective-bar {
@@ -225,6 +309,7 @@
     background: color-mix(in srgb, var(--surface) 90%, transparent);
     box-shadow: var(--shadow);
     box-sizing: border-box;
+    flex-shrink: 0;
 }
 
 .dungeon-objective-badge {
@@ -305,18 +390,21 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
-    padding: 16px;
+    gap: 8px;
+    padding: 12px 16px;
     border: 1px solid var(--border);
     border-radius: var(--dq-panel-radius);
     background: var(--surface);
     box-shadow: var(--shadow);
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .dungeon-board-frame {
-    /* Must stretch, not shrink-wrap: the renderer measures this element to pick
-       the board's whole-number scale, and a shrink-wrapped parent would report
-       the canvas's own (pre-sizing) width and pin the board at 1x forever. */
+    display: flex;
+    justify-content: center;
+    align-items: center;
     width: 100%;
     min-width: 0;
     max-width: 100%;
@@ -330,7 +418,6 @@
     height: auto;
     border-radius: 8px;
     background: var(--bg);
-    /* Pixel art must never be interpolated. */
     image-rendering: pixelated;
     image-rendering: crisp-edges;
 }
@@ -343,18 +430,27 @@
 }
 
 /* ---------------------------------------------------------
-   3. HUD: HEARTS, KEYS, ITEMS
+   3. HUD: HEARTS, KEYS, ITEMS (LEFT STATUS COLUMN)
    --------------------------------------------------------- */
 .dungeon-hud {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-    align-items: start;
-    gap: 14px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
     padding: 16px;
     border: 1px solid var(--border);
     border-radius: var(--dq-panel-radius);
     background: var(--surface);
     box-shadow: var(--shadow);
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.dungeon-hud-section {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
 }
 
 .dungeon-hud-title {
@@ -461,26 +557,95 @@
 }
 
 /* ---------------------------------------------------------
-   4. BATTLE PANEL
+   4. BATTLE PANEL & ENCOUNTER IDLE CARD
    --------------------------------------------------------- */
+.dungeon-battle-idle {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 24px 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--dq-panel-radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.dungeon-battle-idle[hidden] { display: none; }
+
+.dungeon-idle-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    max-width: 280px;
+}
+
+.dungeon-idle-note {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.dungeon-idle-sub {
+    margin: 4px 0 10px;
+    color: var(--ink);
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.dungeon-idle-actions-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--muted) 12%, transparent);
+    color: var(--muted);
+    font-size: 0.75rem;
+}
+
+.dungeon-idle-tag {
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+}
+
 .dungeon-battle {
+    height: 100%;
+    min-height: 0;
+    display: grid;
+    grid-template-rows:
+        auto
+        minmax(0, 1fr)
+        auto;
+    overflow: hidden;
     margin-top: 0;
     padding: 18px;
     border: 1px solid var(--border);
     border-radius: var(--dq-panel-radius);
     background: var(--surface);
     box-shadow: var(--shadow);
+    box-sizing: border-box;
 }
 
 .dungeon-battle[hidden] { display: none; }
 
 .dungeon-battle-header {
+    min-height: 0;
+    flex-shrink: 0;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 14px;
+    margin-bottom: 12px;
 }
 
 .dungeon-battle-title {
@@ -488,8 +653,6 @@
     font-size: 1rem;
 }
 
-/* The panel takes focus when a battle opens so screen readers land on it;
-   that shouldn't paint a focus ring for sighted mouse users. */
 .dungeon-battle-title:focus { outline: none; }
 .dungeon-battle-title:focus-visible {
     outline: 2px solid var(--accent);
@@ -519,6 +682,19 @@
     border-radius: 999px;
     background: var(--danger);
     transition: width 0.25s ease;
+}
+
+.dungeon-battle-form {
+    display: contents;
+}
+
+.dungeon-battle-body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    padding-right: 6px;
 }
 
 .dungeon-question-prompt {
@@ -558,9 +734,7 @@
 }
 
 .dungeon-choice:hover { border-color: var(--accent); }
-
 .dungeon-choice input { margin-top: 3px; }
-
 .dungeon-choice:focus-within {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
@@ -584,22 +758,15 @@
     outline-offset: 1px;
 }
 
-.dungeon-question-scroll {
-    max-height: clamp(180px, 35dvh, 320px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    padding-right: 4px;
-    margin-bottom: 8px;
-    scrollbar-width: thin;
-}
-
 .dungeon-battle-actions {
+    min-height: 0;
+    flex-shrink: 0;
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
     align-items: center;
+    padding-top: 10px;
     margin-top: auto;
-    padding-top: 6px;
 }
 
 .dungeon-feedback {
@@ -611,6 +778,8 @@
     color: var(--ink);
     font-size: 0.88rem;
     line-height: 1.55;
+    max-height: none;
+    overflow: visible;
 }
 
 .dungeon-feedback[hidden] { display: none; }
@@ -622,6 +791,100 @@
 .dungeon-feedback-headline {
     margin: 0 0 4px;
     font-weight: 900;
+}
+
+/* ---------------------------------------------------------
+   RESPONSIVE WORKSPACE LAYOUTS
+   --------------------------------------------------------- */
+@media (max-width: 1239px) and (min-width: 768px) {
+    .dungeon-run-page {
+        height: auto;
+        max-height: none;
+        overflow-y: auto;
+    }
+    body.dungeon-live-run {
+        overflow-y: auto;
+    }
+    .dungeon-run-columns {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        overflow: visible;
+    }
+    .dungeon-info-column {
+        height: auto;
+    }
+    .dungeon-hud {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        height: auto;
+    }
+    .dungeon-hud-section {
+        flex: 1 1 160px;
+    }
+    .dungeon-board-column {
+        height: auto;
+        overflow: visible;
+    }
+    .dungeon-battle-column {
+        height: auto;
+        overflow: visible;
+    }
+    .dungeon-battle {
+        height: auto;
+        max-height: calc(100dvh - 160px);
+    }
+}
+
+@media (max-width: 767px) {
+    .dungeon-run-page {
+        height: auto;
+        max-height: none;
+        padding: 12px;
+        overflow-y: auto;
+    }
+    body.dungeon-live-run {
+        overflow-y: auto;
+    }
+    .dungeon-run-columns {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        overflow: visible;
+    }
+    .dungeon-battle-idle {
+        display: none !important;
+    }
+    .dungeon-info-column {
+        height: auto;
+    }
+    .dungeon-hud {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 12px;
+        height: auto;
+        padding: 12px;
+    }
+    .dungeon-hud-section {
+        flex: 1 1 120px;
+    }
+    .dungeon-board-column {
+        height: auto;
+        overflow: visible;
+    }
+    .dungeon-battle-column {
+        height: auto;
+        overflow: visible;
+    }
+    .dungeon-battle {
+        height: auto;
+        max-height: none;
+    }
 }
 
 /* ---------------------------------------------------------
