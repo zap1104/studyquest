@@ -381,14 +381,21 @@ body.dungeon-theme .dungeon-run-columns[data-state="combat"] .dungeon-battle {
    1. LAUNCH SCREEN (DUNGEON LOBBY / EXPEDITION HUB)
    --------------------------------------------------------- */
 /* Body-level background and torchlit atmosphere glow overrides */
-body:has(.dungeon-lobby-page) {
+body:has(.dungeon-lobby-page),
+body.dungeon-lobby-screen {
     background: #14100c;
     --orb-1: rgba(232, 163, 61, 0.16);
     --orb-2: rgba(112, 92, 255, 0.12);
 }
 
-.page.dungeon-lobby-page,
-.dungeon-lobby-page {
+[data-theme="light"] body:has(.dungeon-lobby-page),
+[data-theme="light"] body.dungeon-lobby-screen {
+    background: #f7f4ed;
+    --orb-1: rgba(232, 163, 61, 0.08);
+    --orb-2: rgba(112, 92, 255, 0.06);
+}
+
+.page.dungeon-lobby-page {
     --bg: #14100c;
     --surface: #1f1812;
     --border: #3a2c1f;
@@ -404,24 +411,32 @@ body:has(.dungeon-lobby-page) {
     z-index: 1;
 }
 
+[data-theme="light"] .page.dungeon-lobby-page {
+    --bg: #f7f4ed;
+    --surface: #ffffff;
+    --border: #e0d5c5;
+    --gold: #c97a16;
+    --ink: #261d15;
+    --muted: #7d6f62;
+}
+
 @media (max-width: 1180px) {
-    .page.dungeon-lobby-page,
-    .dungeon-lobby-page {
+    .page.dungeon-lobby-page {
         width: min(100% - 36px, 1180px);
         max-width: 1180px;
     }
 }
 
 /* Guarantee standard StudyQuest UI typography across the launch page except designated pixel accents */
-.dungeon-lobby-page,
-.dungeon-lobby-page button,
-.dungeon-lobby-page input,
-.dungeon-lobby-page .btn,
-.dungeon-lobby-page .dungeon-status-tag,
-.dungeon-lobby-page .dungeon-delver-chip,
-.dungeon-lobby-page h2,
-.dungeon-lobby-page h3,
-.dungeon-lobby-page h4 {
+.page.dungeon-lobby-page,
+.page.dungeon-lobby-page button,
+.page.dungeon-lobby-page input,
+.page.dungeon-lobby-page .btn,
+.page.dungeon-lobby-page .dungeon-status-tag,
+.page.dungeon-lobby-page .dungeon-delver-chip,
+.page.dungeon-lobby-page h2,
+.page.dungeon-lobby-page h3,
+.page.dungeon-lobby-page h4 {
     font-family: var(--dq-font-body);
 }
 
