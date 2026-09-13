@@ -11,10 +11,10 @@
     "door_unlocked": "sprites/door_unlocked.png"
   },
   "actors": {
-    "player_down": "sprites/player_down.png",
-    "player_up": "sprites/player_up.png",
-    "player_left": "sprites/player_left.png",
-    "player_right": "sprites/player_right.png",
+    "player_down": { "file": "sprites/player_down.png", "frames": 4 },
+    "player_up": { "file": "sprites/player_up.png", "frames": 4 },
+    "player_left": { "file": "sprites/player_left.png", "frames": 4 },
+    "player_right": { "file": "sprites/player_right.png", "frames": 4 },
     "enemy_default": "sprites/enemy_default.png"
   },
   "items": {

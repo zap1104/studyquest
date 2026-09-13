@@ -234,7 +234,11 @@
         var frame = 0;
 
         if (sprite.frames > 1 && !this.reducedMotion) {
-            frame = Math.floor((Date.now() - this.frameStartedAt) / this.frameMs) % sprite.frames;
+            if (key.indexOf('player_') === 0 && !this.tween) {
+                frame = 0;
+            } else {
+                frame = Math.floor((Date.now() - this.frameStartedAt) / this.frameMs) % sprite.frames;
+            }
         }
 
         this.context.drawImage(
