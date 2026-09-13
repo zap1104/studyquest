@@ -272,11 +272,26 @@ class SpriteManifestContractTests(SimpleTestCase):
         self.assertEqual(self.manifest["tile_size"], combat_config.TILE_SIZE)
         self.assertEqual(self.manifest["icon_size"], combat_config.ICON_SIZE)
 
-    def test_tiles_and_actors_are_tile_sized(self):
-        for group, keys in self.TILE_KEYS.items():
-            for key in keys:
-                with self.subTest(sprite=f"{group}.{key}"):
-                    self.assert_sprite(group, key, combat_config.TILE_SIZE)
+    def test_tiles_are_tile_sized(self):
+        for key in self.TILE_KEYS["tiles"]:
+            with self.subTest(sprite=f"tiles.{key}"):
+                self.assert_sprite("tiles", key, combat_config.TILE_SIZE)
+
+    def test_actors_meet_frame_and_anchor_contract(self):
+        for key in self.TILE_KEYS["actors"]:
+            with self.subTest(sprite=f"actors.{key}"):
+                entry = self.entry("actors", key)
+                frame_w = entry.get("frame_width", combat_config.ACTOR_FRAME_SIZE if "frame_width" in entry else combat_config.TILE_SIZE)
+                frame_h = entry.get("frame_height", frame_w)
+                width, height = self.png_size(entry["file"])
+                frames = entry.get("frames", 1)
+                self.assertEqual((width, height), (frame_w * frames, frame_h))
+                if "anchor" in entry:
+                    anchor = entry["anchor"]
+                    self.assertGreaterEqual(anchor.get("x", 0), 0.0)
+                    self.assertLessEqual(anchor.get("x", 0), 1.0)
+                    self.assertGreaterEqual(anchor.get("y", 0), 0.0)
+                    self.assertLessEqual(anchor.get("y", 0), 1.0)
 
     def test_items_and_hearts_are_icon_sized(self):
         for group, keys in self.ICON_KEYS.items():

@@ -248,13 +248,16 @@ def calculate_review_run_xp(*, mastered, questions_mastered):
 # --------------------------------------------------
 # 6. PRESENTATION SCALE
 # --------------------------------------------------
-# Source resolution of one tile, in pixels. The single authority: the template
-# publishes it as a CSS custom property and in the JS bootstrap payload, so
-# neither dungeon.css nor the JS ever spells a tile size out.
-TILE_SIZE = 32
-
-# Icons (inventory items, hearts) are drawn at half a tile.
-ICON_SIZE = TILE_SIZE // 2
+# Distinct measurement scales:
+#  - LOGICAL_TILE_SIZE: grid coordinates, collisions, room generation
+#  - ACTOR_FRAME_SIZE: overworld character source frame (64x64)
+#  - ICON_SIZE: HUD item drops and heart indicators (16x16)
+#  - COMBAT_PORTRAIT_SIZE: encounter and summary presentation (128x128)
+LOGICAL_TILE_SIZE = 32
+TILE_SIZE = LOGICAL_TILE_SIZE
+ACTOR_FRAME_SIZE = 64
+ICON_SIZE = 16
+COMBAT_PORTRAIT_SIZE = 128
 
 # HUD art (icons, the panel frame) is shown at this whole-number multiple of its
 # source size, so it stays crisp and legible beside body text.

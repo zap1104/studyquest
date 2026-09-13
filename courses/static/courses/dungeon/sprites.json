@@ -11,10 +11,10 @@
     "door_unlocked": "sprites/door_unlocked.png"
   },
   "actors": {
-    "player_down": { "file": "sprites/player_down.png", "frames": 4 },
-    "player_up": { "file": "sprites/player_up.png", "frames": 4 },
-    "player_left": { "file": "sprites/player_left.png", "frames": 4 },
-    "player_right": { "file": "sprites/player_right.png", "frames": 4 },
+    "player_down": { "file": "sprites/player_down.png", "frames": 4, "frame_width": 64, "frame_height": 64, "anchor": { "x": 0.5, "y": 0.875 } },
+    "player_up": { "file": "sprites/player_up.png", "frames": 4, "frame_width": 64, "frame_height": 64, "anchor": { "x": 0.5, "y": 0.875 } },
+    "player_left": { "file": "sprites/player_left.png", "frames": 4, "frame_width": 64, "frame_height": 64, "anchor": { "x": 0.5, "y": 0.875 } },
+    "player_right": { "file": "sprites/player_right.png", "frames": 4, "frame_width": 64, "frame_height": 64, "anchor": { "x": 0.5, "y": 0.875 } },
     "enemy_default": "sprites/enemy_default.png"
   },
   "items": {
