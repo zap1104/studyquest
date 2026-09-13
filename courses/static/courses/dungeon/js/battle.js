@@ -239,6 +239,13 @@
             panel.classList.add('dungeon-hit');
         }
 
+        if (result.outcome === 'partial' && !this.reducedMotion) {
+            var panel = this.root;
+            panel.classList.remove('dungeon-glance');
+            void panel.offsetWidth;
+            panel.classList.add('dungeon-glance');
+        }
+
         this.submitEl.hidden = true;
         this.continueEl.hidden = false;
         this.continueEl.textContent = result.enemy_defeated || result.run_over
@@ -278,6 +285,13 @@
         headlineEl.className = 'dungeon-feedback-headline';
         headlineEl.textContent = headline;
         this.feedbackEl.appendChild(headlineEl);
+
+        if (result.outcome === 'partial') {
+            var badge = document.createElement('div');
+            badge.className = 'dungeon-glance-badge';
+            badge.textContent = '⚡ Glancing Blow (Partial Credit)';
+            this.feedbackEl.appendChild(badge);
+        }
 
         lines.forEach(function (line) {
             var p = document.createElement('p');

@@ -18,6 +18,8 @@
         this.api = options.api;
         this.announce = options.announce;
         this.onUsed = options.onUsed;
+        this.reducedMotion = !!options.reducedMotion;
+        this.lastHp = null;
 
         this.heartsEl = this.root.querySelector('[data-hearts]');
         this.hpTextEl = this.root.querySelector('[data-hp-text]');
@@ -39,13 +41,18 @@
 
     Inventory.prototype.renderHearts = function (hp) {
         this.heartsEl.innerHTML = '';
+        var damageTaken = (this.lastHp !== null && hp.current < this.lastHp);
         for (var index = 0; index < hp.max; index += 1) {
             var filled = index < hp.current;
             var img = document.createElement('img');
             img.src = this.renderer.urlFor('ui', filled ? 'heart_full' : 'heart_empty');
             img.alt = '';
+            if (damageTaken && index >= hp.current && index < this.lastHp && !this.reducedMotion) {
+                img.className = 'dungeon-heart-lost';
+            }
             this.heartsEl.appendChild(img);
         }
+        this.lastHp = hp.current;
         this.hpTextEl.textContent = hp.current + ' / ' + hp.max + ' HP';
     };
 

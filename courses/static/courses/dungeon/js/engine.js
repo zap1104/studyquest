@@ -127,6 +127,7 @@
             renderer: this.renderer,
             api: this.api,
             announce: this.announce,
+            reducedMotion: this.reducedMotion,
             onUsed: this.handleItemUsed.bind(this)
         });
 
@@ -254,12 +255,14 @@
                     if (result.encounter) {
                         self.state.battle = result.encounter;
                         self.setDpadActive(false);
-                        self.inventory.render(self.state);
-                        self.battle.open(result.encounter);
-                        self.announce(
-                            'An enemy blocks your path. Question 1 of ' +
-                            result.encounter.questions_total + '.'
-                        );
+                        return self.renderer.flashEncounter(result.x, result.y, 240).then(function () {
+                            self.inventory.render(self.state);
+                            self.battle.open(result.encounter);
+                            self.announce(
+                                'An enemy blocks your path. Question 1 of ' +
+                                result.encounter.questions_total + '.'
+                            );
+                        });
                     }
                     return null;
                 });

@@ -267,14 +267,28 @@
     text-overflow: ellipsis;
 }
 
+.dungeon-objective-bar[data-code="defeat_enemy"] {
+    border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+}
+
 .dungeon-objective-bar[data-code="defeat_enemy"] .dungeon-objective-badge {
     background: color-mix(in srgb, var(--danger) 18%, transparent);
     color: var(--danger);
 }
 
+.dungeon-objective-bar[data-code="exit_unlocked"] {
+    border-color: color-mix(in srgb, var(--gold) 50%, var(--border));
+    box-shadow: 0 0 10px color-mix(in srgb, var(--gold) 20%, transparent);
+}
+
 .dungeon-objective-bar[data-code="exit_unlocked"] .dungeon-objective-badge {
     background: color-mix(in srgb, var(--gold) 22%, transparent);
     color: var(--gold);
+}
+
+.dungeon-objective-bar[data-code="run_complete"] {
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+    box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .dungeon-objective-bar[data-code="run_complete"] .dungeon-objective-badge {
@@ -764,7 +778,7 @@
 }
 
 /* ---------------------------------------------------------
-   7. MOTION
+   7. MOTION & COMBAT FEEDBACK
    Every animated affordance is opt-out. The tween is also disabled in JS,
    so movement stays instant rather than merely un-animated.
    --------------------------------------------------------- */
@@ -774,10 +788,72 @@
     75% { transform: translateX(5px); }
 }
 
+@keyframes battle-enter {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes dungeon-glance {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-3px) rotate(-0.4deg); }
+    40% { transform: translateX(3px) rotate(0.4deg); }
+    60% { transform: translateX(-2px); }
+    80% { transform: translateX(1px); }
+}
+
+@keyframes heart-break {
+    0% {
+        transform: scale(1.25);
+        filter: brightness(1.5) drop-shadow(0 0 4px var(--danger));
+    }
+    50% {
+        transform: scale(0.85) rotate(-6deg);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(1) rotate(0);
+        opacity: 1;
+    }
+}
+
 .dungeon-hit { animation: dungeon-shake 0.28s ease; }
+.dungeon-battle:not([hidden]) { animation: battle-enter 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
+.dungeon-glance {
+    animation: dungeon-glance 0.32s ease;
+    border-color: color-mix(in srgb, var(--gold) 60%, var(--border));
+}
+
+.dungeon-heart-lost {
+    animation: heart-break 0.38s ease-out;
+}
+
+.dungeon-glance-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 6px 0 8px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--gold) 20%, transparent);
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
 
 @media (prefers-reduced-motion: reduce) {
     .dungeon-hit { animation: none; }
+    .dungeon-battle:not([hidden]) { animation: none; }
+    .dungeon-glance { animation: none; }
+    .dungeon-heart-lost { animation: none; }
     .dungeon-enemy-bar span { transition: none; }
     #dungeon-board { transition: none; }
 }

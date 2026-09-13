@@ -48,6 +48,7 @@
         this.scale = this.minScale;
         this.state = null;
         this.tween = null;
+        this.flashTile = null;
         this.frameStartedAt = Date.now();
     }
 
@@ -193,6 +194,32 @@
         });
     };
 
+    /** Flash an encounter highlight over an encounter tile before battle starts. */
+    Renderer.prototype.flashEncounter = function (tileX, tileY, durationMs) {
+        if (this.reducedMotion) { return Promise.resolve(); }
+
+        var self = this;
+        var startedAt = performance.now();
+        var duration = durationMs || 240;
+        this.flashTile = { x: tileX, y: tileY, progress: 0 };
+
+        return new Promise(function (resolve) {
+            function step(now) {
+                var progress = Math.min((now - startedAt) / duration, 1);
+                self.flashTile.progress = progress;
+                self.draw();
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    self.flashTile = null;
+                    self.draw();
+                    resolve();
+                }
+            }
+            requestAnimationFrame(step);
+        });
+    };
+
     Renderer.prototype.sprite = function (group, key) {
         return this.images[group + ':' + key] || null;
     };
@@ -246,6 +273,19 @@
 
         var position = this.playerPosition();
         this.blit('actors', FACING_KEYS[state.player.facing] || 'player_down', position.x, position.y);
+
+        if (this.flashTile) {
+            var size = this.tileSize * this.scale;
+            var p = this.flashTile.progress || 0;
+            var alpha = Math.sin((1 - p) * Math.PI * 0.5) * 0.7;
+            context.save();
+            context.fillStyle = 'rgba(255, 220, 100, ' + alpha + ')';
+            context.fillRect(this.flashTile.x * size, this.flashTile.y * size, size, size);
+            context.strokeStyle = 'rgba(239, 68, 68, ' + alpha + ')';
+            context.lineWidth = Math.max(2, Math.round(2 * this.scale));
+            context.strokeRect(this.flashTile.x * size, this.flashTile.y * size, size, size);
+            context.restore();
+        }
     };
 
     Renderer.prototype.playerPosition = function () {
