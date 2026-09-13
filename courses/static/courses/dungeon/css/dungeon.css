@@ -164,11 +164,11 @@ body.dungeon-theme .dungeon-run-columns[data-state="roaming"] .dungeon-board-pan
 }
 
 body.dungeon-theme .dungeon-run-columns[data-state="combat"] .dungeon-battle {
-    border-color: rgba(232, 163, 61, 0.78);
+    border-color: rgba(108, 92, 231, 0.90);
     box-shadow:
         inset 0 0 0 3px rgba(18, 14, 10, 0.85),
-        inset 0 0 0 5px rgba(232, 163, 61, 0.32),
-        0 0 24px rgba(232, 163, 61, 0.14),
+        inset 0 0 0 5px rgba(108, 92, 231, 0.36),
+        0 0 24px rgba(108, 92, 231, 0.18),
         0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
@@ -1971,12 +1971,12 @@ body.dungeon-live-run .footer,
     justify-content: center;
     align-items: center;
     padding: 24px 20px;
-    border: 3px solid #5a4635;
+    border: 3px solid rgba(108, 92, 231, 0.75);
     border-radius: 6px;
     background: var(--surface);
     box-shadow:
         inset 0 0 0 3px rgba(18, 14, 10, 0.85),
-        inset 0 0 0 5px rgba(232, 163, 61, 0.18),
+        inset 0 0 0 5px rgba(108, 92, 231, 0.28),
         0 8px 24px rgba(0, 0, 0, 0.45);
     text-align: center;
     box-sizing: border-box;
@@ -2049,12 +2049,12 @@ body.dungeon-live-run .footer,
     overflow: hidden;
     margin-top: 0;
     padding: 18px;
-    border: 3px solid #5a4635;
+    border: 3px solid rgba(108, 92, 231, 0.75);
     border-radius: 6px;
     background: var(--surface);
     box-shadow:
         inset 0 0 0 3px rgba(18, 14, 10, 0.85),
-        inset 0 0 0 5px rgba(232, 163, 61, 0.18),
+        inset 0 0 0 5px rgba(108, 92, 231, 0.28),
         0 8px 24px rgba(0, 0, 0, 0.45);
     box-sizing: border-box;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
