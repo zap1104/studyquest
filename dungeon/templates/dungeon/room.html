@@ -82,16 +82,40 @@
                     <p class="dungeon-sr-only" data-board-description></p>
                 </div>
 
-                <!-- Permanent Combat Result / Event Log panel -->
-                <section class="dungeon-combat-result" data-combat-result data-panel-frame aria-label="Combat result and log">
-                    <div class="dungeon-combat-result-header">
-                        <span class="dungeon-combat-result-badge" data-combat-result-badge>Combat Log</span>
-                        <strong class="dungeon-combat-result-label" data-combat-result-label>No active encounter.</strong>
+                <!-- Retro Battle Dialogue / Combat Message Box -->
+                <section class="dungeon-combat-message" data-combat-message data-state="roaming" aria-live="polite" aria-label="Combat message and dialogue log">
+                    <header class="dungeon-message-header">
+                        <strong class="dungeon-message-title pixel-font" data-message-title>
+                            Exploring
+                        </strong>
+
+                        <!-- Upper-right: Combo indicator or Damage / Meta -->
+                        <div class="dungeon-message-combo" data-message-combo data-count="0" hidden>
+                            <span class="combo-dots" aria-hidden="true">
+                                <i></i>
+                                <i></i>
+                                <i></i>
+                            </span>
+                            <span class="dungeon-message-combo-text pixel-font" data-message-combo-text>
+                                Combo 0/3
+                            </span>
+                        </div>
+
+                        <span class="dungeon-message-meta pixel-font" data-message-meta hidden></span>
+                    </header>
+
+                    <div class="dungeon-message-body">
+                        <p class="dungeon-message-primary" data-message-primary>
+                            Find an enemy in the tall grass.
+                        </p>
+
+                        <p class="dungeon-message-answer" data-message-answer hidden></p>
+                        <p class="dungeon-message-secondary" data-message-explanation>
+                            Explore the room using movement keys or on-screen D-pad.
+                        </p>
                     </div>
-                    <div class="dungeon-combat-result-body">
-                        <p class="dungeon-combat-result-answer" data-combat-result-answer hidden></p>
-                        <p class="dungeon-combat-result-explanation" data-combat-result-explanation>Explore the grass to find an enemy.</p>
-                    </div>
+
+                    <span class="dungeon-message-caret" data-message-caret aria-hidden="true" hidden></span>
                 </section>
             </main>
 
@@ -113,24 +137,12 @@
                 <!-- Active battle panel (3-row grid) -->
                 <section class="dungeon-battle" data-battle data-panel-frame hidden aria-labelledby="dungeon-battle-title">
                     <header class="dungeon-battle-header">
-                        <div>
-                            <h2 class="dungeon-battle-title" id="dungeon-battle-title"
-                                data-battle-title tabindex="-1">Enemy</h2>
-                            <p class="dungeon-quiz-meta" data-battle-counter></p>
-                        </div>
-                        <div class="dungeon-battle-header-status">
-                            <div class="dungeon-enemy-hp">
-                                <span class="dungeon-enemy-bar"><span data-enemy-bar style="width:100%"></span></span>
-                                <span data-enemy-hp-text></span>
-                            </div>
-                            <div class="dungeon-combo-meter" data-combo-meter aria-label="Combo streak">
-                                <div class="dungeon-combo-pips" data-combo-pips aria-hidden="true">
-                                    <span class="dungeon-combo-pip" data-pip="1"></span>
-                                    <span class="dungeon-combo-pip" data-pip="2"></span>
-                                    <span class="dungeon-combo-pip" data-pip="3"></span>
-                                </div>
-                                <span class="dungeon-combo-text" data-combo-text>Combo: 0/3</span>
-                            </div>
+                        <h2 class="dungeon-battle-title dungeon-enemy-name" id="dungeon-battle-title"
+                            data-battle-title tabindex="-1">Enemy</h2>
+                        <p class="dungeon-quiz-meta dungeon-question-counter" data-battle-counter></p>
+                        <div class="dungeon-enemy-hp dungeon-enemy-health">
+                            <span class="dungeon-enemy-bar"><span data-enemy-bar style="width:100%"></span></span>
+                            <span data-enemy-hp-text></span>
                         </div>
                     </header>
 

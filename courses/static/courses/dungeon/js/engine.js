@@ -154,19 +154,23 @@
                 self.announce('A battle is already in progress.');
             } else if (self.state.room && self.state.room.door_unlocked) {
                 self.renderCombatLog({
+                    state: 'event',
                     outcome: 'unlocked',
-                    badge: 'Exit Unlocked',
-                    label: 'The key is complete!',
-                    answer: '',
-                    explanation: 'Reach the dungeon door to complete the run.'
+                    title: 'Exit Unlocked',
+                    meta: 'Key Complete',
+                    primary: 'All key pieces assembled!',
+                    explanation: 'Reach the dungeon door to complete the run.',
+                    showCaret: false
                 });
             } else {
                 self.renderCombatLog({
+                    state: 'roaming',
                     outcome: 'roaming',
-                    badge: 'Combat Log',
-                    label: 'No active encounter.',
-                    answer: '',
-                    explanation: 'Explore the grass to find an enemy.'
+                    title: 'Exploring',
+                    meta: '',
+                    primary: 'Find an enemy in the tall grass.',
+                    explanation: 'Explore the room using movement keys or on-screen D-pad.',
+                    showCaret: false
                 });
             }
         }).catch(function (error) {
@@ -348,19 +352,23 @@
 
             if (result.door_unlocked || remaining === 0) {
                 this.renderCombatLog({
+                    state: 'event',
                     outcome: 'unlocked',
-                    badge: 'Exit Unlocked',
-                    label: 'All key pieces assembled!',
-                    answer: '',
-                    explanation: 'The dungeon door is unlocked. Head to the exit to complete the run.'
+                    title: 'Exit Unlocked',
+                    meta: 'Key Complete',
+                    primary: 'All key pieces assembled!',
+                    explanation: 'The dungeon door is unlocked. Head to the exit to complete the run.',
+                    showCaret: false
                 });
             } else {
                 this.renderCombatLog({
+                    state: 'event',
                     outcome: 'victory',
-                    badge: 'Enemy Defeated',
-                    label: 'Enemy defeated!',
-                    answer: '',
-                    explanation: 'The enemy dropped a key piece. ' + remaining + ' enemy' + (remaining === 1 ? '' : 'ies') + ' remaining in the room.'
+                    title: 'Enemy Defeated',
+                    meta: remaining + (remaining === 1 ? ' Enemy Left' : ' Enemies Left'),
+                    primary: 'Enemy defeated! They dropped a key piece.',
+                    explanation: remaining + ' enemy' + (remaining === 1 ? '' : 'ies') + ' still lurking in the room.',
+                    showCaret: false
                 });
             }
 
@@ -385,11 +393,13 @@
             this.announce('You drink a health potion and recover ' + result.healed_by + ' HP.');
             if (!this.battle.isOpen()) {
                 this.renderCombatLog({
+                    state: 'event',
                     outcome: 'item',
-                    badge: 'Potion Used',
-                    label: 'Recovered ' + result.healed_by + ' HP',
-                    answer: '',
-                    explanation: 'Health restored. Your HP is now ' + this.state.hp + '.'
+                    title: 'Potion Used',
+                    meta: '+' + result.healed_by + ' HP',
+                    primary: 'Health restored!',
+                    explanation: 'Your HP is now ' + this.state.hp + '.',
+                    showCaret: false
                 });
             }
             return;
@@ -409,13 +419,15 @@
             this.renderObjective(outcome.objective);
         }
         this.renderCombatLog({
+            state: 'event',
             outcome: outcome.cleared ? 'complete' : 'failed',
-            badge: outcome.cleared ? 'Run Complete' : 'Defeated',
-            label: outcome.cleared ? 'Victory!' : 'You have fallen.',
-            answer: '',
+            title: outcome.cleared ? 'Run Complete' : 'Defeated',
+            meta: outcome.cleared ? '+' + outcome.xp_awarded + ' XP' : '0 HP',
+            primary: outcome.cleared ? 'Victory!' : 'You have fallen in battle.',
             explanation: outcome.cleared
                 ? 'Dungeon cleared! You earned ' + outcome.xp_awarded + ' XP.'
-                : 'Your HP reached 0. The run has ended.'
+                : 'Your HP reached 0. The run has ended.',
+            showCaret: false
         });
         this.announce(
             outcome.cleared
