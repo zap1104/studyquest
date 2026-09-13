@@ -40,6 +40,12 @@
         this.continueEl = this.root.querySelector('[data-continue]');
         this.feedbackEl = this.root.querySelector('[data-feedback]');
 
+        this.combatResultEl = document.querySelector('[data-combat-result]');
+        this.combatResultBadgeEl = document.querySelector('[data-combat-result-badge]');
+        this.combatResultLabelEl = document.querySelector('[data-combat-result-label]');
+        this.combatResultAnswerEl = document.querySelector('[data-combat-result-answer]');
+        this.combatResultExplanationEl = document.querySelector('[data-combat-result-explanation]');
+
         this.comboMeterEl = this.root.querySelector('[data-combo-meter]');
         this.comboPips = this.root.querySelectorAll('[data-combo-pip]');
         this.comboTextEl = this.root.querySelector('[data-combo-text]');
@@ -60,11 +66,50 @@
         return !this.root.hidden;
     };
 
+    Battle.prototype.renderCombatResult = function (options) {
+        if (!this.combatResultEl) return;
+        options = options || {};
+        var outcome = options.outcome || 'roaming';
+        var badge = options.badge || 'Combat Log';
+        var label = options.label || '';
+        var answer = options.answer || '';
+        var explanation = options.explanation || '';
+
+        this.combatResultEl.dataset.outcome = outcome;
+
+        if (this.combatResultBadgeEl) {
+            this.combatResultBadgeEl.textContent = badge;
+        }
+        if (this.combatResultLabelEl) {
+            this.combatResultLabelEl.textContent = label;
+        }
+        if (this.combatResultAnswerEl) {
+            if (answer) {
+                this.combatResultAnswerEl.textContent = answer;
+                this.combatResultAnswerEl.hidden = false;
+            } else {
+                this.combatResultAnswerEl.textContent = '';
+                this.combatResultAnswerEl.hidden = true;
+            }
+        }
+        if (this.combatResultExplanationEl) {
+            this.combatResultExplanationEl.textContent = explanation;
+        }
+    };
+
     Battle.prototype.open = function (battle) {
         this.battle = battle;
         this.root.hidden = false;
         if (this.idleEl) { this.idleEl.hidden = true; }
         this.render();
+
+        this.renderCombatResult({
+            outcome: 'turn',
+            badge: 'Your Turn',
+            label: 'Question ' + battle.question_number + ' of ' + battle.questions_total,
+            answer: '',
+            explanation: 'Choose an answer on the right, then attack.'
+        });
 
         // Bring the battle sheet into view on mobile (< 768px). On desktop / tablet,
         // it is already docked side-by-side or stacked without page scrolling.
@@ -82,7 +127,7 @@
     Battle.prototype.close = function () {
         this.battle = null;
         this.root.hidden = true;
-        this.feedbackEl.hidden = true;
+        if (this.feedbackEl) { this.feedbackEl.hidden = true; }
         if (this.idleEl) { this.idleEl.hidden = false; }
     };
 
@@ -98,7 +143,7 @@
 
         this.renderCombo(battle.combo);
 
-        this.feedbackEl.hidden = true;
+        if (this.feedbackEl) { this.feedbackEl.hidden = true; }
         this.submitEl.hidden = false;
         this.continueEl.hidden = true;
 
@@ -334,72 +379,110 @@
     Battle.prototype.showFeedback = function (result) {
         var feedback = result.feedback || {};
         var combatEvent = result.combat_event || {};
-        var lines = [];
+        var isPowerStrike = (combatEvent.code === 'power_strike') || (result.combo && result.combo.is_power_strike);
 
-        if (combatEvent.code === 'power_strike' || (result.combo && result.combo.is_power_strike)) {
-            lines.push('Power Strike! 2 damage!');
-        } else if (result.damage_to_enemy > 0) {
-            lines.push(result.damage_to_enemy === 1 ? '1 damage' : 'The enemy takes ' + result.damage_to_enemy + ' damage.');
+        var badge = 'Hit';
+        var label = '';
+        var answer = '';
+        var explanation = '';
+
+        if (isPowerStrike) {
+            badge = 'Power Strike!';
+            label = 'POWER STRIKE · 2 DAMAGE';
+        } else if (result.outcome === 'correct') {
+            badge = 'Direct Hit';
+            label = 'DIRECT HIT · 1 DAMAGE';
+        } else if (result.outcome === 'incorrect') {
+            badge = 'Damage Taken';
+            label = 'YOU TAKE A HIT · ' + (result.damage_to_player > 0 ? result.damage_to_player + ' HP LOST' : '1 HP LOST');
+        } else if (result.outcome === 'partial') {
+            badge = 'Glancing Blow';
+            label = 'GLANCING BLOW · PARTIAL CREDIT';
+        } else if (result.outcome === 'skipped') {
+            badge = 'Skipped';
+            label = 'SLIPPED PAST THE ENEMY';
+        } else {
+            badge = 'Combat';
+            label = 'TURN GRADED';
         }
-        if (result.damage_to_player > 0) {
-            lines.push('You lose ' + result.damage_to_player + ' HP.');
+
+        if (result.outcome === 'incorrect' || result.outcome === 'partial') {
+            if (feedback.correct_choice_text) {
+                answer = 'Correct answer: ' + feedback.correct_choice_text;
+            } else if (feedback.canonical_answer) {
+                answer = 'Correct answer: ' + feedback.canonical_answer;
+            }
+            if (feedback.missing_items && feedback.missing_items.length) {
+                var missed = 'Missed: ' + feedback.missing_items.join(', ');
+                answer = answer ? (answer + ' | ' + missed) : missed;
+            }
         }
-        if (feedback.correct_choice_text && result.outcome === 'incorrect') {
-            lines.push('Correct answer: ' + feedback.correct_choice_text);
-        }
-        if (feedback.canonical_answer && result.outcome === 'incorrect') {
-            lines.push('Correct answer: ' + feedback.canonical_answer);
-        }
-        if (feedback.missing_items && feedback.missing_items.length) {
-            lines.push('Missed: ' + feedback.missing_items.join(', '));
-        }
+
         if (feedback.explanation) {
-            lines.push(feedback.explanation);
+            explanation = feedback.explanation;
+        } else if (result.outcome === 'correct') {
+            explanation = isPowerStrike
+                ? 'Combo threshold reached! Massive damage dealt.'
+                : 'Well done! The enemy takes damage.';
+        } else if (result.outcome === 'partial') {
+            explanation = 'Partial credit awarded — nobody takes damage.';
+        } else if (result.outcome === 'skipped') {
+            explanation = 'You slipped past the question.';
+        } else {
+            explanation = 'Review the correct answer before proceeding.';
         }
 
-        var headline = HEADLINES[result.outcome] || 'Result';
-        this.feedbackEl.dataset.outcome = result.outcome;
-        this.feedbackEl.innerHTML = '';
-
-        var headlineEl = document.createElement('p');
-        headlineEl.className = 'dungeon-feedback-headline';
-        headlineEl.textContent = headline;
-        this.feedbackEl.appendChild(headlineEl);
-
-        if (result.outcome === 'partial') {
-            var badge = document.createElement('div');
-            badge.className = 'dungeon-glance-badge';
-            badge.textContent = '⚡ Glancing Blow (Partial Credit)';
-            this.feedbackEl.appendChild(badge);
-        }
-
-        lines.forEach(function (line) {
-            var p = document.createElement('p');
-            p.style.margin = '0';
-            p.textContent = line;
-            this.feedbackEl.appendChild(p);
-        }, this);
-
-        this.feedbackEl.hidden = false;
-        this.announce(headline + ' ' + lines.join(' '));
-
-        this.feedbackEl.scrollIntoView({
-            behavior: this.reducedMotion ? 'auto' : 'smooth',
-            block: 'nearest',
-            inline: 'nearest'
+        this.renderCombatResult({
+            outcome: isPowerStrike ? 'power_strike' : result.outcome,
+            badge: badge,
+            label: label,
+            answer: answer,
+            explanation: explanation
         });
+
+        if (this.feedbackEl) {
+            this.feedbackEl.dataset.outcome = result.outcome;
+            this.feedbackEl.innerHTML = '';
+            var headlineEl = document.createElement('p');
+            headlineEl.className = 'dungeon-feedback-headline';
+            headlineEl.textContent = HEADLINES[result.outcome] || 'Result';
+            this.feedbackEl.appendChild(headlineEl);
+            if (explanation) {
+                var expEl = document.createElement('p');
+                expEl.textContent = explanation;
+                this.feedbackEl.appendChild(expEl);
+            }
+            this.feedbackEl.hidden = false;
+        }
+
+        var announceText = badge + ': ' + label + '. ' + (answer ? answer + '. ' : '') + explanation;
+        this.announce(announceText);
+
+        if (global.innerWidth < 768 && this.combatResultEl) {
+            this.combatResultEl.scrollIntoView({
+                behavior: this.reducedMotion ? 'auto' : 'smooth',
+                block: 'nearest'
+            });
+        }
     };
 
     Battle.prototype.continueAfterFeedback = function () {
         var result = this.pendingResult;
         this.pendingResult = null;
-        this.feedbackEl.hidden = true;
+        if (this.feedbackEl) { this.feedbackEl.hidden = true; }
 
         if (!result) { return; }
 
         if (result.battle) {
             this.battle = result.battle;
             this.render();
+            this.renderCombatResult({
+                outcome: 'turn',
+                badge: 'Your Turn',
+                label: 'Question ' + this.battle.question_number + ' of ' + this.battle.questions_total,
+                answer: '',
+                explanation: 'Choose an answer on the right, then attack.'
+            });
         } else {
             this.close();
         }
@@ -425,7 +508,7 @@
         var isInput = activeEl && activeEl.matches && activeEl.matches('input, select, textarea, [contenteditable="true"]');
         var isTextarea = activeEl && activeEl.matches && activeEl.matches('textarea');
 
-        var isGraded = !this.feedbackEl.hidden;
+        var isGraded = this.continueEl ? !this.continueEl.hidden : false;
         var question = this.battle ? this.battle.question : null;
 
         if (!isGraded) {

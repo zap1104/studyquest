@@ -54,7 +54,7 @@
             </aside>
 
             <!-- 2. CENTER COLUMN: OBJECTIVE & ROOM -->
-            <main class="dungeon-board-column">
+            <main class="dungeon-board-column" role="main">
                 <div class="dungeon-objective-bar" data-objective-bar role="status" aria-live="polite">
                     <span class="dungeon-objective-badge" data-objective-badge>Objective</span>
                     <div class="dungeon-objective-content">
@@ -81,6 +81,18 @@
                     <p class="dungeon-board-caption">Arrow keys or WASD to move. Grass hides enemies.</p>
                     <p class="dungeon-sr-only" data-board-description></p>
                 </div>
+
+                <!-- Permanent Combat Result / Event Log panel -->
+                <section class="dungeon-combat-result" data-combat-result data-panel-frame aria-label="Combat result and log">
+                    <div class="dungeon-combat-result-header">
+                        <span class="dungeon-combat-result-badge" data-combat-result-badge>Combat Log</span>
+                        <strong class="dungeon-combat-result-label" data-combat-result-label>No active encounter.</strong>
+                    </div>
+                    <div class="dungeon-combat-result-body">
+                        <p class="dungeon-combat-result-answer" data-combat-result-answer hidden></p>
+                        <p class="dungeon-combat-result-explanation" data-combat-result-explanation>Explore the grass to find an enemy.</p>
+                    </div>
+                </section>
             </main>
 
             <!-- 3. RIGHT COLUMN: ENCOUNTER / BATTLE -->
@@ -128,12 +140,11 @@
                             <fieldset class="dungeon-answer-fields" data-answer-fields>
                                 <legend data-answer-legend>Answer</legend>
                             </fieldset>
-                            <div class="dungeon-feedback" data-feedback hidden></div>
                         </div>
 
                         <div class="dungeon-battle-actions">
-                            <button type="submit" class="btn btn-primary btn-sm" data-submit-answer>Attack</button>
-                            <button type="button" class="btn btn-primary btn-sm" data-continue hidden>Next question</button>
+                            <button type="submit" class="btn btn-primary" data-submit-answer>Attack</button>
+                            <button type="button" class="btn btn-primary" data-continue hidden>Next question</button>
                         </div>
                     </form>
                 </section>

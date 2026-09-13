@@ -89,6 +89,12 @@
         if (this.objectiveDetail) { this.objectiveDetail.textContent = objective.detail || ''; }
     };
 
+    Engine.prototype.renderCombatLog = function (options) {
+        if (this.battle && typeof this.battle.renderCombatResult === 'function') {
+            this.battle.renderCombatResult(options);
+        }
+    };
+
     Engine.prototype.setDpadActive = function (active) {
         if (!this.dpad) { return; }
         if (active) {
@@ -146,6 +152,22 @@
                 self.setDpadActive(false);
                 self.battle.open(self.state.battle);
                 self.announce('A battle is already in progress.');
+            } else if (self.state.room && self.state.room.door_unlocked) {
+                self.renderCombatLog({
+                    outcome: 'unlocked',
+                    badge: 'Exit Unlocked',
+                    label: 'The key is complete!',
+                    answer: '',
+                    explanation: 'Reach the dungeon door to complete the run.'
+                });
+            } else {
+                self.renderCombatLog({
+                    outcome: 'roaming',
+                    badge: 'Combat Log',
+                    label: 'No active encounter.',
+                    answer: '',
+                    explanation: 'Explore the grass to find an enemy.'
+                });
             }
         }).catch(function (error) {
             self.announce('The dungeon art could not be loaded: ' + error.message);
@@ -324,6 +346,24 @@
                 return !enemy.is_defeated;
             }).length;
 
+            if (result.door_unlocked || remaining === 0) {
+                this.renderCombatLog({
+                    outcome: 'unlocked',
+                    badge: 'Exit Unlocked',
+                    label: 'All key pieces assembled!',
+                    answer: '',
+                    explanation: 'The dungeon door is unlocked. Head to the exit to complete the run.'
+                });
+            } else {
+                this.renderCombatLog({
+                    outcome: 'victory',
+                    badge: 'Enemy Defeated',
+                    label: 'Enemy defeated!',
+                    answer: '',
+                    explanation: 'The enemy dropped a key piece. ' + remaining + ' enemy' + (remaining === 1 ? '' : 'ies') + ' remaining in the room.'
+                });
+            }
+
             this.announce(
                 remaining === 0
                     ? 'The last enemy falls. The key is whole — head for the door.'
@@ -343,6 +383,15 @@
             this.state.inventory = result.inventory;
             this.inventory.render(this.state);
             this.announce('You drink a health potion and recover ' + result.healed_by + ' HP.');
+            if (!this.battle.isOpen()) {
+                this.renderCombatLog({
+                    outcome: 'item',
+                    badge: 'Potion Used',
+                    label: 'Recovered ' + result.healed_by + ' HP',
+                    answer: '',
+                    explanation: 'Health restored. Your HP is now ' + this.state.hp + '.'
+                });
+            }
             return;
         }
 
@@ -359,6 +408,15 @@
         if (outcome && outcome.objective) {
             this.renderObjective(outcome.objective);
         }
+        this.renderCombatLog({
+            outcome: outcome.cleared ? 'complete' : 'failed',
+            badge: outcome.cleared ? 'Run Complete' : 'Defeated',
+            label: outcome.cleared ? 'Victory!' : 'You have fallen.',
+            answer: '',
+            explanation: outcome.cleared
+                ? 'Dungeon cleared! You earned ' + outcome.xp_awarded + ' XP.'
+                : 'Your HP reached 0. The run has ended.'
+        });
         this.announce(
             outcome.cleared
                 ? 'Run complete. You earned ' + outcome.xp_awarded + ' XP.'

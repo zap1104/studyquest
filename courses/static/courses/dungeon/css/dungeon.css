@@ -281,10 +281,10 @@ body.dungeon-live-run .footer,
 }
 
 .dungeon-board-column {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    align-items: center;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) clamp(118px, 16vh, 158px);
+    gap: 12px;
+    align-items: stretch;
     height: 100%;
     min-height: 0;
     overflow: hidden;
@@ -390,13 +390,16 @@ body.dungeon-live-run .footer,
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 8px;
-    padding: 12px 16px;
+    padding: 10px 14px;
     border: 1px solid var(--border);
     border-radius: var(--dq-panel-radius);
     background: var(--surface);
     box-shadow: var(--shadow);
     width: 100%;
+    height: 100%;
+    min-height: 0;
     box-sizing: border-box;
     overflow: hidden;
 }
@@ -405,11 +408,167 @@ body.dungeon-live-run .footer,
     display: flex;
     justify-content: center;
     align-items: center;
+    flex: 1 1 auto;
     width: 100%;
     min-width: 0;
+    min-height: 0;
     max-width: 100%;
-    overflow: auto;
+    overflow: hidden;
     text-align: center;
+}
+
+/* ---------------------------------------------------------
+   2b. COMBAT RESULT & EVENT LOG (CENTER COLUMN)
+   --------------------------------------------------------- */
+.dungeon-combat-result {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--muted);
+    border-radius: var(--dq-panel-radius);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    box-sizing: border-box;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    min-height: 0;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.dungeon-combat-result[data-outcome="turn"] {
+    border-left-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+}
+
+.dungeon-combat-result[data-outcome="correct"] {
+    border-left-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+
+.dungeon-combat-result[data-outcome="power_strike"] {
+    border-left-color: var(--gold);
+    background: color-mix(in srgb, var(--gold) 10%, var(--surface));
+}
+
+.dungeon-combat-result[data-outcome="incorrect"] {
+    border-left-color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+}
+
+.dungeon-combat-result[data-outcome="partial"],
+.dungeon-combat-result[data-outcome="skipped"] {
+    border-left-color: var(--gold);
+    background: color-mix(in srgb, var(--gold) 6%, var(--surface));
+}
+
+.dungeon-combat-result[data-outcome="victory"],
+.dungeon-combat-result[data-outcome="unlocked"],
+.dungeon-combat-result[data-outcome="complete"] {
+    border-left-color: var(--gold);
+    background: color-mix(in srgb, var(--gold) 7%, var(--surface));
+}
+
+.dungeon-combat-result[data-outcome="failed"] {
+    border-left-color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+}
+
+.dungeon-combat-result-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+}
+
+.dungeon-combat-result-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--muted) 16%, transparent);
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.dungeon-combat-result[data-outcome="turn"] .dungeon-combat-result-badge {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--accent);
+}
+
+.dungeon-combat-result[data-outcome="correct"] .dungeon-combat-result-badge {
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+    color: var(--accent);
+}
+
+.dungeon-combat-result[data-outcome="power_strike"] .dungeon-combat-result-badge {
+    background: color-mix(in srgb, var(--gold) 25%, transparent);
+    color: var(--gold);
+}
+
+.dungeon-combat-result[data-outcome="incorrect"] .dungeon-combat-result-badge {
+    background: color-mix(in srgb, var(--danger) 20%, transparent);
+    color: var(--danger);
+}
+
+.dungeon-combat-result[data-outcome="partial"] .dungeon-combat-result-badge,
+.dungeon-combat-result[data-outcome="skipped"] .dungeon-combat-result-badge,
+.dungeon-combat-result[data-outcome="victory"] .dungeon-combat-result-badge,
+.dungeon-combat-result[data-outcome="unlocked"] .dungeon-combat-result-badge,
+.dungeon-combat-result[data-outcome="complete"] .dungeon-combat-result-badge {
+    background: color-mix(in srgb, var(--gold) 22%, transparent);
+    color: var(--gold);
+}
+
+.dungeon-combat-result-label {
+    font-size: 0.86rem;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dungeon-combat-result-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 0;
+}
+
+.dungeon-combat-result-answer {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--gold);
+    line-height: 1.4;
+}
+
+.dungeon-combat-result-answer[hidden] {
+    display: none;
+}
+
+.dungeon-combat-result-explanation {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.45;
+}
+
+.dungeon-combat-result[data-outcome="turn"] .dungeon-combat-result-explanation,
+.dungeon-combat-result[data-outcome="correct"] .dungeon-combat-result-explanation,
+.dungeon-combat-result[data-outcome="power_strike"] .dungeon-combat-result-explanation,
+.dungeon-combat-result[data-outcome="incorrect"] .dungeon-combat-result-explanation {
+    color: var(--ink);
 }
 
 #dungeon-board {
@@ -844,11 +1003,23 @@ body.dungeon-live-run .footer,
     min-height: 0;
     flex-shrink: 0;
     display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-    padding-top: 10px;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 12px;
     margin-top: auto;
+    width: 100%;
+}
+
+.dungeon-battle-actions .btn {
+    width: 100%;
+    min-height: 52px;
+    font-size: 1rem;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: 0.02em;
+    border-radius: 10px;
 }
 
 .dungeon-feedback {
@@ -878,7 +1049,31 @@ body.dungeon-live-run .footer,
 /* ---------------------------------------------------------
    RESPONSIVE WORKSPACE LAYOUTS
    --------------------------------------------------------- */
-@media (max-width: 1239px) and (min-width: 768px) {
+@media (max-height: 760px) and (min-width: 1140px) {
+    .dungeon-board-column {
+        grid-template-rows: auto minmax(0, 1fr) 104px;
+        gap: 8px;
+    }
+    .dungeon-combat-result {
+        padding: 8px 12px;
+    }
+    .dungeon-combat-result-header {
+        margin-bottom: 3px;
+    }
+    .dungeon-combat-result-label {
+        font-size: 0.8rem;
+    }
+    .dungeon-combat-result-explanation {
+        font-size: 0.78rem;
+        line-height: 1.35;
+    }
+    .dungeon-battle-actions .btn {
+        min-height: 44px;
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 1139px) and (min-width: 768px) {
     .dungeon-run-page {
         height: auto;
         max-height: none;
@@ -909,8 +1104,15 @@ body.dungeon-live-run .footer,
         flex: 1 1 160px;
     }
     .dungeon-board-column {
+        display: flex;
+        flex-direction: column;
         height: auto;
         overflow: visible;
+        gap: 12px;
+    }
+    .dungeon-combat-result {
+        min-height: 90px;
+        max-height: 160px;
     }
     .dungeon-battle-column {
         height: auto;
@@ -956,8 +1158,15 @@ body.dungeon-live-run .footer,
         flex: 1 1 120px;
     }
     .dungeon-board-column {
+        display: flex;
+        flex-direction: column;
         height: auto;
         overflow: visible;
+        gap: 10px;
+    }
+    .dungeon-combat-result {
+        min-height: 80px;
+        max-height: 150px;
     }
     .dungeon-battle-column {
         height: auto;
@@ -966,6 +1175,10 @@ body.dungeon-live-run .footer,
     .dungeon-battle {
         height: auto;
         max-height: none;
+    }
+    .dungeon-battle-actions .btn {
+        min-height: 48px;
+        font-size: 0.95rem;
     }
 }
 
