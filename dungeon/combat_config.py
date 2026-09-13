@@ -51,7 +51,7 @@ COMBAT_RULES = {
     ),
     "plus": CombatRules(
         key="plus",
-        base_player_hp=15,
+        base_player_hp=7,
         damage_per_wrong_answer=1,
         questions_per_enemy=5,
         encounter_chance=0.30,

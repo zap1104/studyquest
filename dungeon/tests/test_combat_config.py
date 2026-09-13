@@ -23,8 +23,8 @@ class CombatRuleResolutionTests(SimpleTestCase):
     def test_free_plan_starts_with_five_hp(self):
         self.assertEqual(resolve_combat_rules(plan="free").base_player_hp, 5)
 
-    def test_plus_plan_starts_with_fifteen_hp(self):
-        self.assertEqual(resolve_combat_rules(plan="plus").base_player_hp, 15)
+    def test_plus_plan_starts_with_seven_hp(self):
+        self.assertEqual(resolve_combat_rules(plan="plus").base_player_hp, 7)
 
     def test_unknown_plan_falls_back_to_free_rules(self):
         self.assertEqual(
