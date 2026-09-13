@@ -684,6 +684,88 @@ body.dungeon-live-run .footer,
     transition: width 0.25s ease;
 }
 
+.dungeon-battle-header-status {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.dungeon-combo-meter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    background: color-mix(in srgb, var(--muted) 10%, transparent);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--muted);
+    transition: all 0.2s ease;
+}
+
+.dungeon-combo-pips {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.dungeon-combo-pip {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--muted) 25%, transparent);
+    border: 1px solid var(--border);
+    transition: all 0.2s ease;
+}
+
+.dungeon-combo-pip.active {
+    background: var(--gold);
+    border-color: var(--gold);
+    box-shadow: 0 0 6px color-mix(in srgb, var(--gold) 60%, transparent);
+}
+
+.dungeon-combo-text {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+}
+
+.dungeon-combo-meter.has-combo .dungeon-combo-text {
+    color: var(--gold);
+}
+
+.dungeon-combo-meter.is-ready .dungeon-combo-text {
+    color: var(--danger);
+    font-weight: 800;
+}
+
+@keyframes combo-strike {
+    0% {
+        transform: scale(1);
+    }
+    40% {
+        transform: scale(1.1);
+        box-shadow: 0 0 12px color-mix(in srgb, var(--gold) 70%, transparent), 0 0 20px color-mix(in srgb, var(--danger) 50%, transparent);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.dungeon-combo-meter.combo-strike {
+    animation: combo-strike 300ms ease;
+    border-color: var(--gold);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dungeon-combo-meter.combo-strike {
+        animation: none;
+    }
+}
+
 .dungeon-battle-form {
     display: contents;
 }

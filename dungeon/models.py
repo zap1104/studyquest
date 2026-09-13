@@ -99,6 +99,10 @@ class DungeonEnemy(models.Model):
     question_ids = models.JSONField(default=list, blank=True)
     answered_question_ids = models.JSONField(default=list, blank=True)
 
+    # Streak of consecutive correct answers against this enemy. Resets on wrong answer,
+    # and resets to 0 after triggering a combo strike.
+    current_combo = models.PositiveSmallIntegerField(default=0)
+
     class Meta:
         ordering = ["enemy_index"]
         constraints = [

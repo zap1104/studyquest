@@ -40,6 +40,10 @@
         this.continueEl = this.root.querySelector('[data-continue]');
         this.feedbackEl = this.root.querySelector('[data-feedback]');
 
+        this.comboMeterEl = this.root.querySelector('[data-combo-meter]');
+        this.comboPips = this.root.querySelectorAll('[data-combo-pip]');
+        this.comboTextEl = this.root.querySelector('[data-combo-text]');
+
         this.idleEl = this.root.parentElement
             ? this.root.parentElement.querySelector('[data-battle-idle]')
             : document.querySelector('[data-battle-idle]');
@@ -91,11 +95,48 @@
         this.hpTextEl.textContent = enemy.hp + ' / ' + enemy.max_hp + ' HP';
         this.barEl.style.width = (enemy.max_hp ? (enemy.hp / enemy.max_hp) * 100 : 0) + '%';
 
+        this.renderCombo(battle.combo);
+
         this.feedbackEl.hidden = true;
         this.submitEl.hidden = false;
         this.continueEl.hidden = true;
 
         this.renderQuestion(battle.question);
+    };
+
+    Battle.prototype.renderCombo = function (combo) {
+        if (!this.comboMeterEl) { return; }
+        combo = combo || { current: 0, threshold: 2, is_power_strike: false };
+        var current = combo.current || 0;
+        var threshold = combo.threshold || 2;
+        var isPowerStrike = !!combo.is_power_strike;
+
+        this.comboMeterEl.classList.toggle('has-combo', current > 0 || isPowerStrike);
+        this.comboMeterEl.classList.toggle('is-ready', current >= threshold || isPowerStrike);
+
+        if (this.comboPips && this.comboPips.length) {
+            var activePips = isPowerStrike ? threshold : current;
+            this.comboPips.forEach(function (pip, index) {
+                var pipIndex = index + 1;
+                pip.classList.toggle('active', pipIndex <= activePips);
+            });
+        }
+
+        if (this.comboTextEl) {
+            if (isPowerStrike) {
+                this.comboTextEl.textContent = 'Power Strike!';
+            } else if (current >= threshold) {
+                this.comboTextEl.textContent = 'Power Strike Ready!';
+            } else {
+                this.comboTextEl.textContent = 'Combo: ' + current + '/' + threshold;
+            }
+        }
+
+        if (isPowerStrike && !this.reducedMotion) {
+            this.comboMeterEl.classList.remove('combo-strike');
+            void this.comboMeterEl.offsetWidth;
+            this.comboMeterEl.classList.add('combo-strike');
+        }
     };
 
     Battle.prototype.renderQuestion = function (question) {
@@ -239,6 +280,10 @@
                 (result.enemy.max_hp ? (result.enemy.hp / result.enemy.max_hp) * 100 : 0) + '%';
         }
 
+        if (result.combo) {
+            this.renderCombo(result.combo);
+        }
+
         if (result.damage_to_player > 0 && !this.reducedMotion) {
             var panel = this.root;
             panel.classList.remove('dungeon-hit');
@@ -265,8 +310,10 @@
         var feedback = result.feedback || {};
         var lines = [];
 
-        if (result.damage_to_enemy > 0) {
-            lines.push('The enemy takes ' + result.damage_to_enemy + ' damage.');
+        if (result.combo && result.combo.is_power_strike) {
+            lines.push('Power Strike! 2 damage!');
+        } else if (result.damage_to_enemy > 0) {
+            lines.push(result.damage_to_enemy === 1 ? '1 damage' : 'The enemy takes ' + result.damage_to_enemy + ' damage.');
         }
         if (result.damage_to_player > 0) {
             lines.push('You lose ' + result.damage_to_player + ' HP.');

@@ -95,7 +95,16 @@ def resolve_combat_rules(*, plan, quiz=None, question_count=0):
 # Damage a correct answer deals to the enemy. Kept beside the rules rather than
 # inside CombatRules because it is the same for every plan today; promote it to
 # a CombatRules field the moment one plan needs to differ.
-DAMAGE_PER_CORRECT_ANSWER = 1
+BASE_DAMAGE: int = 1
+DAMAGE_PER_CORRECT_ANSWER: int = BASE_DAMAGE
+
+# Combo mechanics (server-authoritative)
+COMBO_THRESHOLD: int = 2
+COMBO_DAMAGE: int = 2
+COMBO_RESETS_AFTER_STRIKE: bool = True
+COMBO_RESETS_ON_WRONG: bool = True
+COMBO_RESETS_ON_PARTIAL: bool = False
+COMBO_RESETS_ON_NEW_ENEMY: bool = True
 
 # Enumeration questions can be partially right. A partial answer is treated as
 # a glancing blow: the question is spent, but neither side takes damage.
