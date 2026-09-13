@@ -2,6 +2,7 @@ from random import Random
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.utils import timezone
 
 from courses.models import Chapter, Choice, Course, Question, Quiz, QuizAttempt, XPTransaction
 
@@ -1115,4 +1116,53 @@ class ReviewRunServiceTests(DungeonTestCase):
         # This count is bounded and constant regardless of how many courses/quizzes exist.
         with self.assertNumQueries(6):
             services.build_launch_catalog(self.user)
+
+    def test_run_size_and_duration_estimates(self):
+        self.assertEqual(services.run_size_label(1), "Short")
+        self.assertEqual(services.run_size_label(2), "Standard")
+        self.assertEqual(services.run_size_label(3), "Long")
+        self.assertEqual(services.run_size_label(4), "Long")
+
+        self.assertEqual(services.estimate_run_minutes(0, 0), 0)
+        self.assertEqual(services.estimate_run_minutes(5, 1), 4)  # round(3.0 + 0.5) = 4
+        self.assertEqual(services.estimate_run_minutes(10, 2), 7)  # round(6.0 + 1.0) = 7
+        self.assertEqual(services.estimate_run_minutes(20, 4), 14)  # round(12.0 + 2.0) = 14
+
+    def test_get_recent_chapter_groups_summarizes_attempts_and_picks_best(self):
+        quiz_a = make_quiz(self.user, question_count=10, title="Quiz Alpha")
+        quiz_b = make_quiz(self.user, question_count=10, title="Quiz Beta")
+
+        # Create two runs for Quiz Alpha: one abandoned, then one cleared
+        run_a1 = services.start_or_resume_run(self.user, quiz_a)
+        services.abandon_run(run_a1)
+
+        run_a2 = services.start_or_resume_run(self.user, quiz_a)
+        run_a2.status = DungeonRun.STATUS_CLEARED
+        run_a2.xp_awarded = 70
+        run_a2.finished_at = timezone.now()
+        run_a2.save()
+
+        # Create one failed run for Quiz Beta
+        run_b1 = services.start_or_resume_run(self.user, quiz_b)
+        run_b1.status = DungeonRun.STATUS_FAILED
+        run_b1.current_hp = 0
+        run_b1.finished_at = timezone.now()
+        run_b1.save()
+
+        groups = services.get_recent_chapter_groups(self.user)
+        self.assertEqual(len(groups), 2)
+
+        # Quiz Alpha group has 2 attempts, best cleared run is run_a2
+        alpha_group = next(g for g in groups if g["chapter"] == quiz_a.chapter)
+        self.assertEqual(alpha_group["attempt_count"], 2)
+        self.assertEqual(alpha_group["best_cleared_run"], run_a2)
+        self.assertEqual(alpha_group["display_run"], run_a2)
+        self.assertTrue(alpha_group["has_cleared"])
+
+        # Quiz Beta group has 1 attempt, display run is run_b1
+        beta_group = next(g for g in groups if g["chapter"] == quiz_b.chapter)
+        self.assertEqual(beta_group["attempt_count"], 1)
+        self.assertIsNone(beta_group["best_cleared_run"])
+        self.assertEqual(beta_group["display_run"], run_b1)
+        self.assertFalse(beta_group["has_cleared"])
 

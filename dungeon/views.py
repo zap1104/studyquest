@@ -55,14 +55,20 @@ def _service_call(handler):
 def _launch_context(request, launch_error=None):
     """Everything the launch screen renders, including the rules this player
     will actually play under - the template never states a number itself."""
+    active_runs = (
+        DungeonRun.objects.filter(
+            user=request.user, status=DungeonRun.STATUS_IN_PROGRESS
+        ).select_related("quiz__chapter__course", "active_enemy").prefetch_related("enemies")
+    )
+    recent_groups = services.get_recent_chapter_groups(request.user)
     return {
         "catalog": services.build_launch_catalog(request.user),
         "rules": services.rules_for_user(request.user),
-        "active_runs": (
-            DungeonRun.objects.filter(
-                user=request.user, status=DungeonRun.STATUS_IN_PROGRESS
-            ).select_related("quiz__chapter__course", "active_enemy").prefetch_related("enemies")
-        ),
+        "active_runs": active_runs,
+        "recent_groups": recent_groups[:3],
+        "all_recent_groups": recent_groups,
+        "has_more_history": len(recent_groups) > 3,
+        "has_prior_runs": bool(recent_groups or active_runs.exists()),
         "recent_runs": (
             DungeonRun.objects.filter(user=request.user)
             .exclude(status=DungeonRun.STATUS_IN_PROGRESS)

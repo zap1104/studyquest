@@ -250,6 +250,71 @@ def get_unresolved_counts_for_quizzes(user, quizzes):
     return counts
 
 
+def estimate_run_minutes(question_count, enemy_count, rules=None):
+    """Estimated duration in minutes derived from question count and encounters."""
+    if question_count <= 0:
+        return 0
+    return max(2, round(question_count * 0.6 + enemy_count * 0.5))
+
+
+def run_size_label(enemy_count):
+    """Qualitative size label based on enemy count: Short, Standard, or Long."""
+    if enemy_count <= 1:
+        return "Short"
+    elif enemy_count == 2:
+        return "Standard"
+    return "Long"
+
+
+def get_recent_chapter_groups(user, limit=None):
+    """Groups non-in-progress runs by chapter, showing the latest attempt or best cleared run."""
+    from collections import OrderedDict
+
+    runs = (
+        DungeonRun.objects.filter(user=user)
+        .exclude(status=DungeonRun.STATUS_IN_PROGRESS)
+        .select_related("quiz__chapter__course")
+        .order_by("-finished_at", "-started_at")
+    )
+    groups_by_chapter = OrderedDict()
+    for run in runs:
+        chapter = run.quiz.chapter
+        if chapter.id not in groups_by_chapter:
+            groups_by_chapter[chapter.id] = {
+                "chapter": chapter,
+                "course": chapter.course,
+                "runs": [],
+            }
+        groups_by_chapter[chapter.id]["runs"].append(run)
+
+    result = []
+    for group_data in groups_by_chapter.values():
+        all_runs = group_data["runs"]
+        latest_run = all_runs[0]
+        cleared_runs = [r for r in all_runs if r.status == DungeonRun.STATUS_CLEARED]
+        best_cleared_run = (
+            max(cleared_runs, key=lambda r: r.xp_awarded or 0) if cleared_runs else None
+        )
+        display_run = best_cleared_run or latest_run
+        attempt_count = len(all_runs)
+        earlier_count = attempt_count - 1
+
+        result.append({
+            "chapter": group_data["chapter"],
+            "course": group_data["course"],
+            "latest_run": latest_run,
+            "best_cleared_run": best_cleared_run,
+            "display_run": display_run,
+            "attempt_count": attempt_count,
+            "earlier_count": earlier_count,
+            "has_cleared": best_cleared_run is not None,
+        })
+
+    if limit is not None:
+        return result[:limit]
+    return result
+
+
 def build_launch_catalog(user):
     """Every quiz this user owns, annotated with whether it can start a run or review run."""
     courses = (
@@ -291,6 +356,8 @@ def build_launch_catalog(user):
                 "chapter": chapter,
                 "question_count": question_count,
                 "enemy_count": enemy_count,
+                "run_size": run_size_label(enemy_count),
+                "estimated_minutes": estimate_run_minutes(question_count, enemy_count, rules=rules),
                 "minimum_questions": minimum,
                 "is_playable": question_count >= minimum and enemy_count > 0,
                 "unresolved_count": unresolved_count,

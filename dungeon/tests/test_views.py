@@ -437,8 +437,8 @@ class ReviewRunViewTests(DungeonViewTestCase):
         )
 
         response = self.client.get(reverse("dungeon:launch"))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Review (1 missed)")
+        self.assertContains(response, "Review 1")
+        self.assertContains(response, "1 unresolved")
         self.assertContains(response, 'name="run_type" value="review"')
 
     def test_start_review_run_redirects_to_room_and_creates_review_run(self):
