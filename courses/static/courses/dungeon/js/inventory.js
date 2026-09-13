@@ -18,10 +18,13 @@
         this.api = options.api;
         this.announce = options.announce;
         this.onUsed = options.onUsed;
+        this.reducedMotion = !!options.reducedMotion;
+        this.lastHp = null;
 
         this.heartsEl = this.root.querySelector('[data-hearts]');
         this.hpTextEl = this.root.querySelector('[data-hp-text]');
         this.keysEl = this.root.querySelector('[data-keys]');
+        this.keyReadoutEl = this.root.querySelector('[data-key-readout]');
         this.keyNoteEl = this.root.querySelector('[data-key-note]');
         this.itemsEl = this.root.querySelector('[data-items]');
         this.toastEl = options.toast;
@@ -33,25 +36,31 @@
     Inventory.prototype.render = function (state) {
         this.state = state;
         this.renderHearts(state.hp);
-        this.renderKeys(state.inventory);
+        this.renderKeys(state.inventory, state.room);
         this.renderItems(state.inventory, state.hp);
     };
 
     Inventory.prototype.renderHearts = function (hp) {
         this.heartsEl.innerHTML = '';
+        var damageTaken = (this.lastHp !== null && hp.current < this.lastHp);
         for (var index = 0; index < hp.max; index += 1) {
             var filled = index < hp.current;
             var img = document.createElement('img');
             img.src = this.renderer.urlFor('ui', filled ? 'heart_full' : 'heart_empty');
             img.alt = '';
+            if (damageTaken && index >= hp.current && index < this.lastHp && !this.reducedMotion) {
+                img.className = 'dungeon-heart-lost';
+            }
             this.heartsEl.appendChild(img);
         }
+        this.lastHp = hp.current;
         this.hpTextEl.textContent = hp.current + ' / ' + hp.max + ' HP';
     };
 
-    Inventory.prototype.renderKeys = function (inventory) {
+    Inventory.prototype.renderKeys = function (inventory, room) {
         this.keysEl.innerHTML = '';
         var required = inventory.key_pieces_required;
+        var exitUnlocked = !!(inventory.has_final_key || (room && room.door_unlocked));
 
         if (inventory.has_final_key) {
             var key = document.createElement('img');
@@ -59,23 +68,30 @@
             key.alt = 'The assembled final key';
             key.dataset.collected = 'true';
             this.keysEl.appendChild(key);
-            this.keyNoteEl.textContent = 'The key is whole. The exit is open.';
-            this.keyNoteEl.dataset.unlocked = 'true';
-            return;
+            if (this.keyReadoutEl) {
+                this.keyReadoutEl.textContent = 'KEY COMPLETE';
+            }
+        } else {
+            for (var index = 0; index < required; index += 1) {
+                var piece = document.createElement('img');
+                var collected = index < inventory.key_pieces;
+                piece.src = this.renderer.urlFor('items', 'key_piece');
+                piece.alt = collected ? 'Key piece collected' : 'Key piece still missing';
+                piece.dataset.collected = collected ? 'true' : 'false';
+                this.keysEl.appendChild(piece);
+            }
+
+            if (this.keyReadoutEl) {
+                this.keyReadoutEl.textContent =
+                    inventory.key_pieces + ' / ' + required + ' KEY PIECES';
+            }
         }
 
-        for (var index = 0; index < required; index += 1) {
-            var piece = document.createElement('img');
-            var collected = index < inventory.key_pieces;
-            piece.src = this.renderer.urlFor('items', 'key_piece');
-            piece.alt = collected ? 'Key piece collected' : 'Key piece still missing';
-            piece.dataset.collected = collected ? 'true' : 'false';
-            this.keysEl.appendChild(piece);
+        if (this.keyNoteEl) {
+            this.keyNoteEl.hidden = !exitUnlocked;
+            this.keyNoteEl.textContent = exitUnlocked ? 'The key is whole. The exit is open.' : '';
+            this.keyNoteEl.dataset.unlocked = exitUnlocked ? 'true' : 'false';
         }
-
-        this.keyNoteEl.dataset.unlocked = 'false';
-        this.keyNoteEl.textContent =
-            inventory.key_pieces + ' of ' + required + ' key pieces — the exit stays sealed.';
     };
 
     Inventory.prototype.renderItems = function (inventory, hp) {
@@ -113,7 +129,7 @@
             label.textContent = definition.label;
 
             var count = document.createElement('span');
-            count.className = 'dungeon-item-count';
+            count.className = 'dungeon-item-count dq-type-numeric';
             count.textContent = '×' + definition.count;
 
             button.appendChild(icon);

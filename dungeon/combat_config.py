@@ -51,7 +51,7 @@ COMBAT_RULES = {
     ),
     "plus": CombatRules(
         key="plus",
-        base_player_hp=15,
+        base_player_hp=7,
         damage_per_wrong_answer=1,
         questions_per_enemy=5,
         encounter_chance=0.30,
@@ -95,7 +95,17 @@ def resolve_combat_rules(*, plan, quiz=None, question_count=0):
 # Damage a correct answer deals to the enemy. Kept beside the rules rather than
 # inside CombatRules because it is the same for every plan today; promote it to
 # a CombatRules field the moment one plan needs to differ.
-DAMAGE_PER_CORRECT_ANSWER = 1
+BASE_DAMAGE: int = 1
+DAMAGE_PER_CORRECT_ANSWER: int = BASE_DAMAGE
+
+# Combo mechanics (server-authoritative)
+COMBO_THRESHOLD: int = 3
+COMBO_DAMAGE: int = 2
+COMBO_RESETS_AFTER_STRIKE: bool = True
+COMBO_RESETS_ON_WRONG: bool = True
+COMBO_RESETS_ON_PARTIAL: bool = False
+COMBO_RESETS_ON_SKIP: bool = False
+COMBO_RESETS_ON_NEW_ENEMY: bool = True
 
 # Enumeration questions can be partially right. A partial answer is treated as
 # a glancing blow: the question is spent, but neither side takes damage.
@@ -124,6 +134,35 @@ def enemy_count_for_questions(question_count, *, rules):
 def minimum_questions_required(rules):
     """Fewest questions a quiz needs before a run can be launched."""
     return rules.questions_per_enemy * MIN_ENEMIES
+
+
+def review_enemy_specs(unresolved_count, *, rules):
+    """Generate enemy specifications for a Review Run with adaptive sizing.
+
+    A learner with 2 unresolved questions receives a focused 2-question, 2-HP
+    battle rather than an inflated 5-question fight padded with mastered items.
+    Enemies are capped at MAX_ENEMIES.
+    """
+    if unresolved_count <= 0:
+        return []
+
+    specs = []
+    remaining = unresolved_count
+
+    while remaining > 0 and len(specs) < MAX_ENEMIES:
+        # If this is the last available enemy slot, give it all remaining questions
+        if len(specs) == MAX_ENEMIES - 1:
+            question_count = remaining
+        else:
+            question_count = min(remaining, rules.questions_per_enemy)
+
+        specs.append({
+            "question_count": question_count,
+            "max_hp": question_count,
+        })
+        remaining -= question_count
+
+    return specs
 
 
 # --------------------------------------------------
@@ -186,6 +225,24 @@ def calculate_run_xp(*, cleared, enemies_defeated, hp_remaining):
 
 
 XP_REASON_TEMPLATE = "Dungeon Quest clear: {quiz_title}"
+
+# Review Run XP rules
+XP_REVIEW_CLEAR_BASE = 10
+XP_REVIEW_PER_NEW_MASTERY = 5
+XP_REVIEW_PER_SURVIVING_HP = 0
+XP_REASON_REVIEW_TEMPLATE = "Dungeon Quest review clear: {quiz_title}"
+
+
+def calculate_review_run_xp(*, mastered, questions_mastered):
+    """XP for a Review Run.
+
+    Only a mastered review run (every targeted question answered correctly)
+    awards mastery XP. Surviving HP awards 0 XP to prevent distortion on
+    short runs.
+    """
+    if not mastered:
+        return 0
+    return XP_REVIEW_CLEAR_BASE + (questions_mastered * XP_REVIEW_PER_NEW_MASTERY)
 
 
 # --------------------------------------------------

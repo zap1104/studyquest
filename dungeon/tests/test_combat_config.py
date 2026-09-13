@@ -23,8 +23,8 @@ class CombatRuleResolutionTests(SimpleTestCase):
     def test_free_plan_starts_with_five_hp(self):
         self.assertEqual(resolve_combat_rules(plan="free").base_player_hp, 5)
 
-    def test_plus_plan_starts_with_fifteen_hp(self):
-        self.assertEqual(resolve_combat_rules(plan="plus").base_player_hp, 15)
+    def test_plus_plan_starts_with_seven_hp(self):
+        self.assertEqual(resolve_combat_rules(plan="plus").base_player_hp, 7)
 
     def test_unknown_plan_falls_back_to_free_rules(self):
         self.assertEqual(
@@ -137,6 +137,79 @@ class RunXpTests(SimpleTestCase):
         self.assertEqual(
             calculate_run_xp(cleared=True, enemies_defeated=-5, hp_remaining=-5),
             combat_config.XP_CLEAR_BASE,
+        )
+
+
+class ReviewRunConfigTests(SimpleTestCase):
+    def test_review_enemy_specs_adaptive_sizing(self):
+        rules = resolve_combat_rules(plan="free")
+        # 0 questions -> no enemies
+        self.assertEqual(combat_config.review_enemy_specs(0, rules=rules), [])
+        self.assertEqual(combat_config.review_enemy_specs(-1, rules=rules), [])
+
+        # 1-5 questions -> 1 enemy with matching HP
+        self.assertEqual(
+            combat_config.review_enemy_specs(1, rules=rules),
+            [{"question_count": 1, "max_hp": 1}],
+        )
+        self.assertEqual(
+            combat_config.review_enemy_specs(2, rules=rules),
+            [{"question_count": 2, "max_hp": 2}],
+        )
+        self.assertEqual(
+            combat_config.review_enemy_specs(5, rules=rules),
+            [{"question_count": 5, "max_hp": 5}],
+        )
+
+        # 6-10 questions -> 2 enemies
+        self.assertEqual(
+            combat_config.review_enemy_specs(6, rules=rules),
+            [
+                {"question_count": 5, "max_hp": 5},
+                {"question_count": 1, "max_hp": 1},
+            ],
+        )
+        self.assertEqual(
+            combat_config.review_enemy_specs(10, rules=rules),
+            [
+                {"question_count": 5, "max_hp": 5},
+                {"question_count": 5, "max_hp": 5},
+            ],
+        )
+
+        # 12 questions -> 3 enemies
+        self.assertEqual(
+            combat_config.review_enemy_specs(12, rules=rules),
+            [
+                {"question_count": 5, "max_hp": 5},
+                {"question_count": 5, "max_hp": 5},
+                {"question_count": 2, "max_hp": 2},
+            ],
+        )
+
+        # Capped at MAX_ENEMIES (4)
+        specs = combat_config.review_enemy_specs(30, rules=rules)
+        self.assertEqual(len(specs), MAX_ENEMIES)
+
+    def test_calculate_review_run_xp(self):
+        # Unmastered earns 0 XP
+        self.assertEqual(
+            combat_config.calculate_review_run_xp(mastered=False, questions_mastered=5),
+            0,
+        )
+
+        # Mastered earns base + per-question mastery
+        self.assertEqual(
+            combat_config.calculate_review_run_xp(mastered=True, questions_mastered=1),
+            combat_config.XP_REVIEW_CLEAR_BASE + 1 * combat_config.XP_REVIEW_PER_NEW_MASTERY,
+        )
+        self.assertEqual(
+            combat_config.calculate_review_run_xp(mastered=True, questions_mastered=3),
+            25,  # 10 + 3*5
+        )
+        self.assertEqual(
+            combat_config.calculate_review_run_xp(mastered=True, questions_mastered=5),
+            35,  # 10 + 5*5
         )
 
 

@@ -74,10 +74,39 @@
         this.canvas = document.getElementById('dungeon-board');
         this.dpad = document.querySelector('[data-dpad]');
         this.blockedEl = document.querySelector('[data-blocked-note]');
+        this.objectiveBar = document.querySelector('[data-objective-bar]');
+        this.objectiveLabel = document.querySelector('[data-objective-label]');
+        this.objectiveDetail = document.querySelector('[data-objective-detail]');
 
         this.moving = false;
         this.announce = this.announce.bind(this);
     }
+
+    Engine.prototype.renderObjective = function (objective) {
+        if (!this.objectiveBar || !objective) { return; }
+        this.objectiveBar.dataset.code = objective.code || '';
+        if (this.objectiveLabel) { this.objectiveLabel.textContent = objective.label || ''; }
+        if (this.objectiveDetail) { this.objectiveDetail.textContent = objective.detail || ''; }
+    };
+
+    Engine.prototype.renderCombatLog = function (options) {
+        if (this.battle && typeof this.battle.renderCombatResult === 'function') {
+            this.battle.renderCombatResult(options);
+        }
+    };
+
+    Engine.prototype.setDpadActive = function (active) {
+        if (!this.dpad) { return; }
+        if (active) {
+            this.dpad.hidden = false;
+            this.dpad.removeAttribute('aria-hidden');
+            this.dpad.inert = false;
+        } else {
+            this.dpad.hidden = true;
+            this.dpad.setAttribute('aria-hidden', 'true');
+            this.dpad.inert = true;
+        }
+    };
 
     Engine.prototype.start = function () {
         var self = this;
@@ -104,6 +133,7 @@
             renderer: this.renderer,
             api: this.api,
             announce: this.announce,
+            reducedMotion: this.reducedMotion,
             onUsed: this.handleItemUsed.bind(this)
         });
 
@@ -114,9 +144,34 @@
             self.describeBoard();
             self.bindInput();
 
+            if (self.state.objective) {
+                self.renderObjective(self.state.objective);
+            }
+
             if (self.state.battle) {
+                self.setDpadActive(false);
                 self.battle.open(self.state.battle);
                 self.announce('A battle is already in progress.');
+            } else if (self.state.room && self.state.room.door_unlocked) {
+                self.renderCombatLog({
+                    state: 'event',
+                    outcome: 'unlocked',
+                    title: 'Exit Unlocked',
+                    meta: 'Key Complete',
+                    primary: 'All key pieces assembled!',
+                    explanation: 'Reach the dungeon door to complete the run.',
+                    showCaret: false
+                });
+            } else {
+                self.renderCombatLog({
+                    state: 'roaming',
+                    outcome: 'roaming',
+                    title: 'Exploring',
+                    meta: '',
+                    primary: 'Find an enemy in the tall grass.',
+                    explanation: 'Explore the room using movement keys or on-screen D-pad.',
+                    showCaret: false
+                });
             }
         }).catch(function (error) {
             self.announce('The dungeon art could not be loaded: ' + error.message);
@@ -196,6 +251,10 @@
         this.api.move(direction).then(function (response) {
             var result = response.result;
 
+            if (result.objective) {
+                self.renderObjective(result.objective);
+            }
+
             if (!result.moved) {
                 self.renderer.setState(self.state);
                 if (result.blocked_reason) {
@@ -221,12 +280,15 @@
 
                     if (result.encounter) {
                         self.state.battle = result.encounter;
-                        self.inventory.render(self.state);
-                        self.battle.open(result.encounter);
-                        self.announce(
-                            'An enemy blocks your path. Question 1 of ' +
-                            result.encounter.questions_total + '.'
-                        );
+                        self.setDpadActive(false);
+                        return self.renderer.flashEncounter(result.x, result.y, 240).then(function () {
+                            self.inventory.render(self.state);
+                            self.battle.open(result.encounter);
+                            self.announce(
+                                'An enemy blocks your path. Question 1 of ' +
+                                result.encounter.questions_total + '.'
+                            );
+                        });
                     }
                     return null;
                 });
@@ -245,6 +307,10 @@
         this.state.hp = result.hp;
         this.state.inventory = result.inventory;
         this.state.room.door_unlocked = result.door_unlocked;
+
+        if (result.objective) {
+            this.renderObjective(result.objective);
+        }
 
         if (result.enemy) {
             this.state.enemies = this.state.enemies.map(function (enemy) {
@@ -266,6 +332,14 @@
         this.state.battle = result.battle || null;
         this.inventory.render(this.state);
 
+        if (!this.state.battle) {
+            this.setDpadActive(true);
+        }
+
+        if (result.objective) {
+            this.renderObjective(result.objective);
+        }
+
         if (result.run_over) {
             this.finish(result.run_over);
             return;
@@ -275,6 +349,28 @@
             var remaining = this.state.enemies.filter(function (enemy) {
                 return !enemy.is_defeated;
             }).length;
+
+            if (result.door_unlocked || remaining === 0) {
+                this.renderCombatLog({
+                    state: 'event',
+                    outcome: 'unlocked',
+                    title: 'Exit Unlocked',
+                    meta: 'Key Complete',
+                    primary: 'All key pieces assembled!',
+                    explanation: 'The dungeon door is unlocked. Head to the exit to complete the run.',
+                    showCaret: false
+                });
+            } else {
+                this.renderCombatLog({
+                    state: 'event',
+                    outcome: 'victory',
+                    title: 'Enemy Defeated',
+                    meta: remaining + (remaining === 1 ? ' Enemy Left' : ' Enemies Left'),
+                    primary: 'Enemy defeated! They dropped a key piece.',
+                    explanation: remaining + ' enemy' + (remaining === 1 ? '' : 'ies') + ' still lurking in the room.',
+                    showCaret: false
+                });
+            }
 
             this.announce(
                 remaining === 0
@@ -286,11 +382,26 @@
     };
 
     Engine.prototype.handleItemUsed = function (itemKey, result) {
+        if (result && result.objective) {
+            this.renderObjective(result.objective);
+        }
+
         if (itemKey === 'health_potion') {
             this.state.hp = result.hp;
             this.state.inventory = result.inventory;
             this.inventory.render(this.state);
             this.announce('You drink a health potion and recover ' + result.healed_by + ' HP.');
+            if (!this.battle.isOpen()) {
+                this.renderCombatLog({
+                    state: 'event',
+                    outcome: 'item',
+                    title: 'Potion Used',
+                    meta: '+' + result.healed_by + ' HP',
+                    primary: 'Health restored!',
+                    explanation: 'Your HP is now ' + this.state.hp + '.',
+                    showCaret: false
+                });
+            }
             return;
         }
 
@@ -302,7 +413,22 @@
 
     Engine.prototype.finish = function (outcome) {
         this.state.is_active = false;
+        this.setDpadActive(false);
         this.battle.close();
+        if (outcome && outcome.objective) {
+            this.renderObjective(outcome.objective);
+        }
+        this.renderCombatLog({
+            state: 'event',
+            outcome: outcome.cleared ? 'complete' : 'failed',
+            title: outcome.cleared ? 'Run Complete' : 'Defeated',
+            meta: outcome.cleared ? '+' + outcome.xp_awarded + ' XP' : '0 HP',
+            primary: outcome.cleared ? 'Victory!' : 'You have fallen in battle.',
+            explanation: outcome.cleared
+                ? 'Dungeon cleared! You earned ' + outcome.xp_awarded + ' XP.'
+                : 'Your HP reached 0. The run has ended.',
+            showCaret: false
+        });
         this.announce(
             outcome.cleared
                 ? 'Run complete. You earned ' + outcome.xp_awarded + ' XP.'
@@ -321,6 +447,12 @@
         var description = this.renderer.describeSurroundings();
         if (this.boardDescription) { this.boardDescription.textContent = description; }
         if (this.canvas) { this.canvas.setAttribute('aria-label', description); }
+
+        var living = (this.state.enemies || []).filter(function (e) { return !e.is_defeated; }).length;
+        var remainingEl = document.querySelector('[data-enemies-remaining]');
+        if (remainingEl) {
+            remainingEl.textContent = 'Enemies remaining: ' + living;
+        }
     };
 
     Engine.prototype.showBlocked = function (message) {

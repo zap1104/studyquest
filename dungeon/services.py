@@ -20,11 +20,19 @@ from django.db.models import F
 from django.utils import timezone
 
 from courses.grading import _grade_question
-from courses.models import Course, Question, Quiz
+from courses.models import Course, Question, Quiz, QuizAttempt
 
 from . import rooms
 from .combat_config import (
+    BASE_DAMAGE,
     BOARD_VERTICAL_RESERVE,
+    COMBO_DAMAGE,
+    COMBO_RESETS_AFTER_STRIKE,
+    COMBO_RESETS_ON_NEW_ENEMY,
+    COMBO_RESETS_ON_PARTIAL,
+    COMBO_RESETS_ON_SKIP,
+    COMBO_RESETS_ON_WRONG,
+    COMBO_THRESHOLD,
     DAMAGE_PER_CORRECT_ANSWER,
     FORCED_ENCOUNTER_ON_ENEMY_TILE,
     ICON_SIZE,
@@ -38,11 +46,14 @@ from .combat_config import (
     PARTIAL_ANSWER_DAMAGES_PLAYER,
     TILE_SIZE,
     UI_SCALE,
+    XP_REASON_REVIEW_TEMPLATE,
     XP_REASON_TEMPLATE,
+    calculate_review_run_xp,
     calculate_run_xp,
     enemy_count_for_questions,
     minimum_questions_required,
     resolve_combat_rules,
+    review_enemy_specs,
     roll_item_drop,
 )
 from .models import DungeonEnemy, DungeonInventory, DungeonRun
@@ -65,6 +76,12 @@ POTION_FIELDS = {
 }
 
 SEALED_DOOR_MESSAGE = "The door is sealed. Defeat every enemy to assemble the key."
+
+OBJECTIVE_RUN_FAILED = "run_failed"
+OBJECTIVE_RUN_COMPLETE = "run_complete"
+OBJECTIVE_DEFEAT_ENEMY = "defeat_enemy"
+OBJECTIVE_EXIT_UNLOCKED = "exit_unlocked"
+OBJECTIVE_EXPLORE = "explore"
 
 
 class DungeonError(Exception):
@@ -95,8 +112,211 @@ def get_owned_quiz(user, quiz_id):
     )
 
 
+def _normalize_review_outcome(item):
+    """Normalize an attempt item result to 'correct', 'partial', or 'incorrect'."""
+    if not isinstance(item, dict):
+        return "incorrect"
+    state = str(item.get("result_state", "")).lower().strip()
+    if state in {"correct", "partial", "incorrect"}:
+        return state
+    if item.get("is_correct") is True:
+        return "correct"
+    earned = float(item.get("earned_points", 0) or 0)
+    maximum = float(item.get("maximum_points", 1) or 1)
+    if earned >= maximum and maximum > 0:
+        return "correct"
+    elif earned > 0:
+        return "partial"
+    return "incorrect"
+
+
+def get_unresolved_review_questions(user, quiz):
+    """Return active Question objects for this quiz whose latest outcome is unresolved.
+
+    A question is unresolved if its latest authoritative outcome is incorrect or partial,
+    and has not subsequently been answered correctly in a later quiz attempt or mastered
+    in a Review Run. Questions that were deleted or moved away from this quiz are excluded.
+    """
+    latest_outcome_by_question = {}
+
+    # Chronologically inspect QuizAttempt history
+    attempts = (
+        QuizAttempt.objects.filter(user=user, quiz=quiz)
+        .order_by("completed_at", "pk")
+    )
+    for attempt in attempts:
+        items = (attempt.review_data or {}).get("review_items", [])
+        for item in items:
+            qid = item.get("question_id")
+            if qid is not None:
+                latest_outcome_by_question[qid] = (attempt.completed_at, _normalize_review_outcome(item))
+
+    # Chronologically inspect finished Review Runs
+    review_runs = (
+        DungeonRun.objects.filter(
+            user=user,
+            quiz=quiz,
+            run_type=DungeonRun.TYPE_REVIEW,
+            finished_at__isnull=False,
+        ).order_by("finished_at", "pk")
+    )
+    for rrun in review_runs:
+        ts = rrun.finished_at
+        mastered_set = set(rrun.review_mastered_question_ids or [])
+        targeted = rrun.review_question_ids or []
+        for qid in targeted:
+            if qid in mastered_set:
+                latest_outcome_by_question[qid] = (ts, "correct")
+            else:
+                latest_outcome_by_question[qid] = (ts, "incorrect")
+
+    unresolved_ids = {
+        qid for qid, (_, outcome) in latest_outcome_by_question.items()
+        if outcome in {"incorrect", "partial"}
+    }
+
+    if not unresolved_ids:
+        return Question.objects.none()
+
+    return Question.objects.filter(quiz=quiz, id__in=unresolved_ids).order_by("order", "id")
+
+
+def get_unresolved_counts_for_quizzes(user, quizzes):
+    """Batch-compute unresolved mistake counts across multiple quizzes without N+1 queries."""
+    if not quizzes:
+        return {}
+
+    quiz_ids = [q.id for q in quizzes]
+    outcomes_by_quiz = {qid: {} for qid in quiz_ids}
+
+    attempts = (
+        QuizAttempt.objects.filter(user=user, quiz_id__in=quiz_ids)
+        .order_by("completed_at", "pk")
+    )
+    for attempt in attempts:
+        bucket = outcomes_by_quiz.get(attempt.quiz_id)
+        if bucket is not None:
+            items = (attempt.review_data or {}).get("review_items", [])
+            for item in items:
+                qid = item.get("question_id")
+                if qid is not None:
+                    bucket[qid] = (attempt.completed_at, _normalize_review_outcome(item))
+
+    review_runs = (
+        DungeonRun.objects.filter(
+            user=user,
+            quiz_id__in=quiz_ids,
+            run_type=DungeonRun.TYPE_REVIEW,
+            finished_at__isnull=False,
+        ).order_by("finished_at", "pk")
+    )
+    for rrun in review_runs:
+        bucket = outcomes_by_quiz.get(rrun.quiz_id)
+        if bucket is not None:
+            ts = rrun.finished_at
+            mastered_set = set(rrun.review_mastered_question_ids or [])
+            targeted = rrun.review_question_ids or []
+            for qid in targeted:
+                if qid in mastered_set:
+                    bucket[qid] = (ts, "correct")
+                else:
+                    bucket[qid] = (ts, "incorrect")
+
+    # Collect all unresolved question IDs
+    all_unresolved_ids = set()
+    quiz_unresolved_ids = {}
+    for qid, bucket in outcomes_by_quiz.items():
+        unres = {
+            question_id for question_id, (_, outcome) in bucket.items()
+            if outcome in {"incorrect", "partial"}
+        }
+        quiz_unresolved_ids[qid] = unres
+        all_unresolved_ids.update(unres)
+
+    # Filter to currently active valid questions belonging to each quiz
+    valid_active_questions = set(
+        Question.objects.filter(quiz_id__in=quiz_ids, id__in=all_unresolved_ids)
+        .values_list("quiz_id", "id")
+    )
+
+    counts = {}
+    for qid in quiz_ids:
+        active_unresolved = [
+            question_id for question_id in quiz_unresolved_ids.get(qid, set())
+            if (qid, question_id) in valid_active_questions
+        ]
+        counts[qid] = len(active_unresolved)
+
+    return counts
+
+
+def estimate_run_minutes(question_count, enemy_count, rules=None):
+    """Estimated duration in minutes derived from question count and encounters."""
+    if question_count <= 0:
+        return 0
+    return max(2, round(question_count * 0.6 + enemy_count * 0.5))
+
+
+def run_size_label(enemy_count):
+    """Qualitative size label based on enemy count: Short, Standard, or Long."""
+    if enemy_count <= 1:
+        return "Short"
+    elif enemy_count == 2:
+        return "Standard"
+    return "Long"
+
+
+def get_recent_chapter_groups(user, limit=None):
+    """Groups non-in-progress runs by chapter, showing the latest attempt or best cleared run."""
+    from collections import OrderedDict
+
+    runs = (
+        DungeonRun.objects.filter(user=user)
+        .exclude(status=DungeonRun.STATUS_IN_PROGRESS)
+        .select_related("quiz__chapter__course")
+        .order_by("-finished_at", "-started_at")
+    )
+    groups_by_chapter = OrderedDict()
+    for run in runs:
+        chapter = run.quiz.chapter
+        if chapter.id not in groups_by_chapter:
+            groups_by_chapter[chapter.id] = {
+                "chapter": chapter,
+                "course": chapter.course,
+                "runs": [],
+            }
+        groups_by_chapter[chapter.id]["runs"].append(run)
+
+    result = []
+    for group_data in groups_by_chapter.values():
+        all_runs = group_data["runs"]
+        latest_run = all_runs[0]
+        cleared_runs = [r for r in all_runs if r.status == DungeonRun.STATUS_CLEARED]
+        best_cleared_run = (
+            max(cleared_runs, key=lambda r: r.xp_awarded or 0) if cleared_runs else None
+        )
+        display_run = best_cleared_run or latest_run
+        attempt_count = len(all_runs)
+        earlier_count = attempt_count - 1
+
+        result.append({
+            "chapter": group_data["chapter"],
+            "course": group_data["course"],
+            "latest_run": latest_run,
+            "best_cleared_run": best_cleared_run,
+            "display_run": display_run,
+            "attempt_count": attempt_count,
+            "earlier_count": earlier_count,
+            "has_cleared": best_cleared_run is not None,
+        })
+
+    if limit is not None:
+        return result[:limit]
+    return result
+
+
 def build_launch_catalog(user):
-    """Every quiz this user owns, annotated with whether it can start a run."""
+    """Every quiz this user owns, annotated with whether it can start a run or review run."""
     courses = (
         Course.objects.filter(user=user)
         .exclude(status="archived")
@@ -105,6 +325,16 @@ def build_launch_catalog(user):
     )
     profile = _get_profile(user)
     catalog = []
+
+    # Gather all quizzes to batch-fetch unresolved counts with 0 N+1 growth
+    all_quizzes = []
+    for course in courses:
+        for chapter in course.chapters.all():
+            quiz = getattr(chapter, "quiz", None)
+            if quiz is not None:
+                all_quizzes.append(quiz)
+
+    unresolved_counts = get_unresolved_counts_for_quizzes(user, all_quizzes)
 
     for course in courses:
         entries = []
@@ -119,14 +349,19 @@ def build_launch_catalog(user):
             )
             minimum = minimum_questions_required(rules)
             enemy_count = enemy_count_for_questions(question_count, rules=rules)
+            unresolved_count = unresolved_counts.get(quiz.id, 0)
 
             entries.append({
                 "quiz": quiz,
                 "chapter": chapter,
                 "question_count": question_count,
                 "enemy_count": enemy_count,
+                "run_size": run_size_label(enemy_count),
+                "estimated_minutes": estimate_run_minutes(question_count, enemy_count, rules=rules),
                 "minimum_questions": minimum,
                 "is_playable": question_count >= minimum and enemy_count > 0,
+                "unresolved_count": unresolved_count,
+                "review_run_available": unresolved_count > 0,
             })
 
         if entries:
@@ -136,22 +371,66 @@ def build_launch_catalog(user):
 
 
 @transaction.atomic
-def start_or_resume_run(user, quiz, *, seed=None):
+def start_or_resume_run(user, quiz, *, run_type=DungeonRun.TYPE_CLASSIC, seed=None):
     """Return this user's in-progress run for the quiz, creating one if needed.
 
     Resuming is deliberate: an abandoned browser tab must not become a way to
     re-roll the room or restore lost HP.
     """
+    if run_type not in dict(DungeonRun.RUN_TYPE_CHOICES):
+        raise DungeonError(f"Invalid run type '{run_type}'.")
+
     existing = _find_active_run(user, quiz)
     if existing is not None:
+        if existing.run_type != run_type:
+            existing_label = existing.get_run_type_display()
+            requested_label = dict(DungeonRun.RUN_TYPE_CHOICES).get(run_type, run_type)
+            raise LaunchBlocked(
+                f"A {existing_label} is already in progress for this chapter. "
+                f"Resume or abandon it before starting a {requested_label}."
+            )
         return existing
 
+    profile = _get_profile(user)
+
+    if run_type == DungeonRun.TYPE_REVIEW:
+        unresolved_questions = list(get_unresolved_review_questions(user, quiz))
+        unresolved_count = len(unresolved_questions)
+        if unresolved_count == 0:
+            raise LaunchBlocked(
+                f'"{_quiz_title(quiz)}" has no unresolved mistakes to review. '
+                f"Play a Classic Expedition or complete a chapter quiz first."
+            )
+
+        rules = resolve_combat_rules(
+            plan=_plan_of(profile), quiz=quiz, question_count=unresolved_count
+        )
+        specs = review_enemy_specs(unresolved_count, rules=rules)
+        if not specs:
+            raise LaunchBlocked("Unable to field enemies for this Review Run.")
+
+        enemy_count = len(specs)
+        seed = seed if seed is not None else Random().randrange(1, 2 ** 31 - 1)
+        room_data = _build_room_for(user, seed=seed, enemy_count=enemy_count)
+        question_ids = [q.id for q in unresolved_questions]
+
+        try:
+            with transaction.atomic():
+                return _create_review_run(
+                    user, quiz, rules, room_data, question_ids, specs, seed
+                )
+        except IntegrityError:
+            existing = _find_active_run(user, quiz)
+            if existing is None:
+                raise
+            return existing
+
+    # Standard Classic Expedition
     question_ids = list(
         quiz.questions.order_by("order", "id").values_list("id", flat=True)
     )
     question_count = len(question_ids)
 
-    profile = _get_profile(user)
     rules = resolve_combat_rules(
         plan=_plan_of(profile), quiz=quiz, question_count=question_count
     )
@@ -193,6 +472,7 @@ def _create_run(user, quiz, rules, room_data, question_ids, enemy_count, seed):
     run = DungeonRun.objects.create(
         user=user,
         quiz=quiz,
+        run_type=DungeonRun.TYPE_CLASSIC,
         status=DungeonRun.STATUS_IN_PROGRESS,
         current_hp=rules.base_player_hp,
         max_hp=rules.base_player_hp,
@@ -214,6 +494,45 @@ def _create_run(user, quiz, rules, room_data, question_ids, enemy_count, seed):
             y=position["y"],
             hp=rules.enemy_hp,
             max_hp=rules.enemy_hp,
+            question_ids=assigned,
+        )
+
+    return run
+
+
+def _create_review_run(user, quiz, rules, room_data, question_ids, specs, seed):
+    run = DungeonRun.objects.create(
+        user=user,
+        quiz=quiz,
+        run_type=DungeonRun.TYPE_REVIEW,
+        review_question_ids=list(question_ids),
+        review_mastered_question_ids=[],
+        status=DungeonRun.STATUS_IN_PROGRESS,
+        current_hp=rules.base_player_hp,
+        max_hp=rules.base_player_hp,
+        room_data=room_data,
+        player_x=room_data["spawn"]["x"],
+        player_y=room_data["spawn"]["y"],
+        rules_key=rules.key,
+        seed=seed,
+    )
+    DungeonInventory.objects.create(run=run)
+
+    shuffled_qids = list(question_ids)
+    Random(seed).shuffle(shuffled_qids)
+
+    cursor = 0
+    for index, spec in enumerate(specs):
+        assigned = shuffled_qids[cursor:cursor + spec["question_count"]]
+        cursor += spec["question_count"]
+        position = room_data["enemy_positions"][index]
+        DungeonEnemy.objects.create(
+            run=run,
+            enemy_index=index,
+            x=position["x"],
+            y=position["y"],
+            hp=spec["max_hp"],
+            max_hp=spec["max_hp"],
             question_ids=assigned,
         )
 
@@ -267,10 +586,16 @@ def move_player(run, direction, *, rng=None):
             "moved": False,
             "facing": direction,
             "blocked_reason": SEALED_DOOR_MESSAGE,
+            "objective": serialize_objective(run),
         }
 
     if not rooms.is_walkable(grid, target_x, target_y, door_unlocked=unlocked):
-        return {"moved": False, "facing": direction, "blocked_reason": None}
+        return {
+            "moved": False,
+            "facing": direction,
+            "blocked_reason": None,
+            "objective": serialize_objective(run),
+        }
 
     run.player_x, run.player_y = target_x, target_y
     run.save(update_fields=["player_x", "player_y"])
@@ -282,14 +607,17 @@ def move_player(run, direction, *, rng=None):
             "x": target_x,
             "y": target_y,
             "exit": finish_run(run, cleared=True),
+            "objective": serialize_objective(run),
         }
 
+    encounter = _roll_encounter(run, target_x, target_y, rng=rng)
     return {
         "moved": True,
         "facing": direction,
         "x": target_x,
         "y": target_y,
-        "encounter": _roll_encounter(run, target_x, target_y, rng=rng),
+        "encounter": encounter,
+        "objective": serialize_objective(run, run.active_enemy if encounter else None),
     }
 
 
@@ -313,6 +641,11 @@ def _roll_encounter(run, x, y, *, rng=None):
     enemy = lair_holder or min(
         living, key=lambda e: (abs(e.x - x) + abs(e.y - y), e.enemy_index)
     )
+
+    if COMBO_RESETS_ON_NEW_ENEMY and run.active_enemy_id != enemy.id:
+        if enemy.current_combo != 0:
+            enemy.current_combo = 0
+            enemy.save(update_fields=["current_combo"])
 
     run.active_enemy = enemy
     run.save(update_fields=["active_enemy"])
@@ -384,27 +717,65 @@ def _resolve_turn(run, enemy, question, *, outcome, feedback):
 
     damage_to_enemy = 0
     damage_to_player = 0
+    combat_event = None
 
     if outcome == OUTCOME_CORRECT:
-        damage_to_enemy = DAMAGE_PER_CORRECT_ANSWER
+        new_combo = (enemy.current_combo or 0) + 1
+        if new_combo >= COMBO_THRESHOLD:
+            damage_to_enemy = COMBO_DAMAGE
+            combat_event = {
+                "code": "power_strike",
+                "label": "Power Strike",
+                "damage": COMBO_DAMAGE,
+            }
+            if COMBO_RESETS_AFTER_STRIKE:
+                enemy.current_combo = 0
+            else:
+                enemy.current_combo = new_combo
+        else:
+            damage_to_enemy = BASE_DAMAGE
+            combat_event = {
+                "code": "direct_hit",
+                "label": "Direct Hit",
+                "damage": BASE_DAMAGE,
+            }
+            enemy.current_combo = new_combo
+
+        if run.is_review_run and question.id not in (run.review_mastered_question_ids or []):
+            run.review_mastered_question_ids = list(run.review_mastered_question_ids or []) + [question.id]
+            run.save(update_fields=["review_mastered_question_ids"])
     elif outcome == OUTCOME_PARTIAL:
-        damage_to_enemy = DAMAGE_PER_CORRECT_ANSWER if PARTIAL_ANSWER_DAMAGES_ENEMY else 0
+        if COMBO_RESETS_ON_PARTIAL:
+            enemy.current_combo = 0
+        damage_to_enemy = BASE_DAMAGE if PARTIAL_ANSWER_DAMAGES_ENEMY else 0
         damage_to_player = (
             rules.damage_per_wrong_answer if PARTIAL_ANSWER_DAMAGES_PLAYER else 0
         )
     elif outcome == OUTCOME_INCORRECT:
+        if COMBO_RESETS_ON_WRONG:
+            enemy.current_combo = 0
         damage_to_player = rules.damage_per_wrong_answer
+    elif outcome == OUTCOME_SKIPPED:
+        if COMBO_RESETS_ON_SKIP:
+            enemy.current_combo = 0
 
     enemy.hp = max(enemy.hp - damage_to_enemy, 0)
     run.current_hp = max(run.current_hp - damage_to_player, 0)
 
     # An enemy falls when its HP is gone *or* when its hand is spent - surviving
     # its full set of questions counts as a clear.
-    enemy_defeated = enemy.hp <= 0 or not enemy.has_questions_left
+    # In a Review Run, the enemy only falls once all its assigned remediation questions
+    # have been resolved, even if HP hit 0 early from combos.
+    if run.is_review_run:
+        enemy_defeated = not enemy.has_questions_left
+    else:
+        enemy_defeated = enemy.hp <= 0 or not enemy.has_questions_left
+
     if enemy_defeated:
         enemy.is_defeated = True
+        enemy.current_combo = 0
 
-    enemy.save(update_fields=["hp", "is_defeated", "answered_question_ids"])
+    enemy.save(update_fields=["hp", "is_defeated", "answered_question_ids", "current_combo"])
     run.save(update_fields=["current_hp"])
 
     drops = None
@@ -413,10 +784,28 @@ def _resolve_turn(run, enemy, question, *, outcome, feedback):
         run.active_enemy = None
         run.save(update_fields=["active_enemy"])
 
+    is_power_strike = bool(combat_event and combat_event["code"] == "power_strike")
+    if is_power_strike:
+        feedback["combat_message"] = "Power Strike! 2 damage!"
+    elif damage_to_enemy > 0:
+        feedback["combat_message"] = f"{damage_to_enemy} damage"
+
+    stored_combo = enemy.current_combo or 0
+    combo_payload = {
+        "count": stored_combo,
+        "threshold": COMBO_THRESHOLD,
+        "remaining": max(COMBO_THRESHOLD - stored_combo, 0),
+        "current": stored_combo,
+        "is_power_strike": is_power_strike,
+    }
+
     payload = {
         "outcome": outcome,
         "damage_to_enemy": damage_to_enemy,
         "damage_to_player": damage_to_player,
+        "damage_dealt": damage_to_enemy,
+        "combat_event": combat_event,
+        "combo": combo_payload,
         "enemy_defeated": enemy_defeated,
         "drops": drops,
         "feedback": feedback,
@@ -426,10 +815,12 @@ def _resolve_turn(run, enemy, question, *, outcome, feedback):
         "door_unlocked": is_door_unlocked(run),
         "run_over": None,
         "battle": None,
+        "objective": serialize_objective(run, None if enemy_defeated else enemy),
     }
 
     if run.current_hp <= 0:
         payload["run_over"] = finish_run(run, cleared=False)
+        payload["objective"] = serialize_objective(run)
         return payload
 
     if not enemy_defeated:
@@ -505,6 +896,7 @@ def use_item(run, item_key):
             "battle": (
                 serialize_battle(run, run.active_enemy) if run.active_enemy_id else None
             ),
+            "objective": serialize_objective(run),
         }
 
     if item_key == ITEM_SKIP_POTION:
@@ -579,11 +971,23 @@ def finish_run(run, *, cleared):
     """
     status = DungeonRun.STATUS_CLEARED if cleared else DungeonRun.STATUS_FAILED
     enemies_defeated = run.enemies.filter(is_defeated=True).count()
-    xp = calculate_run_xp(
-        cleared=cleared,
-        enemies_defeated=enemies_defeated,
-        hp_remaining=run.current_hp,
-    )
+
+    if run.is_review_run:
+        targeted = run.targeted_count
+        mastered_count = run.mastered_count
+        is_mastered = cleared and targeted > 0 and mastered_count == targeted
+        xp = calculate_review_run_xp(
+            mastered=is_mastered,
+            questions_mastered=mastered_count,
+        )
+        reason = XP_REASON_REVIEW_TEMPLATE.format(quiz_title=_quiz_title(run.quiz))
+    else:
+        xp = calculate_run_xp(
+            cleared=cleared,
+            enemies_defeated=enemies_defeated,
+            hp_remaining=run.current_hp,
+        )
+        reason = XP_REASON_TEMPLATE.format(quiz_title=_quiz_title(run.quiz))
 
     claimed = DungeonRun.objects.filter(pk=run.pk, xp_awarded__isnull=True).update(
         status=status,
@@ -597,18 +1001,22 @@ def finish_run(run, *, cleared):
     if claimed and xp > 0:
         profile = _get_profile(run.user)
         if profile is not None:
-            profile.award_xp(
-                xp, reason=XP_REASON_TEMPLATE.format(quiz_title=_quiz_title(run.quiz))
-            )
+            profile.award_xp(xp, reason=reason)
             profile.record_study_activity()
 
     return {
         "status": run.status,
         "cleared": cleared,
+        "run_type": run.run_type,
+        "is_review_run": run.is_review_run,
+        "is_mastered": run.is_mastered,
+        "targeted_count": run.targeted_count,
+        "mastered_count": run.mastered_count,
         "xp_awarded": run.xp_awarded or 0,
         "xp_newly_awarded": bool(claimed) and xp > 0,
         "enemies_defeated": enemies_defeated,
         "hp_remaining": run.current_hp,
+        "objective": serialize_objective(run),
     }
 
 
@@ -622,6 +1030,25 @@ def abandon_run(run):
     run.active_enemy = None
     run.save(update_fields=["status", "finished_at", "active_enemy"])
     return run
+
+
+def get_run_verdict_code(run):
+    """Authoritative verdict classification for a completed or terminated DungeonRun."""
+    if run.status == DungeonRun.STATUS_ABANDONED:
+        return "abandoned"
+
+    if run.status == DungeonRun.STATUS_FAILED:
+        return "failed"
+
+    if run.run_type == DungeonRun.TYPE_REVIEW:
+        targeted = set(run.review_question_ids or [])
+        mastered = set(run.review_mastered_question_ids or [])
+        return "review_mastered" if (targeted and targeted <= mastered) else "review_incomplete"
+
+    if run.status == DungeonRun.STATUS_CLEARED:
+        return "cleared"
+
+    return "incomplete"
 
 
 # --------------------------------------------------
@@ -654,6 +1081,76 @@ def serialize_question(run, question):
     return payload
 
 
+def serialize_objective(run, battle_enemy=None):
+    """The authoritative current objective for this run.
+
+    Decided entirely on the server; the client renders what it receives and
+    never computes gameplay conditions or win/loss states independently.
+    """
+    if run.status in (DungeonRun.STATUS_FAILED, DungeonRun.STATUS_ABANDONED) or not run.is_alive:
+        return {
+            "code": OBJECTIVE_RUN_FAILED,
+            "label": "You have fallen",
+            "detail": "The dungeon claimed this run.",
+        }
+
+    if run.status == DungeonRun.STATUS_CLEARED:
+        return {
+            "code": OBJECTIVE_RUN_COMPLETE,
+            "label": "Review mastered" if run.is_mastered else "Dungeon cleared",
+            "detail": "You escaped through the exit door.",
+        }
+
+    if run.is_review_run:
+        enemy = battle_enemy or (run.active_enemy if run.active_enemy_id else None)
+        if enemy and not enemy.is_defeated:
+            remaining_q = len(enemy.remaining_question_ids)
+            q_word = "question" if remaining_q == 1 else "questions"
+            return {
+                "code": OBJECTIVE_DEFEAT_ENEMY,
+                "label": f"Review Enemy {enemy.enemy_index + 1}",
+                "detail": f"{remaining_q} remediation {q_word} remaining ({enemy.hp} HP).",
+            }
+
+        if is_door_unlocked(run):
+            return {
+                "code": OBJECTIVE_EXIT_UNLOCKED,
+                "label": "Review Complete — Exit Unlocked",
+                "detail": "Step onto the door to record your remediation.",
+            }
+
+        living = run.enemies.filter(is_defeated=False).count()
+        plural = "enemy" if living == 1 else "enemies"
+        return {
+            "code": OBJECTIVE_EXPLORE,
+            "label": "Review Run: Explore",
+            "detail": f"Search the tall grass ({living} review {plural} remaining · {run.mastered_count}/{run.targeted_count} mastered).",
+        }
+
+    enemy = battle_enemy or (run.active_enemy if run.active_enemy_id else None)
+    if enemy and not enemy.is_defeated:
+        return {
+            "code": OBJECTIVE_DEFEAT_ENEMY,
+            "label": f"Defeat Enemy {enemy.enemy_index + 1}",
+            "detail": f"{enemy.hp} of {enemy.max_hp} HP remaining",
+        }
+
+    if is_door_unlocked(run):
+        return {
+            "code": OBJECTIVE_EXIT_UNLOCKED,
+            "label": "Exit is open",
+            "detail": "Step onto the door to escape.",
+        }
+
+    living = run.enemies.filter(is_defeated=False).count()
+    plural = "enemy" if living == 1 else "enemies"
+    return {
+        "code": OBJECTIVE_EXPLORE,
+        "label": "Explore the room",
+        "detail": f"Search the tall grass ({living} {plural} remaining)",
+    }
+
+
 def serialize_enemy(enemy):
     return {
         "index": enemy.enemy_index,
@@ -664,6 +1161,7 @@ def serialize_enemy(enemy):
         "is_defeated": enemy.is_defeated,
         "questions_total": len(enemy.question_ids or []),
         "questions_answered": len(enemy.answered_question_ids or []),
+        "combo": enemy.current_combo,
     }
 
 
@@ -676,6 +1174,14 @@ def serialize_battle(run, enemy):
         "question": serialize_question(run, question) if question else None,
         "question_number": len(enemy.answered_question_ids or []) + 1,
         "questions_total": len(enemy.question_ids or []),
+        "objective": serialize_objective(run, enemy),
+        "combo": {
+            "count": enemy.current_combo or 0,
+            "threshold": COMBO_THRESHOLD,
+            "remaining": max(COMBO_THRESHOLD - (enemy.current_combo or 0), 0),
+            "current": enemy.current_combo or 0,
+            "is_power_strike": False,
+        },
     }
 
 
@@ -701,6 +1207,11 @@ def serialize_run(run):
     return {
         "run_id": run.pk,
         "status": run.status,
+        "run_type": run.run_type,
+        "is_review_run": run.is_review_run,
+        "review_targeted_count": run.targeted_count,
+        "review_mastered_count": run.mastered_count,
+        "is_mastered": run.is_mastered,
         "is_active": run.is_active,
         "hp": {"current": run.current_hp, "max": run.max_hp},
         "player": {"x": run.player_x, "y": run.player_y},
@@ -715,6 +1226,7 @@ def serialize_run(run):
         "enemies": [serialize_enemy(enemy) for enemy in run.enemies.all()],
         "inventory": serialize_inventory(run),
         "battle": serialize_battle(run, active),
+        "objective": serialize_objective(run, active),
         "display": display_settings(),
         "quiz": {
             "title": _quiz_title(run.quiz),

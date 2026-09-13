@@ -2,6 +2,7 @@ from random import Random
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.utils import timezone
 
 from courses.models import Chapter, Choice, Course, Question, Quiz, QuizAttempt, XPTransaction
 
@@ -747,3 +748,471 @@ class ConcurrentLaunchTests(DungeonTestCase):
         self.assertEqual(
             DungeonRun.objects.filter(status=DungeonRun.STATUS_IN_PROGRESS).count(), 1
         )
+
+
+class AuthoritativeObjectiveTests(DungeonTestCase):
+    def test_fresh_run_has_explore_objective(self):
+        run = self.start(question_count=10)
+        obj = services.serialize_run(run)["objective"]
+        self.assertEqual(obj["code"], services.OBJECTIVE_EXPLORE)
+        self.assertEqual(obj["label"], "Explore the room")
+        self.assertIn("2 enemies remaining", obj["detail"])
+
+    def test_engaging_enemy_sets_defeat_enemy_objective(self):
+        run = self.start(question_count=10)
+        move_result = self.engage(run)
+        self.assertIn("objective", move_result)
+        self.assertEqual(move_result["objective"]["code"], services.OBJECTIVE_DEFEAT_ENEMY)
+
+        run = self.reload(run)
+        obj = services.serialize_run(run)["objective"]
+        self.assertEqual(obj["code"], services.OBJECTIVE_DEFEAT_ENEMY)
+        self.assertEqual(obj["label"], f"Defeat Enemy {run.active_enemy.enemy_index + 1}")
+        self.assertIn(f"{run.active_enemy.hp} of {run.active_enemy.max_hp} HP", obj["detail"])
+
+    def test_turn_result_payload_carries_objective(self):
+        run = self.start(question_count=10)
+        self.engage(run)
+        result = self.answer_correctly(run)
+        self.assertIn("objective", result)
+        self.assertEqual(result["objective"]["code"], services.OBJECTIVE_DEFEAT_ENEMY)
+        self.assertIn("4 of 5 HP", result["objective"]["detail"])
+
+    def test_all_enemies_defeated_sets_exit_unlocked_objective(self):
+        run = self.start(question_count=10)
+        self.clear_all_enemies(run)
+        run = self.reload(run)
+        self.assertTrue(services.is_door_unlocked(run))
+
+        obj = services.serialize_run(run)["objective"]
+        self.assertEqual(obj["code"], services.OBJECTIVE_EXIT_UNLOCKED)
+        self.assertEqual(obj["label"], "Exit is open")
+        self.assertEqual(obj["detail"], "Step onto the door to escape.")
+
+    def test_cleared_run_sets_run_complete_objective(self):
+        run = self.start(question_count=10)
+        self.clear_all_enemies(run)
+        self.walk_to_door(run)
+        exit_payload = services.attempt_exit(run)
+        self.assertIn("objective", exit_payload)
+        self.assertEqual(exit_payload["objective"]["code"], services.OBJECTIVE_RUN_COMPLETE)
+
+        run = self.reload(run)
+        obj = services.serialize_run(run)["objective"]
+        self.assertEqual(obj["code"], services.OBJECTIVE_RUN_COMPLETE)
+        self.assertEqual(obj["label"], "Dungeon cleared")
+
+    def test_zero_hp_sets_run_failed_objective(self):
+        run = self.start(question_count=5)
+        self.engage(run)
+        turn_result = None
+        while run.is_alive:
+            turn_result = self.answer_wrongly(run)
+            run = self.reload(run)
+
+        self.assertEqual(turn_result["objective"]["code"], services.OBJECTIVE_RUN_FAILED)
+        obj = services.serialize_run(run)["objective"]
+        self.assertEqual(obj["code"], services.OBJECTIVE_RUN_FAILED)
+        self.assertEqual(obj["label"], "You have fallen")
+
+    def test_health_potion_use_includes_objective(self):
+        run = self.start(question_count=10)
+        run.current_hp = 3
+        run.save(update_fields=["current_hp"])
+        self.set_inventory(run, health_potions=1)
+        result = services.use_item(run, ITEM_HEALTH_POTION)
+        self.assertIn("objective", result)
+        self.assertEqual(result["objective"]["code"], services.OBJECTIVE_EXPLORE)
+
+
+class ReviewRunServiceTests(DungeonTestCase):
+    def test_older_incorrect_plus_newer_correct_is_not_unresolved(self):
+        quiz = make_quiz(self.user, question_count=5)
+        q1, q2 = quiz.questions.all()[:2]
+
+        # Attempt 1: Q1 and Q2 incorrect
+        QuizAttempt.objects.create(
+            user=self.user,
+            quiz=quiz,
+            score=0,
+            total_questions=5,
+            review_data={
+                "review_items": [
+                    {"question_id": q1.id, "result_state": "incorrect"},
+                    {"question_id": q2.id, "result_state": "incorrect"},
+                ]
+            },
+        )
+
+        # Attempt 2: Q1 correct, Q2 still incorrect
+        QuizAttempt.objects.create(
+            user=self.user,
+            quiz=quiz,
+            score=1,
+            total_questions=5,
+            review_data={
+                "review_items": [
+                    {"question_id": q1.id, "result_state": "correct"},
+                    {"question_id": q2.id, "result_state": "incorrect"},
+                ]
+            },
+        )
+
+        unresolved = list(services.get_unresolved_review_questions(self.user, quiz))
+        self.assertEqual(len(unresolved), 1)
+        self.assertEqual(unresolved[0].id, q2.id)
+
+    def test_older_correct_plus_newer_incorrect_is_unresolved(self):
+        quiz = make_quiz(self.user, question_count=5)
+        q1 = quiz.questions.first()
+
+        # Attempt 1: Q1 correct
+        QuizAttempt.objects.create(
+            user=self.user,
+            quiz=quiz,
+            score=1,
+            total_questions=5,
+            review_data={"review_items": [{"question_id": q1.id, "result_state": "correct"}]},
+        )
+
+        # Attempt 2: Q1 incorrect
+        QuizAttempt.objects.create(
+            user=self.user,
+            quiz=quiz,
+            score=0,
+            total_questions=5,
+            review_data={"review_items": [{"question_id": q1.id, "result_state": "incorrect"}]},
+        )
+
+        unresolved = list(services.get_unresolved_review_questions(self.user, quiz))
+        self.assertEqual(len(unresolved), 1)
+        self.assertEqual(unresolved[0].id, q1.id)
+
+    def test_partial_remains_unresolved(self):
+        quiz = make_quiz(self.user, question_count=5)
+        q1 = quiz.questions.first()
+
+        QuizAttempt.objects.create(
+            user=self.user,
+            quiz=quiz,
+            score=0.5,
+            total_questions=5,
+            review_data={"review_items": [{"question_id": q1.id, "result_state": "partial"}]},
+        )
+
+        unresolved = list(services.get_unresolved_review_questions(self.user, quiz))
+        self.assertEqual(len(unresolved), 1)
+        self.assertEqual(unresolved[0].id, q1.id)
+
+    def test_deleted_or_moved_question_is_excluded(self):
+        quiz = make_quiz(self.user, question_count=5)
+        q1, q2 = quiz.questions.all()[:2]
+
+        QuizAttempt.objects.create(
+            user=self.user,
+            quiz=quiz,
+            score=0,
+            total_questions=5,
+            review_data={
+                "review_items": [
+                    {"question_id": q1.id, "result_state": "incorrect"},
+                    {"question_id": q2.id, "result_state": "incorrect"},
+                ]
+            },
+        )
+
+        # Delete q1
+        q1_id = q1.id
+        q1.delete()
+
+        # Move q2 to another quiz
+        other_quiz = make_quiz(self.user, question_count=3, title="Other Quiz")
+        q2.quiz = other_quiz
+        q2.save(update_fields=["quiz"])
+
+        unresolved = list(services.get_unresolved_review_questions(self.user, quiz))
+        self.assertEqual(len(unresolved), 0)
+
+    def test_review_run_launch_blocks_when_no_unresolved_mistakes(self):
+        quiz = make_quiz(self.user, question_count=10)
+        with self.assertRaises(services.LaunchBlocked):
+            services.start_or_resume_run(self.user, quiz, run_type=DungeonRun.TYPE_REVIEW)
+
+    def test_review_run_adaptive_sizing_one_enemy_two_hp(self):
+        quiz = make_quiz(self.user, question_count=10)
+        q1, q2 = quiz.questions.all()[:2]
+        QuizAttempt.objects.create(
+            user=self.user,
+            quiz=quiz,
+            score=0,
+            total_questions=10,
+            review_data={
+                "review_items": [
+                    {"question_id": q1.id, "result_state": "incorrect"},
+                    {"question_id": q2.id, "result_state": "incorrect"},
+                ]
+            },
+        )
+
+        run = services.start_or_resume_run(self.user, quiz, run_type=DungeonRun.TYPE_REVIEW)
+        self.assertEqual(run.run_type, DungeonRun.TYPE_REVIEW)
+        self.assertTrue(run.is_review_run)
+        self.assertEqual(set(run.review_question_ids), {q1.id, q2.id})
+        self.assertEqual(run.enemies.count(), 1)
+
+        enemy = run.enemies.first()
+        self.assertEqual(enemy.hp, 2)
+        self.assertEqual(enemy.max_hp, 2)
+        self.assertEqual(len(enemy.question_ids), 2)
+
+    def test_active_run_type_conflict_blocks_launch(self):
+        quiz = make_quiz(self.user, question_count=10)
+        q1 = quiz.questions.first()
+        QuizAttempt.objects.create(
+            user=self.user,
+            quiz=quiz,
+            score=0,
+            total_questions=10,
+            review_data={"review_items": [{"question_id": q1.id, "result_state": "incorrect"}]},
+        )
+
+        # Start a classic run
+        classic_run = services.start_or_resume_run(
+            self.user, quiz, run_type=DungeonRun.TYPE_CLASSIC
+        )
+        self.assertEqual(classic_run.run_type, DungeonRun.TYPE_CLASSIC)
+
+        # Attempting to start review run must fail
+        with self.assertRaises(services.LaunchBlocked) as ctx:
+            services.start_or_resume_run(self.user, quiz, run_type=DungeonRun.TYPE_REVIEW)
+        self.assertIn("Classic Expedition is already in progress", str(ctx.exception))
+
+    def test_enemy_defeat_requires_all_remediation_questions_resolved(self):
+        quiz = make_quiz(self.user, question_count=10)
+        q1, q2, q3 = quiz.questions.all()[:3]
+        QuizAttempt.objects.create(
+            user=self.user,
+            quiz=quiz,
+            score=0,
+            total_questions=10,
+            review_data={
+                "review_items": [
+                    {"question_id": q1.id, "result_state": "incorrect"},
+                    {"question_id": q2.id, "result_state": "incorrect"},
+                    {"question_id": q3.id, "result_state": "incorrect"},
+                ]
+            },
+        )
+
+        run = services.start_or_resume_run(self.user, quiz, run_type=DungeonRun.TYPE_REVIEW)
+        enemy = run.enemies.first()
+        # Manually drop enemy HP to 0 early to simulate rapid damage/combo
+        enemy.hp = 0
+        enemy.save(update_fields=["hp"])
+
+        self.engage(run, enemy)
+        # Enemy has 3 questions. First question answered correctly:
+        res = self.answer_correctly(run)
+        enemy = DungeonEnemy.objects.get(pk=enemy.pk)
+
+        # Enemy must NOT be defeated because 2 remediation questions remain
+        self.assertFalse(res["enemy_defeated"])
+        self.assertFalse(enemy.is_defeated)
+        self.assertEqual(len(enemy.remaining_question_ids), 2)
+
+        # Answer remaining two questions
+        self.answer_correctly(run)
+        res3 = self.answer_correctly(run)
+        enemy = DungeonEnemy.objects.get(pk=enemy.pk)
+
+        self.assertTrue(res3["enemy_defeated"])
+        self.assertTrue(enemy.is_defeated)
+
+    def test_review_run_mastery_tracking_and_xp_award(self):
+        quiz = make_quiz(self.user, question_count=10)
+        q1, q2 = quiz.questions.all()[:2]
+        QuizAttempt.objects.create(
+            user=self.user,
+            quiz=quiz,
+            score=0,
+            total_questions=10,
+            review_data={
+                "review_items": [
+                    {"question_id": q1.id, "result_state": "incorrect"},
+                    {"question_id": q2.id, "result_state": "incorrect"},
+                ]
+            },
+        )
+
+        run = services.start_or_resume_run(self.user, quiz, run_type=DungeonRun.TYPE_REVIEW)
+        self.engage(run)
+
+        # Answer both correctly
+        self.answer_correctly(run)
+        self.answer_correctly(run)
+
+        run = self.reload(run)
+        self.assertEqual(set(run.review_mastered_question_ids), {q1.id, q2.id})
+        self.assertTrue(run.is_mastered)
+
+        # Exit door and clear
+        self.walk_to_door(run)
+        result = services.attempt_exit(run)
+
+        self.assertTrue(result["cleared"])
+        self.assertTrue(result["is_mastered"])
+        self.assertEqual(result["xp_awarded"], 10 + 2 * 5)  # base 10 + 2*5 = 20
+
+        # Now get_unresolved_review_questions must be empty!
+        unresolved = list(services.get_unresolved_review_questions(self.user, quiz))
+        self.assertEqual(len(unresolved), 0)
+
+    def test_imperfect_review_run_preserves_remaining_target_and_awards_zero_xp(self):
+        quiz = make_quiz(self.user, question_count=10)
+        q1, q2 = quiz.questions.all()[:2]
+        QuizAttempt.objects.create(
+            user=self.user,
+            quiz=quiz,
+            score=0,
+            total_questions=10,
+            review_data={
+                "review_items": [
+                    {"question_id": q1.id, "result_state": "incorrect"},
+                    {"question_id": q2.id, "result_state": "incorrect"},
+                ]
+            },
+        )
+
+        run = services.start_or_resume_run(self.user, quiz, run_type=DungeonRun.TYPE_REVIEW)
+        self.engage(run)
+
+        # Answer 1 correctly and 1 incorrectly
+        self.answer_correctly(run)
+        self.answer_wrongly(run)
+
+        run = self.reload(run)
+        self.assertEqual(len(run.review_mastered_question_ids), 1)
+        self.assertFalse(run.is_mastered)
+
+        # Exit door and clear (player survived)
+        self.walk_to_door(run)
+        result = services.attempt_exit(run)
+
+        self.assertTrue(result["cleared"])
+        self.assertFalse(result["is_mastered"])
+        self.assertEqual(result["xp_awarded"], 0)  # Imperfect clear awards 0 mastery XP
+
+        # The question answered incorrectly remains unresolved!
+        unresolved = list(services.get_unresolved_review_questions(self.user, quiz))
+        self.assertEqual(len(unresolved), 1)
+
+    def test_launch_catalog_batch_queries_has_no_n_plus_one(self):
+        # Create 3 courses with 2 quizzes each
+        for c_idx in range(3):
+            for q_idx in range(2):
+                make_quiz(self.user, question_count=5, title=f"Course {c_idx} Quiz {q_idx}")
+
+        # Exactly 6 queries total: Course, Chapter, Quiz, Question prefetch, QuizAttempt batch, and DungeonRun batch.
+        # This count is bounded and constant regardless of how many courses/quizzes exist.
+        with self.assertNumQueries(6):
+            services.build_launch_catalog(self.user)
+
+    def test_run_size_and_duration_estimates(self):
+        self.assertEqual(services.run_size_label(1), "Short")
+        self.assertEqual(services.run_size_label(2), "Standard")
+        self.assertEqual(services.run_size_label(3), "Long")
+        self.assertEqual(services.run_size_label(4), "Long")
+
+        self.assertEqual(services.estimate_run_minutes(0, 0), 0)
+        self.assertEqual(services.estimate_run_minutes(5, 1), 4)  # round(3.0 + 0.5) = 4
+        self.assertEqual(services.estimate_run_minutes(10, 2), 7)  # round(6.0 + 1.0) = 7
+        self.assertEqual(services.estimate_run_minutes(20, 4), 14)  # round(12.0 + 2.0) = 14
+
+    def test_get_recent_chapter_groups_summarizes_attempts_and_picks_best(self):
+        quiz_a = make_quiz(self.user, question_count=10, title="Quiz Alpha")
+        quiz_b = make_quiz(self.user, question_count=10, title="Quiz Beta")
+
+        # Create two runs for Quiz Alpha: one abandoned, then one cleared
+        run_a1 = services.start_or_resume_run(self.user, quiz_a)
+        services.abandon_run(run_a1)
+
+        run_a2 = services.start_or_resume_run(self.user, quiz_a)
+        run_a2.status = DungeonRun.STATUS_CLEARED
+        run_a2.xp_awarded = 70
+        run_a2.finished_at = timezone.now()
+        run_a2.save()
+
+        # Create one failed run for Quiz Beta
+        run_b1 = services.start_or_resume_run(self.user, quiz_b)
+        run_b1.status = DungeonRun.STATUS_FAILED
+        run_b1.current_hp = 0
+        run_b1.finished_at = timezone.now()
+        run_b1.save()
+
+        groups = services.get_recent_chapter_groups(self.user)
+        self.assertEqual(len(groups), 2)
+
+        # Quiz Alpha group has 2 attempts, best cleared run is run_a2
+        alpha_group = next(g for g in groups if g["chapter"] == quiz_a.chapter)
+        self.assertEqual(alpha_group["attempt_count"], 2)
+        self.assertEqual(alpha_group["best_cleared_run"], run_a2)
+        self.assertEqual(alpha_group["display_run"], run_a2)
+        self.assertTrue(alpha_group["has_cleared"])
+
+        # Quiz Beta group has 1 attempt, display run is run_b1
+        beta_group = next(g for g in groups if g["chapter"] == quiz_b.chapter)
+        self.assertEqual(beta_group["attempt_count"], 1)
+        self.assertIsNone(beta_group["best_cleared_run"])
+        self.assertEqual(beta_group["display_run"], run_b1)
+        self.assertFalse(beta_group["has_cleared"])
+
+
+class VerdictCodeTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="delver_verdict", password="password123")
+        self.quiz = make_quiz(self.user, question_count=10)
+
+    def test_verdict_code_abandoned(self):
+        run = services.start_or_resume_run(self.user, self.quiz)
+        services.abandon_run(run)
+        self.assertEqual(services.get_run_verdict_code(run), "abandoned")
+        self.assertEqual(run.verdict_code, "abandoned")
+
+    def test_verdict_code_failed(self):
+        run = services.start_or_resume_run(self.user, self.quiz)
+        run.status = DungeonRun.STATUS_FAILED
+        run.save()
+        self.assertEqual(services.get_run_verdict_code(run), "failed")
+        self.assertEqual(run.verdict_code, "failed")
+
+    def test_verdict_code_classic_cleared(self):
+        run = services.start_or_resume_run(self.user, self.quiz)
+        run.status = DungeonRun.STATUS_CLEARED
+        run.save()
+        self.assertEqual(services.get_run_verdict_code(run), "cleared")
+        self.assertEqual(run.verdict_code, "cleared")
+
+    def test_verdict_code_review_mastered(self):
+        run = DungeonRun.objects.create(
+            user=self.user,
+            quiz=self.quiz,
+            run_type=DungeonRun.TYPE_REVIEW,
+            status=DungeonRun.STATUS_CLEARED,
+            review_question_ids=[1, 2],
+            review_mastered_question_ids=[1, 2],
+        )
+        self.assertEqual(services.get_run_verdict_code(run), "review_mastered")
+        self.assertEqual(run.verdict_code, "review_mastered")
+
+    def test_verdict_code_review_incomplete(self):
+        run = DungeonRun.objects.create(
+            user=self.user,
+            quiz=self.quiz,
+            run_type=DungeonRun.TYPE_REVIEW,
+            status=DungeonRun.STATUS_CLEARED,
+            review_question_ids=[1, 2],
+            review_mastered_question_ids=[1],
+        )
+        self.assertEqual(services.get_run_verdict_code(run), "review_incomplete")
+        self.assertEqual(run.verdict_code, "review_incomplete")
+

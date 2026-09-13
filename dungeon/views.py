@@ -55,14 +55,20 @@ def _service_call(handler):
 def _launch_context(request, launch_error=None):
     """Everything the launch screen renders, including the rules this player
     will actually play under - the template never states a number itself."""
+    active_runs = (
+        DungeonRun.objects.filter(
+            user=request.user, status=DungeonRun.STATUS_IN_PROGRESS
+        ).select_related("quiz__chapter__course", "active_enemy").prefetch_related("enemies")
+    )
+    recent_groups = services.get_recent_chapter_groups(request.user)
     return {
         "catalog": services.build_launch_catalog(request.user),
         "rules": services.rules_for_user(request.user),
-        "active_runs": (
-            DungeonRun.objects.filter(
-                user=request.user, status=DungeonRun.STATUS_IN_PROGRESS
-            ).select_related("quiz__chapter__course")
-        ),
+        "active_runs": active_runs,
+        "recent_groups": recent_groups[:3],
+        "all_recent_groups": recent_groups,
+        "has_more_history": len(recent_groups) > 3,
+        "has_prior_runs": bool(recent_groups or active_runs.exists()),
         "recent_runs": (
             DungeonRun.objects.filter(user=request.user)
             .exclude(status=DungeonRun.STATUS_IN_PROGRESS)
@@ -84,8 +90,10 @@ def start_run(request):
     if quiz is None:
         raise Http404("Quiz not found.")
 
+    run_type = request.POST.get("run_type") or DungeonRun.TYPE_CLASSIC
+
     try:
-        run = services.start_or_resume_run(request.user, quiz)
+        run = services.start_or_resume_run(request.user, quiz, run_type=run_type)
     except services.LaunchBlocked as error:
         return render(
             request, "dungeon/launch.html", _launch_context(request, str(error)), status=400
@@ -103,6 +111,7 @@ def room(request, pk):
     display = services.display_settings()
     return render(request, "dungeon/room.html", {
         "run": run,
+        "presentation": display,
         "tile_size": display["tile_size"],
         "icon_size": display["icon_size"],
         "ui_scale": display["ui_scale"],
@@ -130,13 +139,46 @@ def summary(request, pk):
         return redirect("dungeon:room", pk=run.pk)
 
     enemies = list(run.enemies.all())
+    targeted = run.targeted_count
+    mastered = run.mastered_count
+    verdict_code = services.get_run_verdict_code(run)
+
+    unresolved_questions = services.get_unresolved_review_questions(request.user, run.quiz)
+    unresolved_count = len(unresolved_questions)
+
+    active_run = DungeonRun.objects.filter(
+        user=request.user,
+        quiz=run.quiz,
+        status=DungeonRun.STATUS_IN_PROGRESS,
+    ).exclude(pk=run.pk).select_related("quiz__chapter").first()
+
+    other_active_run = active_run
+    if other_active_run is None:
+        other_active_run = DungeonRun.objects.filter(
+            user=request.user,
+            status=DungeonRun.STATUS_IN_PROGRESS,
+        ).exclude(pk=run.pk).select_related("quiz__chapter").first()
+
     return render(request, "dungeon/summary.html", {
         "run": run,
+        "verdict_code": verdict_code,
+        "is_review_run": run.is_review_run,
+        "is_mastered": run.is_mastered,
+        "targeted_count": targeted,
+        "mastered_count": mastered,
+        "still_to_review_count": max(targeted - mastered, 0),
+        "unresolved_count": unresolved_count,
+        "active_run": active_run,
+        "other_active_run": other_active_run,
+        "active_run_url": reverse("dungeon:room", args=[other_active_run.pk]) if other_active_run else None,
+        "review_action_blocked": active_run is not None,
         "enemies_defeated": sum(1 for enemy in enemies if enemy.is_defeated),
         "enemy_count": len(enemies),
         "questions_answered": sum(len(e.answered_question_ids or []) for e in enemies),
         "inventory": services.serialize_inventory(run),
         "relaunch_url": reverse("dungeon:launch"),
+        "chapter_review_url": reverse("courses:chapter_review", args=[run.quiz.chapter.pk]),
+        "course_url": reverse("courses:course_detail", args=[run.quiz.chapter.course.pk]),
     })
 
 

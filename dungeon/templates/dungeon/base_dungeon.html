@@ -1,0 +1,12 @@
+{% extends 'courses/base.html' %}
+{% load static %}
+
+{% block body_class %}dungeon-theme {% block dungeon_body_class %}{% endblock %}{% endblock %}
+
+{% block nav_dungeon_aria %}aria-current="page"{% endblock %}
+{% block nav_dungeon_aria_mobile %}aria-current="page"{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'courses/dungeon/css/dungeon.css' %}">
+{% endblock %}
+
