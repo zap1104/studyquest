@@ -1,0 +1,254 @@
+<!-- UNIVERSAL QUIZ LAUNCH & STYLE SELECTION MODAL -->
+<div class="sq-modal-backdrop" id="quiz-launch-modal" aria-hidden="true" hidden>
+    <div class="sq-modal-box quiz-launch-box" role="dialog" aria-modal="true" aria-labelledby="quiz-modal-main-title">
+        <div class="sq-modal-header">
+            <div>
+                <h3 id="quiz-modal-main-title" style="display: flex; align-items: center; gap: 8px; margin: 0 0 4px;">
+                    <span>⚡</span>
+                    <span>Choose Your Quiz Style</span>
+                </h3>
+                <p style="margin: 0; color: var(--muted); font-size: 0.82rem;">
+                    The questions, points, and passing score stay the same. Only the quiz layout changes.
+                </p>
+            </div>
+            <button type="button" class="sq-modal-close" id="quiz-launch-modal-close" aria-label="Close dialog">✕</button>
+        </div>
+
+        <!-- Combined Prior-Knowledge Prerequisite Notice (only shown when reading is incomplete) -->
+        <div class="quiz-prereq-box" id="quiz-modal-prereq-box" style="display: none;">
+            <div class="prereq-item">
+                <span class="prereq-icon gold" aria-hidden="true">📖</span>
+                <div>
+                    <strong>Trying the Quiz First</strong>
+                    <div style="color: var(--muted); margin-top: 2px;">
+                        You have not completed the Chapter Review. Complete the review and score at least <strong>&ge; 75%</strong>, or score at least <strong>&ge; 90%</strong> through the prior-knowledge route to unlock the next chapter.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Presentation Style Selection Cards -->
+        <div class="quiz-style-section">
+            <div class="quiz-style-options">
+                <!-- STANDARD STYLE CARD -->
+                <label class="quiz-style-card is-selected" id="launch-style-card-standard">
+                    <div class="quiz-style-header">
+                        <span class="quiz-style-name">📄 STANDARD</span>
+                        <input type="radio" name="universal_quiz_style" value="standard" class="quiz-style-radio" checked>
+                    </div>
+                    <div class="quiz-style-sub">Focused study layout</div>
+
+                    <!-- Composition Preview for Standard -->
+                    <div class="composition-preview std-preview" aria-hidden="true">
+                        <div class="preview-stage-header">
+                            <div class="preview-mini-track"></div>
+                            <div class="preview-mini-chip"></div>
+                        </div>
+                        <div class="preview-mini-qbox">
+                            <div class="preview-mini-text">Question</div>
+                        </div>
+                        <div class="preview-std-grid">
+                            <div class="mini-std-card">A</div>
+                            <div class="mini-std-card">B</div>
+                            <div class="mini-std-card">C</div>
+                            <div class="mini-std-card">D</div>
+                        </div>
+                    </div>
+                </label>
+
+                <!-- QUICK PLAY STYLE CARD -->
+                <label class="quiz-style-card" id="launch-style-card-quickplay">
+                    <div class="quiz-style-header">
+                        <span class="quiz-style-name">⚡ QUICK PLAY</span>
+                        <input type="radio" name="universal_quiz_style" value="quick_play" class="quiz-style-radio">
+                    </div>
+                    <div class="quiz-style-sub">Full answer board</div>
+
+                    <!-- Composition Preview for Quick Play -->
+                    <div class="composition-preview qp-preview" aria-hidden="true">
+                        <div class="preview-stage-header">
+                            <div class="preview-mini-track qp-track"></div>
+                            <div class="preview-mini-chip qp-chip"></div>
+                        </div>
+                        <div class="preview-mini-qbox qp-qbox">
+                            <div class="preview-mini-text bold">Question</div>
+                        </div>
+                        <div class="preview-qp-grid">
+                            <div class="mini-qp-quad red">▲ A</div>
+                            <div class="mini-qp-quad blue">◆ B</div>
+                            <div class="mini-qp-quad yellow">● C</div>
+                            <div class="mini-qp-quad green">■ D</div>
+                        </div>
+                    </div>
+                </label>
+            </div>
+
+            <label class="quiz-remember-row" style="margin-top: 10px;">
+                <input type="checkbox" id="launch-modal-remember">
+                <span>Remember my choice on this device</span>
+            </label>
+        </div>
+
+        <div class="sq-modal-actions" style="display: flex; gap: 10px; margin-top: 16px;">
+            <button type="button" class="btn btn-secondary" id="quiz-launch-cancel-btn" style="flex: 1; justify-content: center;">
+                Cancel
+            </button>
+            <a href="#" id="quiz-launch-read-btn" class="btn btn-secondary" style="display: none; flex: 1; justify-content: center;">
+                📖 Read Lesson First
+            </a>
+            <button type="button" class="btn btn-primary btn-chunky" id="quiz-launch-confirm-btn" style="flex: 1; justify-content: center;">
+                ⚡ Start Quiz
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+(() => {
+    let targetQuizUrl = '';
+
+    // One-time cleanup of legacy test key so user sees the modal on their first quiz launch
+    try {
+        if (localStorage.getItem('studyquest_quiz_style') && !localStorage.getItem('studyquest_style_migrated_v2')) {
+            localStorage.removeItem('studyquest_quiz_style');
+            localStorage.setItem('studyquest_style_migrated_v2', 'true');
+        }
+    } catch (e) {}
+
+    function getLaunchModal() {
+        return document.getElementById('quiz-launch-modal');
+    }
+
+    function getSelectedLaunchStyle() {
+        const checked = document.querySelector('input[name="universal_quiz_style"]:checked');
+        return checked ? checked.value : 'standard';
+    }
+
+    function syncLaunchCardUI() {
+        const val = getSelectedLaunchStyle();
+        const stdCard = document.getElementById('launch-style-card-standard');
+        const qpCard = document.getElementById('launch-style-card-quickplay');
+        if (stdCard) stdCard.classList.toggle('is-selected', val === 'standard');
+        if (qpCard) qpCard.classList.toggle('is-selected', val === 'quick_play');
+    }
+
+    function initLaunchModal() {
+        const modal = getLaunchModal();
+        if (!modal) return;
+
+        // Init radio selection from saved preference if exists
+        const preferredStyle = localStorage.getItem('studyquest_quiz_style_preference') || sessionStorage.getItem('studyquest_quiz_style_session') || 'quick_play';
+        const radios = modal.querySelectorAll('input[name="universal_quiz_style"]');
+        radios.forEach(radio => {
+            if (radio.value === preferredStyle) radio.checked = true;
+            radio.addEventListener('change', syncLaunchCardUI);
+        });
+        syncLaunchCardUI();
+
+        const closeBtn = document.getElementById('quiz-launch-modal-close');
+        const cancelBtn = document.getElementById('quiz-launch-cancel-btn');
+        const confirmBtn = document.getElementById('quiz-launch-confirm-btn');
+        const rememberCheckbox = document.getElementById('launch-modal-remember');
+
+        function closeModal() {
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+            modal.hidden = true;
+            document.body.classList.remove('sq-modal-open');
+        }
+
+        closeBtn?.addEventListener('click', closeModal);
+        cancelBtn?.addEventListener('click', closeModal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        confirmBtn?.addEventListener('click', () => {
+            const chosen = getSelectedLaunchStyle();
+            if (rememberCheckbox?.checked) {
+                // Persistent across browser restarts
+                localStorage.setItem('studyquest_quiz_style_preference', chosen);
+                sessionStorage.setItem('studyquest_quiz_style_session', chosen);
+            } else {
+                // For current session only (will ask again in a new browser session)
+                sessionStorage.setItem('studyquest_quiz_style_session', chosen);
+                localStorage.removeItem('studyquest_quiz_style_preference');
+            }
+            if (targetQuizUrl) {
+                const sep = targetQuizUrl.includes('?') ? '&' : '?';
+                window.location.href = `${targetQuizUrl}${sep}layout=${chosen}`;
+            }
+        });
+
+        // Universal trigger binding: captures any link with .prequiz-trigger or href pointing to a chapter quiz
+        document.addEventListener('click', (e) => {
+            const trigger = e.target.closest('.prequiz-trigger, a[href*="/quiz/"]');
+            if (!trigger) return;
+
+            // Don't intercept if clicking an exit, return, or review link
+            if (trigger.id === 'quiz-exit-link' || trigger.classList.contains('quiz-exit-btn') || trigger.id === 'return-course-btn' || trigger.getAttribute('href')?.includes('view=review')) {
+                return;
+            }
+
+            const quizUrl = trigger.dataset.quizUrl || trigger.getAttribute('href');
+            if (!quizUrl || !quizUrl.includes('/quiz/')) return;
+
+            const lessonCompleted = trigger.dataset.lessonCompleted === 'true';
+
+            // Check persistent preference (remembered indefinitely) or session preference (remembered for this tab/session)
+            const persistentStyle = localStorage.getItem('studyquest_quiz_style_preference');
+            const sessionStyle = sessionStorage.getItem('studyquest_quiz_style_session');
+            const activeStyle = persistentStyle || sessionStyle;
+
+            if (activeStyle) {
+                const sep = quizUrl.includes('?') ? '&' : '?';
+                window.location.href = `${quizUrl}${sep}layout=${activeStyle}`;
+                e.preventDefault();
+                return;
+            }
+
+            // Otherwise, open the selection modal on the first quiz launch
+            e.preventDefault();
+            targetQuizUrl = quizUrl;
+
+            const prereqBox = document.getElementById('quiz-modal-prereq-box');
+            if (prereqBox) {
+                // If reading is not completed, display the prior-knowledge combined warning
+                prereqBox.style.display = lessonCompleted ? 'none' : 'block';
+            }
+
+            const readBtn = document.getElementById('quiz-launch-read-btn');
+            const reviewUrl = trigger.dataset.reviewUrl;
+            const openReaderBtn = document.getElementById('read-full-lesson-btn');
+
+            if (!lessonCompleted && (reviewUrl || openReaderBtn)) {
+                if (readBtn) {
+                    readBtn.style.display = 'inline-flex';
+                    readBtn.onclick = (ev) => {
+                        ev.preventDefault();
+                        closeModal();
+                        if (openReaderBtn) {
+                            openReaderBtn.click();
+                        } else if (reviewUrl) {
+                            window.location.href = reviewUrl;
+                        }
+                    };
+                }
+            } else if (readBtn) {
+                readBtn.style.display = 'none';
+            }
+
+            modal.hidden = false;
+            modal.setAttribute('aria-hidden', 'false');
+            modal.classList.add('open');
+            document.body.classList.add('sq-modal-open');
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initLaunchModal);
+    } else {
+        initLaunchModal();
+    }
+})();
+</script>

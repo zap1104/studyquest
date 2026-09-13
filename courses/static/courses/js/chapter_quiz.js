@@ -8,10 +8,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const progressLabel = document.getElementById('quiz-progress-label');
     const actionBtn = document.getElementById('action-btn');
 
-    // Feedback Sheet Elements
+    // Permanent Response Dock & Feedback Elements
+    const responseDock = document.getElementById('quiz-response-dock');
+    const checkState = document.getElementById('quiz-dock-check-state');
     const sheet = document.getElementById('quiz-feedback-sheet');
-    const sheetToggle = document.getElementById('feedback-sheet-toggle');
     const sheetContinue = document.getElementById('sheet-continue-btn');
+    const sheetAnswerLabel = document.getElementById('sheet-answer-label');
+    const sheetTitleText = document.getElementById('sheet-title-text');
+    const sheetExplText = document.getElementById('sheet-expl-text');
+    const sheetExtraWrap = document.getElementById('sheet-extra-wrap');
+    const sheetStatusPill = document.getElementById('sheet-status-pill');
+    const sheetPointsPill = document.getElementById('sheet-points-pill');
 
     // Result & Review Modals
     const resultSheet = document.getElementById('result-sheet');
@@ -30,11 +37,228 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const letters = ['A', 'B', 'C', 'D'];
+    const qpShapes = ['▲', '◆', '●', '■'];
+
     let currentIndex = 0;
     let selectedAnswers = {};
     let gradedHistory = [];
     let isCurrentGraded = false;
     let serverReviewData = null;
+
+    function showCheckState() {
+        if (responseDock) {
+            responseDock.classList.remove('is-correct', 'is-partial', 'is-incorrect');
+            responseDock.hidden = false;
+        }
+        if (checkState) {
+            checkState.hidden = false;
+        }
+        if (sheet) {
+            sheet.hidden = true;
+        }
+    }
+
+    function populateFeedback(data, q) {
+        const earned = Number(data.points_awarded ?? data.earned_points ?? (data.is_correct ? 1 : 0));
+        const maxPts = Number(data.maximum_points ?? q.max_points ?? 1);
+        const status = data.status || (earned >= maxPts && maxPts > 0 ? 'correct' : (earned > 0 ? 'partial' : 'incorrect'));
+        const isLast = currentIndex === quiz.questions.length - 1;
+
+        if (responseDock) {
+            responseDock.classList.remove('is-correct', 'is-partial', 'is-incorrect');
+            responseDock.classList.add(`is-${status}`);
+        }
+
+        if (sheetStatusPill) {
+            sheetStatusPill.textContent = status === 'correct' ? 'CORRECT' : (status === 'partial' ? 'PARTIALLY CORRECT' : 'NEEDS REVIEW');
+        }
+        if (sheetPointsPill) {
+            sheetPointsPill.textContent = `${earned} / ${maxPts} point${maxPts === 1 ? '' : 's'}`;
+        }
+
+        let label = 'CORRECT ANSWER';
+        let heading = '';
+        let extraHtml = '';
+
+        if (q.type === 'multiple_choice' || q.type === 'true_false') {
+            label = 'CORRECT ANSWER';
+            heading = data.correct_choice_text || '';
+            if (!heading && q.choices) {
+                const matched = q.choices.find(c => c.id === data.correct_choice_id);
+                if (matched) heading = matched.text;
+            }
+        } else if (q.type === 'identification') {
+            label = 'ACCEPTED ANSWER';
+            heading = data.canonical_answer || (data.accepted_answers && data.accepted_answers[0]) || '';
+            if (data.accepted_answers && data.accepted_answers.length > 1) {
+                const canonicalNorm = heading.trim().toLowerCase();
+                const variants = data.accepted_answers.filter(a => a.trim().toLowerCase() !== canonicalNorm);
+                if (variants.length) {
+                    extraHtml = `<div>Also accepted: <strong>${variants.join(', ')}</strong></div>`;
+                }
+            }
+        } else if (q.type === 'enumeration') {
+            const missing = data.missing_items || [];
+            const expected = data.expected_items || [];
+
+            if (status === 'correct') {
+                label = expected.length === 1 ? 'EXPECTED ANSWER' : 'EXPECTED ANSWERS';
+                heading = expected.join(', ');
+            } else if (status === 'partial') {
+                label = missing.length === 1 ? 'MISSING ANSWER' : 'MISSING ANSWERS';
+                heading = missing.join(', ');
+                if (expected.length) {
+                    extraHtml = `<div>Expected full list: <strong>${expected.join(', ')}</strong></div>`;
+                }
+            } else {
+                label = expected.length === 1 ? 'EXPECTED ANSWER' : 'EXPECTED ANSWERS';
+                heading = expected.join(', ');
+            }
+        }
+
+        if (sheetAnswerLabel) sheetAnswerLabel.textContent = label;
+        if (sheetTitleText) sheetTitleText.textContent = heading;
+        if (sheetExplText) sheetExplText.textContent = data.explanation || '';
+        if (sheetExtraWrap) sheetExtraWrap.innerHTML = extraHtml;
+        if (sheetContinue) sheetContinue.textContent = isLast ? 'Complete Quiz' : 'Next Question';
+    }
+
+    function showFeedbackState(data, q) {
+        populateFeedback(data, q);
+        if (checkState) checkState.hidden = true;
+        if (sheet) {
+            sheet.hidden = false;
+            sheet.scrollTop = 0;
+        }
+    }
+
+    // Layout configuration: URL param > persistent preference > session preference > 'quick_play'
+    let currentLayout = new URLSearchParams(window.location.search).get('layout')
+        || localStorage.getItem('studyquest_quiz_style_preference')
+        || sessionStorage.getItem('studyquest_quiz_style_session')
+        || 'quick_play';
+    if (currentLayout !== 'quick_play' && currentLayout !== 'standard') {
+        currentLayout = 'quick_play';
+    }
+    document.body.dataset.quizLayout = currentLayout;
+
+    let isQuizCompleted = false;
+
+    // In-Quiz Style Dropdown Menu
+    const dropdownWrap = document.getElementById('quiz-style-dropdown-wrap');
+    const dropdownBtn = document.getElementById('quiz-style-dropdown-btn');
+    const dropdownMenu = document.getElementById('quiz-style-dropdown-menu');
+    const styleLabel = document.getElementById('quiz-style-label');
+    const switchBtn = document.getElementById('style-switch-btn');
+    const switchIcon = document.getElementById('switch-btn-icon');
+    const switchTitle = document.getElementById('switch-btn-title');
+    const switchSubtitle = document.getElementById('switch-btn-subtitle');
+    const forgetBtn = document.getElementById('style-forget-btn');
+
+    function isStyleLocked() {
+        return isQuizCompleted || currentIndex > 0 || isCurrentGraded || gradedHistory.length > 0;
+    }
+
+    function showQuizToast(message) {
+        const toast = document.getElementById('quiz-toast');
+        if (!toast) return;
+        toast.textContent = message;
+        toast.hidden = false;
+        setTimeout(() => {
+            toast.hidden = true;
+        }, 2800);
+    }
+
+    function updateStyleDropdownUI() {
+        if (isQuizCompleted) {
+            if (dropdownWrap) {
+                dropdownWrap.style.display = 'none';
+                dropdownWrap.hidden = true;
+            }
+            return;
+        }
+        if (styleLabel) {
+            styleLabel.textContent = currentLayout === 'quick_play' ? '⚡ Quick Play' : '📄 Standard';
+        }
+        if (switchTitle) {
+            const nextMode = currentLayout === 'quick_play' ? 'Standard' : 'Quick Play';
+            const nextIcon = currentLayout === 'quick_play' ? '📄' : '⚡';
+            const nextSub = currentLayout === 'quick_play' ? 'Compact, focused layout' : 'Full answer board';
+            if (switchIcon) switchIcon.textContent = nextIcon;
+            switchTitle.textContent = `Switch to ${nextMode}`;
+            if (switchSubtitle) {
+                switchSubtitle.textContent = isStyleLocked() ? 'Locked for this attempt' : nextSub;
+            }
+        }
+        if (switchBtn) {
+            if (isStyleLocked()) {
+                switchBtn.disabled = true;
+                switchBtn.title = 'Quiz style cannot be changed after Question 1 has been answered.';
+            } else {
+                switchBtn.disabled = false;
+                switchBtn.title = '';
+            }
+        }
+    }
+    updateStyleDropdownUI();
+
+    if (dropdownBtn && dropdownMenu) {
+        dropdownBtn.addEventListener('click', (e) => {
+            if (isQuizCompleted) return;
+            e.stopPropagation();
+            const isHidden = dropdownMenu.hidden;
+            dropdownMenu.hidden = !isHidden;
+            dropdownBtn.setAttribute('aria-expanded', String(isHidden));
+            dropdownWrap?.classList.toggle('open', isHidden);
+            updateStyleDropdownUI();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (dropdownWrap && !dropdownWrap.contains(e.target)) {
+                dropdownMenu.hidden = true;
+                dropdownBtn.setAttribute('aria-expanded', 'false');
+                dropdownWrap.classList.remove('open');
+            }
+        });
+    }
+
+    if (switchBtn) {
+        switchBtn.addEventListener('click', () => {
+            if (isQuizCompleted || isStyleLocked()) {
+                showQuizToast('Layout is locked after answering Question 1.');
+                return;
+            }
+            currentLayout = currentLayout === 'quick_play' ? 'standard' : 'quick_play';
+            document.body.dataset.quizLayout = currentLayout;
+            if (localStorage.getItem('studyquest_quiz_style_preference')) {
+                localStorage.setItem('studyquest_quiz_style_preference', currentLayout);
+            }
+            sessionStorage.setItem('studyquest_quiz_style_session', currentLayout);
+            updateStyleDropdownUI();
+            if (dropdownMenu) {
+                dropdownMenu.hidden = true;
+                dropdownBtn?.setAttribute('aria-expanded', 'false');
+                dropdownWrap?.classList.remove('open');
+            }
+            if (!isQuizCompleted && quiz && quiz.questions && quiz.questions[currentIndex]) {
+                renderQuestion();
+            }
+        });
+    }
+
+    if (forgetBtn) {
+        forgetBtn.addEventListener('click', () => {
+            localStorage.removeItem('studyquest_quiz_style_preference');
+            sessionStorage.removeItem('studyquest_quiz_style_session');
+            localStorage.removeItem('studyquest_quiz_style');
+            if (dropdownMenu) {
+                dropdownMenu.hidden = true;
+                dropdownBtn?.setAttribute('aria-expanded', 'false');
+                dropdownWrap?.classList.remove('open');
+            }
+            showQuizToast("Saved style preference cleared. You'll choose style on your next quiz.");
+        });
+    }
 
     function getCookie(name) {
         const parts = (`; ${document.cookie}`).split(`; ${name}=`);
@@ -96,12 +320,38 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!presentation || !resultSheet) return;
 
         const resultHeight = resultSheet.getBoundingClientRect().height;
-        const overlap = window.innerWidth <= 640 ? 24 : 34;
+        const overlap = window.innerWidth <= 640 ? 20 : 36;
         presentation.style.bottom = `${Math.max(resultHeight - overlap, 0)}px`;
     }
 
     function showResultPresentation(resultData, animate = true) {
         setResultPresentation(resultData);
+
+        // Hide style dropdown, action button, question wrapper, stage, board, response dock, and badges completely on results
+        if (dropdownWrap) {
+            dropdownWrap.style.display = 'none';
+            dropdownWrap.hidden = true;
+        }
+        if (wrap) {
+            wrap.innerHTML = '';
+            wrap.style.display = 'none';
+        }
+        if (actionBtn) {
+            actionBtn.classList.add('is-hidden');
+            actionBtn.style.display = 'none';
+        }
+        if (responseDock) {
+            responseDock.style.display = 'none';
+            responseDock.hidden = true;
+        }
+        const stage = document.getElementById('quiz-question-stage');
+        if (stage) stage.style.display = 'none';
+        const answerBoard = document.getElementById('quiz-answer-board');
+        if (answerBoard) answerBoard.style.display = 'none';
+        const metaDot = document.getElementById('quiz-meta-dot');
+        if (metaDot) metaDot.style.display = 'none';
+        const typeBadge = document.getElementById('quiz-type-badge');
+        if (typeBadge) typeBadge.style.display = 'none';
 
         if (animate) {
             document.body.classList.remove('show-result-mascot');
@@ -116,34 +366,58 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderQuestion() {
+        if (isQuizCompleted) return;
         isCurrentGraded = false;
         const q = quiz.questions[currentIndex];
         if (!q) return;
 
+        const isQuickPlay = currentLayout === 'quick_play';
         const isTF = q.type === 'true_false';
         const typeLabels = {
             multiple_choice: 'Multiple Choice',
             true_false: 'True or False',
-            identification: 'Identification',
+            identification: isQuickPlay ? 'Written Response' : 'Identification',
             enumeration: 'Enumeration'
         };
 
-        // Reset Feedback Sheet
-        sheet.classList.add('is-hidden');
-        sheet.classList.remove('is-collapsed', 'is-entering', 'is-correct', 'is-partial', 'is-incorrect');
+        // Reset Response Dock to Check State & Restore Wrap
+        if (responseDock) {
+            responseDock.style.display = '';
+            responseDock.hidden = false;
+        }
+        showCheckState();
+        if (wrap) wrap.style.display = '';
 
-        // Restore the single action button
-        actionBtn.classList.remove('is-hidden');
+        // Restore action button state
         actionBtn.disabled = !selectedAnswers[q.id];
         actionBtn.textContent = 'Check Answer';
 
-        // Update Progress Bar: (currentIndex + 1) guarantees Question 10 of 10 hits 100%
+        // Update Progress Bar
         const pct = Math.round(((currentIndex + 1) / quiz.questions.length) * 100);
         if (progressFill) progressFill.style.width = `${pct}%`;
         if (progressLabel) {
             progressLabel.classList.remove('is-complete');
             progressLabel.textContent = `Question ${currentIndex + 1} of ${quiz.questions.length}`;
         }
+
+        // Region 1 Meta: Type badge and separator dot
+        const badgeEl = document.getElementById('quiz-type-badge');
+        if (badgeEl) {
+            badgeEl.style.display = '';
+            badgeEl.textContent = typeLabels[q.type] || q.type;
+        }
+        const metaDot = document.getElementById('quiz-meta-dot');
+        if (metaDot) metaDot.style.display = '';
+
+        // Region 2 Center Stage: Question text
+        const qTextEl = document.getElementById('quiz-question-text');
+        if (qTextEl) {
+            qTextEl.textContent = q.text;
+        }
+        const qStage = document.getElementById('quiz-question-stage');
+        if (qStage) qStage.style.display = '';
+        const ansBoard = document.getElementById('quiz-answer-board');
+        if (ansBoard) ansBoard.style.display = '';
 
         // Generate Question Body
         let bodyHtml = '';
@@ -152,13 +426,27 @@ document.addEventListener('DOMContentLoaded', () => {
             bodyHtml = `
                 <div class="quiz-choices ${isTF ? 'tf-layout' : ''}" id="choices-container">
                     ${q.choices.map((c, i) => {
-                        let badge = letters[i] || '';
-                        if (isTF) {
-                            badge = c.text.trim().toLowerCase().startsWith('t') ? 'T' : 'F';
+                        let badge = '';
+                        let extraClass = '';
+                        if (isQuickPlay) {
+                            if (isTF) {
+                                const isTrue = c.text.trim().toLowerCase().startsWith('t');
+                                badge = isTrue ? '▲' : '◆';
+                                extraClass = isTrue ? 'qp-tf-true' : 'qp-tf-false';
+                            } else {
+                                badge = qpShapes[i % qpShapes.length] || '';
+                                extraClass = `qp-opt-${i % 4}`;
+                            }
+                        } else {
+                            if (isTF) {
+                                badge = c.text.trim().toLowerCase().startsWith('t') ? 'T' : 'F';
+                            } else {
+                                badge = letters[i] || '';
+                            }
                         }
                         const isSelected = currentPick === c.id;
                         return `
-                            <button type="button" class="quiz-option ${isSelected ? 'selected' : ''}" data-choice-id="${c.id}">
+                            <button type="button" class="quiz-option ${extraClass} ${isSelected ? 'selected' : ''}" data-choice-id="${c.id}">
                                 <span class="quiz-letter">${badge}</span>
                                 <span>${c.text}</span>
                             </button>
@@ -185,15 +473,10 @@ document.addEventListener('DOMContentLoaded', () => {
             bodyHtml = `<div class="enumeration-inputs">${inputs}</div>`;
         }
 
-        wrap.innerHTML = `
-            <div class="quiz-tag-row">
-                <span class="quiz-tag">Question ${currentIndex + 1}</span>
-                <span class="quiz-tag tag-type">${typeLabels[q.type] || q.type}</span>
-            </div>
-            <h2 class="quiz-question-text">${q.text}</h2>
-            ${bodyHtml}
-        `;
+        wrap.innerHTML = bodyHtml;
+        wrap.style.display = '';
 
+        updateStyleDropdownUI();
         bindInputEvents(q);
     }
 
@@ -271,6 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await res.json();
             isCurrentGraded = true;
             gradedHistory.push({ question: q, userPick: answerPayload, result: data });
+            updateStyleDropdownUI();
 
             if (q.type === 'multiple_choice' || q.type === 'true_false') {
                 wrap.querySelectorAll('.quiz-option').forEach(btn => {
@@ -290,46 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 wrap.querySelectorAll('.enumeration-input').forEach(inp => inp.disabled = true);
             }
 
-            actionBtn.classList.add('is-hidden');
-
-            const earned = Number(data.earned_points ?? (data.is_correct ? 1 : 0));
-            const maxPts = Number(data.maximum_points ?? q.max_points ?? 1);
-            const feedbackState = earned === maxPts ? 'is-correct' : (earned > 0 ? 'is-partial' : 'is-incorrect');
-
-            sheet.className = `quiz-feedback-sheet ${feedbackState}`;
-            setText('sheet-status-pill', feedbackState === 'is-correct' ? 'Correct' : (feedbackState === 'is-partial' ? 'Partially Correct' : 'Needs Review'));
-            setText('sheet-points-pill', `${earned} / ${maxPts} Pt${maxPts === 1 ? '' : 's'}`);
-            setText('sheet-title-text', feedbackState === 'is-correct' ? 'Nicely Done!' : (feedbackState === 'is-partial' ? 'Almost There' : 'Concept Review'));
-            setText('sheet-expl-text', data.explanation || '');
-
-            let extraHtml = '';
-            if (data.canonical_answer) {
-                extraHtml += `<div>Accepted Term: <strong>${data.canonical_answer}</strong></div>`;
-            }
-            if (data.matched_items && data.matched_items.length) {
-                extraHtml += `<div>Matched: <strong>${data.matched_items.join(', ')}</strong></div>`;
-            }
-            if (data.missing_items && data.missing_items.length) {
-                extraHtml += `<div style="color: var(--gold);">Missing: <strong>${data.missing_items.join(', ')}</strong></div>`;
-            }
-            const extraEl = document.getElementById('sheet-extra-wrap');
-            if (extraEl) extraEl.innerHTML = extraHtml;
-
-            if (sheetContinue) {
-                sheetContinue.innerHTML = isLast ? 'Complete Quiz &rarr;' : 'Next Question &rarr;';
-            }
-
-            sheet.classList.remove('is-hidden');
-            sheet.classList.add('is-entering');
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    sheet.classList.remove('is-entering');
-                });
-            });
-
-            if (window.innerWidth > 640) {
-                sheet.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
+            showFeedbackState(data, q);
 
         } catch (err) {
             console.error('Answer check error:', err);
@@ -349,29 +594,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    sheetToggle?.addEventListener('click', () => {
-        sheet.classList.toggle('is-collapsed');
-    });
-
-    let touchStartY = null;
-    sheet.addEventListener('touchstart', (e) => {
-        if (!e.target.closest('.feedback-sheet-handle')) return;
-        touchStartY = e.touches[0].clientY;
-    }, { passive: true });
-
-    sheet.addEventListener('touchend', (e) => {
-        if (touchStartY === null) return;
-        const diff = e.changedTouches[0].clientY - touchStartY;
-        if (diff > 45) {
-            sheet.classList.add('is-collapsed');
-        } else if (diff < -45) {
-            sheet.classList.remove('is-collapsed');
-        }
-        touchStartY = null;
-    }, { passive: true });
-
     async function finalizeQuiz() {
-        sheet.classList.add('is-hidden');
+        isQuizCompleted = true;
+        if (responseDock) {
+            responseDock.style.display = 'none';
+            responseDock.hidden = true;
+        }
+        if (sheet) {
+            sheet.hidden = true;
+        }
+        if (checkState) {
+            checkState.hidden = true;
+        }
+
+        // Completely hide the style switcher dropdown
+        if (dropdownWrap) {
+            dropdownWrap.style.display = 'none';
+            dropdownWrap.hidden = true;
+        }
+        if (dropdownMenu) {
+            dropdownMenu.hidden = true;
+        }
+
+        // Hide action button
+        if (actionBtn) {
+            actionBtn.classList.add('is-hidden');
+            actionBtn.style.display = 'none';
+            actionBtn.disabled = true;
+        }
+
+        // Hide question stage and meta indicators immediately during evaluation
+        const stage = document.getElementById('quiz-question-stage');
+        if (stage) stage.style.display = 'none';
+        const metaDot = document.getElementById('quiz-meta-dot');
+        if (metaDot) metaDot.style.display = 'none';
+        const typeBadge = document.getElementById('quiz-type-badge');
+        if (typeBadge) typeBadge.style.display = 'none';
+
         if (progressFill) progressFill.style.width = '100%';
 
         // Upgrade progress counter to glowing completion banner
@@ -414,8 +673,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 passBadge.className = `result-badge ${data.passed ? 'passed' : 'retry'}`;
             }
 
-            // Clear loading text before presenting the final result.
+            // Clear loading text and hide wrap and answer board before presenting the final result.
             wrap.innerHTML = '';
+            wrap.style.display = 'none';
+            const answerBoard = document.getElementById('quiz-answer-board');
+            if (answerBoard) answerBoard.style.display = 'none';
 
             if (resultSheet) {
                 resultSheet.classList.add('open');
@@ -423,6 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (err) {
             console.error('Finalize error:', err);
+            wrap.style.display = '';
             wrap.innerHTML = `
                 <div style="text-align: center; padding: 50px 20px;">
                     <p style="color: var(--danger);">Failed to save assessment results.</p>
@@ -647,7 +910,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('resize', () => {
-        if (resultSheet?.classList.contains('open')) {
+        if (resultSheet?.classList.contains('open') || document.body.classList.contains('show-result-mascot')) {
             positionResultPresentation();
         }
     });
@@ -667,6 +930,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (isReviewMode) {
+        isQuizCompleted = true;
+        if (dropdownWrap) {
+            dropdownWrap.style.display = 'none';
+            dropdownWrap.hidden = true;
+        }
         // Hide quiz controls immediately
         actionBtn.classList.add('is-hidden');
         actionBtn.style.display = 'none';

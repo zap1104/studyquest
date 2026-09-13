@@ -425,10 +425,15 @@
                             <div class="activity-icon" aria-hidden="true">⚡</div>
                             <div class="activity-copy">
                                 <strong>Quiz</strong>
-                                <span>Score: {{ latest_attempt.score|floatformat:0 }}/{{ latest_attempt.total_questions }}</span>
+                                <span>Score: {{ latest_attempt.score|floatformat:0 }}/{{ latest_attempt.total_questions }}{% if not is_completed %} · Score &ge; {{ prior_knowledge_threshold|default:90 }}% to bypass{% endif %}</span>
                             </div>
                             <div class="activity-actions">
-                                <a href="{% url 'courses:chapter_quiz' chapter.pk %}" class="activity-btn primary" title="Retake Quiz">Retake</a>
+                                <a href="{% url 'courses:chapter_quiz' chapter.pk %}"
+                                   class="activity-btn primary prequiz-trigger"
+                                   data-chapter-id="{{ chapter.pk }}"
+                                   data-lesson-completed="{{ is_completed|yesno:'true,false' }}"
+                                   data-quiz-url="{% url 'courses:chapter_quiz' chapter.pk %}"
+                                   title="Retake Quiz">Retake</a>
                                 {% if latest_attempt.review_data.review_items %}
                                     <a href="{% url 'courses:chapter_quiz' chapter.pk %}?view=review" class="activity-btn secondary" title="Review Last Results">Review</a>
                                 {% endif %}
@@ -436,11 +441,15 @@
                         </div>
                     {% else %}
                         <!-- Displays for first-time quiz takers -->
-                        <a href="{% url 'courses:chapter_quiz' chapter.pk %}" class="lesson-activity quiz-activity">
+                        <a href="{% url 'courses:chapter_quiz' chapter.pk %}"
+                           class="lesson-activity quiz-activity prequiz-trigger"
+                           data-chapter-id="{{ chapter.pk }}"
+                           data-lesson-completed="{{ is_completed|yesno:'true,false' }}"
+                           data-quiz-url="{% url 'courses:chapter_quiz' chapter.pk %}">
                             <div class="activity-icon" aria-hidden="true">⚡</div>
                             <div class="activity-copy">
-                                <strong>Quiz</strong>
-                                <span>{{ question_count }} question{{ question_count|pluralize }}</span>
+                                <strong>{% if not is_completed %}Try Quiz First{% else %}Quiz{% endif %}</strong>
+                                <span>{{ question_count }} question{{ question_count|pluralize }}{% if not is_completed %} · Score &ge; {{ prior_knowledge_threshold|default:90 }}% to bypass{% endif %}</span>
                             </div>
                             <span class="activity-arrow" aria-hidden="true">&rarr;</span>
                         </a>
@@ -669,6 +678,8 @@
     </aside>
 </div>
 
+
+
 <!-- Reader Toggle & Reading Completion Tracking -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -678,6 +689,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const openReaderBtn = document.getElementById('read-full-lesson-btn');
     const closeReaderBtn = document.getElementById('close-reader-btn');
     const completeBtn = document.getElementById('mark-complete-btn');
+
+
 
     let hasReadToEnd = (completeBtn && completeBtn.dataset.hasRead === 'true') ||
                        (completeBtn && completeBtn.classList.contains('is-complete'));
@@ -700,28 +713,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 'X-Requested-With': 'XMLHttpRequest'
             }
         });
-        if (!response.ok) throw new Error('Unable to record reading progress');
-        return response.json();
-    }
-
-    let readingSyncPending = false;
-
-    async function checkReadingProgress() {
-        if (hasReadToEnd || readingSyncPending || !readerContent || !completeBtn) return;
-
-        const distanceFromBottom = readerContent.scrollHeight - readerContent.scrollTop - readerContent.clientHeight;
-        if (distanceFromBottom > 80) return;
-
-        readingSyncPending = true;
-        try {
-            await recordReadingCompletion();
+        if (response.ok) {
             hasReadToEnd = true;
             completeBtn.disabled = false;
             completeBtn.textContent = 'Mark Lesson Complete (+15 XP)';
-        } catch (err) {
-            console.error('Failed to sync reading status:', err);
-        } finally {
-            readingSyncPending = false;
+        }
+    }
+
+    function checkReadingProgress() {
+        if (hasReadToEnd || !readerContent) return;
+        const scrollBottom = readerContent.scrollTop + readerContent.clientHeight;
+        const scrollThreshold = readerContent.scrollHeight - 160;
+        if (scrollBottom >= scrollThreshold) {
+            recordReadingCompletion();
         }
     }
 
@@ -754,7 +758,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && workspace.classList.contains('reader-open')) closeReader();
+        if (e.key === 'Escape') {
+            if (prequizModal && prequizModal.classList.contains('open')) {
+                setModalOpen(prequizModal, false);
+            } else if (workspace.classList.contains('reader-open')) {
+                closeReader();
+            }
+        }
     });
 
     if (!completeBtn) return;

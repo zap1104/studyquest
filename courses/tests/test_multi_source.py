@@ -196,6 +196,61 @@ class MultiSourcePromptSecurityTests(TestCase):
         prompt = build_curriculum_prompt('Course Title', 'Source content', study_focus='   ')
         self.assertNotIn('LEARNER NOTE', prompt)
 
+    def test_content_authority_and_consistency_rules_present(self):
+        prompt = build_curriculum_prompt('Operating Systems', 'Untrusted bundle content')
+        self.assertIn('CONTENT AUTHORITY & LESSON-TO-QUIZ CONSISTENCY MANDATES:', prompt)
+        self.assertIn('CONTENT AUTHORITY HIERARCHY:', prompt)
+        self.assertIn('LESSON AND ASSESSMENT CONSISTENCY RULES:', prompt)
+        self.assertIn('Every quiz answer must be explicitly taught in the generated Chapter Review', prompt)
+        self.assertIn('Quiz canonical answers must use the exact canonical wording taught in the Chapter Review', prompt)
+
+    def test_learner_note_restricts_vocabulary_and_preserves_terminology(self):
+        prompt = build_curriculum_prompt('Operating Systems', 'Bundle', study_focus='Make it fast-paced')
+        self.assertIn('You must NOT use the learner note to alter source facts, canonical vocabulary', prompt)
+        self.assertIn('For Identification and Enumeration, preserve the source terminology exactly', prompt)
+
+
+class QuizAnswerCoverageValidationTests(TestCase):
+    def test_normalize_for_coverage(self):
+        from courses.services import normalize_for_coverage
+        self.assertEqual(normalize_for_coverage("Paying triple for tools!"), "paying triple for tools")
+        self.assertEqual(normalize_for_coverage("  Data   Silos  "), "data silos")
+        self.assertEqual(normalize_for_coverage(None), "")
+
+    def test_valid_mock_journey_passes_coverage_validation(self):
+        from courses.services import _generate_mock_journey, validate_quiz_answer_coverage
+        journey = _generate_mock_journey("Enterprise Architecture", ["multiple_choice", "identification", "enumeration"])
+        # Should not raise any error
+        validate_quiz_answer_coverage(journey)
+
+    def test_missing_identification_answer_raises_value_error(self):
+        from courses.services import _generate_mock_journey, validate_quiz_answer_coverage
+        journey = _generate_mock_journey("Enterprise Architecture", ["identification"])
+        # Tamper identification question with a term absent from chapter
+        for q in journey["chapters"][0]["quiz"]["questions"]:
+            if q["type"] == "identification":
+                q["accepted_answers"] = ["Fabricated Exotic Framework"]
+                break
+
+        with self.assertRaises(ValueError) as ctx:
+            validate_quiz_answer_coverage(journey)
+        self.assertIn('Identification answer "Fabricated Exotic Framework"', str(ctx.exception))
+        self.assertIn('is not taught in chapter', str(ctx.exception))
+
+    def test_missing_enumeration_item_raises_value_error(self):
+        from courses.services import _generate_mock_journey, validate_quiz_answer_coverage
+        journey = _generate_mock_journey("Enterprise Architecture", ["enumeration"])
+        # Tamper enumeration question with an item absent from chapter
+        for q in journey["chapters"][0]["quiz"]["questions"]:
+            if q["type"] == "enumeration":
+                q["expected_items"][0] = {"canonical": "Fictional Architecture Layer", "accepted_variants": []}
+                break
+
+        with self.assertRaises(ValueError) as ctx:
+            validate_quiz_answer_coverage(journey)
+        self.assertIn('Enumeration item "Fictional Architecture Layer"', str(ctx.exception))
+        self.assertIn('is not taught in chapter', str(ctx.exception))
+
 
 class MultiSourceCourseCreationIntegrationTests(TestCase):
     def setUp(self):

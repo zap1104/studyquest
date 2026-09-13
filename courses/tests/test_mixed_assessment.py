@@ -9,6 +9,7 @@ from courses.schemas import GenerationPreferences, get_assessment_mix
 from courses.views import (
     _grade_question,
     calculate_quiz_xp,
+    get_chapter_completion_state,
     get_chapter_status,
     normalize_text_answer,
 )
@@ -293,6 +294,99 @@ class QuizEndpointIntegrationTests(TestCase):
         self.assertEqual(data["results"][0]["submitted_choice_text"], "Trunk tagging")
         self.assertEqual(data["results"][1]["submitted_answer"], {"text": "802.1q"})
 
+    def test_check_multiple_choice_contract_includes_correct_choice_text_and_status(self):
+        response = self.post_json(
+            "courses:check_quiz_answer",
+            {"question_id": self.choice_question.pk, "answer": {"choice_id": 99999}},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "incorrect")
+        self.assertEqual(data["points_awarded"], 0)
+        self.assertEqual(data["maximum_points"], 1)
+        self.assertEqual(data["correct_choice_text"], "Trunk tagging")
+        self.assertEqual(data["explanation"], "It is a trunk tagging protocol.")
+
+    def test_check_true_false_contract_includes_correct_choice_text(self):
+        tf_q = Question.objects.create(
+            quiz=self.quiz,
+            order=3,
+            question_type="true_false",
+            text="VLANs operate at Layer 2.",
+            explanation="They divide broadcast domains at L2.",
+        )
+        c_true = Choice.objects.create(question=tf_q, text="True", is_correct=True)
+        Choice.objects.create(question=tf_q, text="False", is_correct=False)
+
+        response = self.post_json(
+            "courses:check_quiz_answer",
+            {"question_id": tf_q.pk, "answer": {"choice_id": c_true.pk}},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "correct")
+        self.assertEqual(data["points_awarded"], 1)
+        self.assertEqual(data["correct_choice_text"], "True")
+
+    def test_check_identification_contract_and_variant_deduplication(self):
+        response = self.post_json(
+            "courses:check_quiz_answer",
+            {"question_id": self.identification.pk, "answer": {"text": "802.1Q"}},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "correct")
+        self.assertEqual(data["canonical_answer"], "802.1Q")
+        self.assertIn("IEEE 802.1Q", data["accepted_answers"])
+
+        # Verify filtering canonical answer leaves distinct variants
+        canonical_norm = data["canonical_answer"].strip().lower()
+        variants = [a for a in data["accepted_answers"] if a.strip().lower() != canonical_norm]
+        self.assertEqual(variants, ["IEEE 802.1Q"])
+
+    def test_check_enumeration_contract_includes_expected_and_missing_items(self):
+        enum_q = Question.objects.create(
+            quiz=self.quiz,
+            order=4,
+            question_type="enumeration",
+            text="Name RACI roles.",
+            explanation="RACI matrix roles.",
+            answer_data={
+                "order_matters": False,
+                "expected_items": [
+                    {"canonical": "Responsible", "accepted_variants": []},
+                    {"canonical": "Accountable", "accepted_variants": []},
+                    {"canonical": "Consulted", "accepted_variants": []},
+                    {"canonical": "Informed", "accepted_variants": []},
+                ],
+            },
+        )
+
+        # Partial answer
+        response = self.post_json(
+            "courses:check_quiz_answer",
+            {"question_id": enum_q.pk, "answer": {"items": ["Responsible", "Accountable", "Consulted"]}},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "partial")
+        self.assertEqual(data["points_awarded"], 3)
+        self.assertEqual(data["maximum_points"], 4)
+        self.assertEqual(data["missing_items"], ["Informed"])
+        self.assertEqual(data["expected_items"], ["Responsible", "Accountable", "Consulted", "Informed"])
+
+        # Correct answer
+        response = self.post_json(
+            "courses:check_quiz_answer",
+            {"question_id": enum_q.pk, "answer": {"items": ["Responsible", "Accountable", "Consulted", "Informed"]}},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "correct")
+        self.assertEqual(data["points_awarded"], 4)
+        self.assertEqual(data["missing_items"], [])
+        self.assertEqual(data["expected_items"], ["Responsible", "Accountable", "Consulted", "Informed"])
+
 
 class ProgressionGateIntegrationTests(TestCase):
     def setUp(self):
@@ -306,21 +400,45 @@ class ProgressionGateIntegrationTests(TestCase):
         self.assertEqual(get_chapter_status(self.user, self.chapter_one), "available")
         self.assertEqual(get_chapter_status(self.user, self.chapter_two), "locked")
 
-    def test_quiz_pass_at_seventy_five_percent_unlocks_chapter(self):
+    def test_quiz_pass_at_seventy_five_percent_with_reading_unlocks_chapter(self):
         ChapterCompletion.objects.create(user=self.user, chapter=self.chapter_one)
         QuizAttempt.objects.create(user=self.user, quiz=self.quiz, score=3, total_questions=4, xp_earned=35)
 
+        state = get_chapter_completion_state(self.user, self.chapter_one)
+        self.assertTrue(state["completed"])
+        self.assertEqual(state["unlock_route"], "guided")
+        self.assertFalse(state["tested_out"])
         self.assertEqual(get_chapter_status(self.user, self.chapter_one), "completed")
         self.assertEqual(get_chapter_status(self.user, self.chapter_two), "available")
 
-    def test_quiz_pass_at_seventy_five_percent_does_not_require_reading(self):
+    def test_quiz_pass_at_seventy_five_percent_without_reading_does_not_unlock(self):
+        # 3/4 = 75%, passes the quiz itself but does not bypass without reading
         QuizAttempt.objects.create(user=self.user, quiz=self.quiz, score=3, total_questions=4, xp_earned=35)
 
+        state = get_chapter_completion_state(self.user, self.chapter_one)
+        self.assertTrue(state["quiz_passed"])
+        self.assertFalse(state["completed"])
+        self.assertIsNone(state["unlock_route"])
+        self.assertFalse(state["tested_out"])
+        self.assertEqual(get_chapter_status(self.user, self.chapter_one), "available")
+        self.assertEqual(get_chapter_status(self.user, self.chapter_two), "locked")
+
+    def test_quiz_pass_at_ninety_percent_without_reading_unlocks_via_prior_knowledge(self):
+        # 4/4 = 100% (>= 90%), tests out without reading
+        QuizAttempt.objects.create(user=self.user, quiz=self.quiz, score=4, total_questions=4, xp_earned=60)
+
+        state = get_chapter_completion_state(self.user, self.chapter_one)
+        self.assertTrue(state["completed"])
+        self.assertEqual(state["unlock_route"], "prior_knowledge")
+        self.assertTrue(state["tested_out"])
         self.assertEqual(get_chapter_status(self.user, self.chapter_one), "completed")
         self.assertEqual(get_chapter_status(self.user, self.chapter_two), "available")
 
     def test_below_seventy_five_percent_without_reading_does_not_unlock(self):
         QuizAttempt.objects.create(user=self.user, quiz=self.quiz, score=2, total_questions=4, xp_earned=20)
 
+        state = get_chapter_completion_state(self.user, self.chapter_one)
+        self.assertFalse(state["quiz_passed"])
+        self.assertFalse(state["completed"])
         self.assertEqual(get_chapter_status(self.user, self.chapter_one), "available")
         self.assertEqual(get_chapter_status(self.user, self.chapter_two), "locked")

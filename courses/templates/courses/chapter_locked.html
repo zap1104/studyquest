@@ -1,180 +1,346 @@
 {% extends 'courses/base.html' %}
 
 {% block title %}Chapter Locked — StudyQuest{% endblock %}
+{% block page_class %}locked-chapter-main-shell{% endblock %}
 
 {% block content %}
 <style>
-    .locked-chapter-page {
-        min-height: 75vh;
+    .page.locked-chapter-main-shell {
+        min-height: calc(100dvh - var(--topbar-height, 60px));
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 32px 16px;
+        padding: clamp(24px, 4vh, 48px) 16px;
+        box-sizing: border-box;
     }
 
     .locked-chapter-card {
         width: min(100%, 540px);
-        padding: 36px 32px;
+        margin: 0 auto;
+        padding: 24px 26px;
         text-align: center;
-        border-radius: 22px;
+        border-radius: 18px;
         background: var(--surface);
         border: 1px solid var(--border);
         box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
     }
 
     .locked-chapter-icon {
-        font-size: 3rem;
+        font-size: 2.2rem;
         line-height: 1;
-        margin-bottom: 12px;
+        margin-bottom: 4px;
     }
 
     .locked-chapter-card h1 {
-        margin: 14px 0 10px;
+        margin: 6px 0 4px;
         color: var(--ink);
-        font-size: 1.5rem;
+        font-size: 1.25rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
     }
 
-    .locked-chapter-card p {
+    .locked-chapter-card p.locked-desc {
         color: var(--muted);
-        line-height: 1.6;
-        margin: 0;
-        font-size: 0.92rem;
-    }
-
-    .locked-requirements {
-        margin-top: 24px;
-        padding: 18px 20px;
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        background: var(--bg);
-        text-align: left;
-    }
-
-    .locked-requirements h2 {
-        margin: 0 0 12px;
-        font-size: 0.95rem;
-        color: var(--ink);
-    }
-
-    .requirement-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 16px;
-        padding: 8px 0;
-        color: var(--muted);
+        line-height: 1.45;
+        margin: 0 0 10px;
         font-size: 0.86rem;
     }
 
-    .requirement-row + .requirement-row {
-        border-top: 1px solid var(--border);
+    .routes-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        text-align: left;
+        margin-top: 8px;
     }
 
-    .requirement-row strong {
+    .route-card {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px 14px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .route-card.guided-route {
+        border-color: rgba(234, 179, 8, 0.35);
+        background: linear-gradient(180deg, rgba(234, 179, 8, 0.04) 0%, var(--bg) 100%);
+    }
+
+    .route-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+
+    .route-title {
+        font-size: 0.90rem;
+        font-weight: 800;
+        color: var(--ink);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .route-badge {
+        font-size: 0.65rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 2px 7px;
+        border-radius: 999px;
+    }
+
+    .route-badge.badge-gold {
+        background: rgba(234, 179, 8, 0.15);
+        color: #eab308;
+        border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+
+    .route-badge.badge-cyan {
+        background: rgba(6, 182, 212, 0.15);
+        color: #06b6d4;
+        border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    .requirement-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-bottom: 8px;
+    }
+
+    .requirement-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.80rem;
+        color: var(--muted);
+        padding: 2px 0;
+    }
+
+    .requirement-item strong {
+        color: var(--ink);
+        font-size: 0.80rem;
+    }
+
+    .requirement-item .req-done {
+        color: #22c55e;
+        font-weight: 700;
+    }
+
+    .requirement-item .req-pending {
+        color: var(--muted);
+        font-weight: 600;
+    }
+
+    .route-desc-text {
+        color: var(--muted);
+        font-size: 0.80rem;
+        line-height: 1.45;
+        margin: 0 0 6px;
+    }
+
+    .route-progress-stat {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.80rem;
+        color: var(--muted);
+        padding: 3px 0 6px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: 6px;
+    }
+
+    .route-progress-stat strong {
         color: var(--ink);
     }
 
-    .requirement-row .requirement-done {
-        color: var(--accent);
+    .route-actions {
+        display: flex;
+        gap: 8px;
     }
 
-    .locked-divider {
+    .route-actions .btn {
+        flex: 1;
+        justify-content: center;
+        text-align: center;
+        font-size: 0.82rem;
+        padding: 7px 12px;
+    }
+
+    .locked-route-divider {
         display: flex;
         align-items: center;
-        gap: 12px;
-        margin: 20px 0;
+        gap: 10px;
+        margin: 4px 0;
     }
 
-    .locked-divider::before,
-    .locked-divider::after {
+    .locked-route-divider::before,
+    .locked-route-divider::after {
         content: "";
         flex: 1;
         height: 1px;
         background: var(--border);
     }
 
-    .locked-divider span {
+    .locked-route-divider span {
         color: var(--muted);
-        font-size: 0.72rem;
+        font-size: 0.65rem;
         font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.08em;
     }
 
-    .locked-actions {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        margin-top: 22px;
+    .locked-back-action {
+        margin-top: 10px;
     }
 
-    @media (max-width: 480px) {
-        .locked-chapter-page { padding: 16px 12px; min-height: calc(100dvh - var(--topbar-height) - 40px); align-items: flex-start; }
-        .locked-chapter-card { min-width: 0; max-width: 100%; padding: 24px 16px; border-radius: 18px; overflow-wrap: anywhere; }
-        .locked-chapter-icon { font-size: 2.4rem; margin-bottom: 8px; }
-        .locked-chapter-card h1 { font-size: 1.25rem; margin: 10px 0 8px; }
-        .locked-chapter-card p { font-size: 0.86rem; }
-        .locked-requirements { margin-top: 18px; padding: 14px; }
-        .requirement-row { flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 0; }
-        .requirement-row strong { max-width: 100%; }
-        .locked-actions { margin-top: 18px; gap: 8px; }
-        .locked-actions .btn { width: 100%; min-height: 48px; display: flex; align-items: center; justify-content: center; padding: 10px 14px; text-align: center; white-space: normal; }
+    .locked-back-action .btn {
+        width: 100%;
+        justify-content: center;
+        font-size: 0.82rem;
+        padding: 6px 12px;
+    }
+
+    @media (max-width: 520px) {
+        .page.locked-chapter-main-shell {
+            padding: 16px 12px;
+            min-height: calc(100dvh - var(--topbar-height) - 20px);
+            align-items: flex-start;
+        }
+        .locked-chapter-card {
+            padding: 24px 16px;
+            border-radius: 18px;
+        }
+        .requirement-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+        }
+        .route-actions {
+            flex-direction: column;
+        }
     }
 </style>
 
-<div class="page locked-chapter-page">
-    <section class="locked-chapter-card">
-        <div class="locked-chapter-icon" aria-hidden="true">🔒</div>
-        <span class="chip chip-gold">Prerequisite Required</span>
+<section class="locked-chapter-card">
+    <div class="locked-chapter-icon" aria-hidden="true">🔒</div>
+    <span class="chip chip-gold">Prerequisite Required</span>
 
-        <h1>{{ chapter.title }} is Locked</h1>
-        <p>
-            Complete the previous chapter through the guided learning path, or prove your prior knowledge with an unlock challenge.
-        </p>
-
+    <h1>{{ chapter.title }} is Locked</h1>
+    <p class="locked-desc">
         {% if prev_chapter %}
-            <div class="locked-requirements">
-                <h2>Prerequisite: Chapter {{ prev_chapter.order }}</h2>
-                <div class="requirement-row">
-                    <span>1. Read & mark lesson complete</span>
-                    {% if previous_state.lesson_completed %}
-                        <strong class="requirement-done">✓ Done</strong>
-                    {% else %}
-                        <strong>Required</strong>
-                    {% endif %}
-                </div>
-                <div class="requirement-row">
-                    <span>2. Pass chapter quiz</span>
-                    {% if previous_state.quiz_passed %}
-                        <strong class="requirement-done">✓ {{ previous_state.best_quiz_percentage }}%</strong>
-                    {% else %}
-                        <strong>&ge; {{ regular_pass_threshold|default:pass_threshold }}% Required</strong>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="locked-actions">
-                {% if not previous_state.lesson_completed %}
-                    <div class="locked-divider"><span>guided path or quiz pass</span></div>
-                    <p style="font-size: 0.86rem;">
-                        Read the lesson and mark it complete, or score at least <strong>{{ regular_pass_threshold|default:pass_threshold }}%</strong> on the quiz.
-                    </p>
-                    <a href="{% url 'courses:chapter_review' prev_chapter.pk %}" class="btn btn-secondary">
-                        Review Chapter {{ prev_chapter.order }}
-                    </a>
-                {% endif %}
-
-                {% if previous_state.has_quiz %}
-                    <a href="{% url 'courses:chapter_quiz' prev_chapter.pk %}" class="btn btn-primary btn-chunky">
-                        ⚡ Take Chapter {{ prev_chapter.order }} Quiz (&ge; {{ regular_pass_threshold|default:pass_threshold }}%) &rarr;
-                    </a>
-                {% endif %}
-
-                <a href="{% url 'courses:course_detail' course.pk %}" class="btn btn-ghost">
-                    &larr; Back to Learning Path
-                </a>
-            </div>
+            To unlock this chapter, complete <strong>Chapter {{ prev_chapter.order }}: {{ prev_chapter.title }}</strong> using either route below:
+        {% else %}
+            This chapter is locked until previous course prerequisites are cleared.
         {% endif %}
-    </section>
-</div>
+    </p>
+
+    {% if prev_chapter %}
+        <div class="routes-container">
+            <!-- ROUTE 1: GUIDED LEARNING -->
+            <div class="route-card guided-route">
+                <div class="route-header">
+                    <div class="route-title">
+                        <span>📖</span>
+                        <span>Guided Learning Route</span>
+                    </div>
+                    <span class="route-badge badge-gold">Recommended</span>
+                </div>
+
+                <div class="requirement-list">
+                    <div class="requirement-item">
+                        <span>1. Read & mark lesson complete (+15 XP)</span>
+                        {% if previous_state.lesson_completed %}
+                            <strong class="req-done">✓ Completed</strong>
+                        {% else %}
+                            <strong class="req-pending">Required</strong>
+                        {% endif %}
+                    </div>
+                    <div class="requirement-item">
+                        <span>2. Score &ge; {{ guided_threshold|default:75 }}% on chapter quiz</span>
+                        {% if previous_state.quiz_passed %}
+                            <strong class="req-done">✓ {{ previous_state.best_quiz_percentage }}% (Passed)</strong>
+                        {% elif previous_state.best_quiz_percentage %}
+                            <strong class="req-pending">{{ previous_state.best_quiz_percentage }}% / &ge; {{ guided_threshold|default:75 }}% needed</strong>
+                        {% else %}
+                            <strong class="req-pending">&ge; {{ guided_threshold|default:75 }}% Required</strong>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="route-actions">
+                    {% if not previous_state.lesson_completed %}
+                        <a href="{% url 'courses:chapter_review' prev_chapter.pk %}" class="btn btn-secondary">
+                            📖 Review Chapter {{ prev_chapter.order }} Lesson
+                        </a>
+                    {% elif previous_state.has_quiz and not previous_state.quiz_passed %}
+                        <a href="{% url 'courses:chapter_quiz' prev_chapter.pk %}"
+                           class="btn btn-primary btn-chunky prequiz-trigger"
+                           data-quiz-url="{% url 'courses:chapter_quiz' prev_chapter.pk %}"
+                           data-chapter-id="{{ prev_chapter.pk }}"
+                           data-lesson-completed="{{ previous_state.lesson_completed|yesno:'true,false' }}"
+                           data-review-url="{% url 'courses:chapter_review' prev_chapter.pk %}">
+                            ⚡ Take Chapter {{ prev_chapter.order }} Quiz (&ge; {{ guided_threshold|default:75 }}%)
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if previous_state.has_quiz %}
+                <!-- DIVIDER -->
+                <div class="locked-route-divider">
+                    <span>or jump ahead with prior knowledge</span>
+                </div>
+
+                <!-- ROUTE 2: PRIOR KNOWLEDGE BYPASS -->
+                <div class="route-card bypass-route">
+                    <div class="route-header">
+                        <div class="route-title">
+                            <span>⚡</span>
+                            <span>Prior Knowledge Route</span>
+                        </div>
+                        <span class="route-badge badge-cyan">Fast Track</span>
+                    </div>
+
+                    <p class="route-desc-text">
+                        Already familiar with this topic? Skip the reading and unlock this chapter directly by scoring <strong>&ge; {{ prior_knowledge_threshold|default:90 }}%</strong> on the quiz.
+                    </p>
+
+                    <div class="route-progress-stat">
+                        <span>Your Quiz High Score:</span>
+                        <strong>
+                            {% if previous_state.best_quiz_percentage is not None %}
+                                {{ previous_state.best_quiz_percentage }}% (need &ge; {{ prior_knowledge_threshold|default:90 }}%)
+                            {% else %}
+                                Not taken yet
+                            {% endif %}
+                        </strong>
+                    </div>
+
+                    <div class="route-actions">
+                        <a href="{% url 'courses:chapter_quiz' prev_chapter.pk %}"
+                           class="btn btn-secondary prequiz-trigger"
+                           data-quiz-url="{% url 'courses:chapter_quiz' prev_chapter.pk %}"
+                           data-chapter-id="{{ prev_chapter.pk }}"
+                           data-lesson-completed="{{ previous_state.lesson_completed|yesno:'true,false' }}"
+                           data-review-url="{% url 'courses:chapter_review' prev_chapter.pk %}">
+                            ⚡ Take Quiz (Aim for &ge; {{ prior_knowledge_threshold|default:90 }}%)
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="locked-back-action">
+            <a href="{% url 'courses:course_detail' course.pk %}" class="btn btn-ghost">
+                &larr; Back to Learning Path
+            </a>
+        </div>
+    {% endif %}
+</section>
 {% endblock %}

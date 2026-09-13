@@ -33,81 +33,82 @@
     .forge-stage {
         position: relative;
         width: 100%;
-        max-width: 1480px;
+        max-width: 1640px;
         margin: 0 auto;
-        padding: 24px 20px;
+        padding: clamp(12px, 1.8vh, 24px) 20px;
         box-sizing: border-box;
         display: flex;
         justify-content: center;
         align-items: center;
-        transform: translateY(-2dvh);
     }
 
-    /* 3. WORKBENCH HUB: The purely centered two-pane focal point */
+    /* 3. WORKBENCH HUB: Perfectly centered focal point */
     .forge-center-hub {
         position: relative;
-        width: min(1280px, calc(100% - 48px));
-        max-width: 1280px;
+        width: min(1080px, calc(100% - 32px));
+        max-width: 1080px;
         margin-inline: auto;
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: clamp(10px, 1.4vh, 16px);
         z-index: 2;
     }
 
-    /* 4. DECORATIVE MASCOT FLANK: Fixed to the viewport edge */
+    /* 4. DECORATIVE MASCOT FLANK: Prominent sidekick filling the gutter */
     .forge-mascot-flank {
         display: none;
     }
 
-    @media (min-width: 1440px) {
-    .forge-mascot-flank {
-        position: fixed;
-        left: -35px; /* Pushes the container further left/partially off-screen */
-        bottom: 40px; /* Anchors feet closer to the bottom edge */
-        z-index: 1;
-        display: block;
-        width: clamp(350px, 30vw, 450px); /* Increases width and size scale */
-        overflow: visible; /* Prevents clipping when scaled */
-        pointer-events: none;
-        user-select: none;
-    }
-
-    .forge-mascot-img {
-        width: 100%;
-        height: auto;
-        max-height: 100vh; /* Enlarges height to occupy more vertical space */
-        display: block;
-        object-fit: contain;
-        transform: translateX(-20px); /* Extra nudge to tuck the elbow/side toward the edge */
-        filter: 
-            drop-shadow(0 0 12px rgba(0, 194, 168, 0.34))
-            drop-shadow(0 16px 32px rgba(0, 0, 0, 0.48));
-    }
-}
-
-    /* Scaling for ultra-wide displays */
-    @media (min-width: 1720px) {
+    /* Desktop displays (e.g. 1920x1200 @ 125% = 1536px, and 1600px+): 
+       Substantially larger mascot taking up the empty space with sleek margins */
+    @media (min-width: 1480px) and (min-height: 680px) {
         .forge-mascot-flank {
-            width: clamp(260px, 16vw, 320px);
+            display: block;
+            position: absolute;
+            right: calc(100% + 6px);
+            bottom: 0;
+            width: clamp(190px, 14vw, 225px);
+            pointer-events: none;
+            user-select: none;
+            z-index: 2;
+        }
+
+        .forge-mascot-img {
+            width: 100%;
+            height: auto;
+            max-height: clamp(330px, 48vh, 380px);
+            display: block;
+            object-fit: contain;
+            object-position: bottom right;
+            filter: 
+                drop-shadow(0 0 14px rgba(0, 194, 168, 0.32))
+                drop-shadow(0 14px 28px rgba(0, 0, 0, 0.45));
         }
     }
 
-    /* Safeguards: Hide when viewport width or height would cause overlap */
-    @media (max-width: 1439px), (max-height: 720px) {
+    /* Ultra-wide displays: Generous breathing room */
+    @media (min-width: 1720px) and (min-height: 720px) {
+        .forge-mascot-flank {
+            right: calc(100% + 10px);
+            width: clamp(220px, 14.5vw, 270px);
+        }
+
+        .forge-mascot-img {
+            max-height: clamp(380px, 52vh, 440px);
+        }
+    }
+
+    /* Safeguards: Cleanly hide when space is constrained */
+    @media (max-width: 1479px), (max-height: 679px) {
         .forge-mascot-flank {
             display: none !important;
-        }
-
-        .forge-stage {
-            transform: none !important;
-            padding-top: 16px;
-            padding-bottom: 24px;
         }
     }
 
     /* 5. TOP HERO ROW */
     .forge-hero-row {
+        position: relative;
+        z-index: 3;
         display: grid;
         grid-template-columns: 1fr;
         gap: 16px;
@@ -251,6 +252,8 @@
 
     /* 7. TWO-PANE FORGE GRID (Scaled to match widened hero row) */
     .forge-grid {
+        position: relative;
+        z-index: 3;
         display: grid;
         grid-template-columns: 1fr;
         gap: 16px;
@@ -262,19 +265,23 @@
     @media (min-width: 900px) {
         .forge-grid {
             grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-            gap: 22px;
+            gap: 20px;
         }
     }
 
     .forge-pane {
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: clamp(10px, 1.4vh, 16px);
         background: var(--surface);
         border: 1px solid var(--border);
-        border-radius: 18px;
-        padding: 24px 26px; /* Substantially larger breathing room */
+        border-radius: 16px;
+        padding: clamp(16px, 2vh, 22px) clamp(16px, 1.8vw, 24px);
         box-sizing: border-box;
+    }
+
+    .study-materials-pane {
+        position: relative;
     }
 
     .pane-header {
@@ -282,12 +289,12 @@
         align-items: center;
         justify-content: space-between;
         gap: 12px;
-        padding-bottom: 12px;
+        padding-bottom: 10px;
         border-bottom: 1px solid var(--border);
     }
 
     .pane-title {
-        font-size: 1.18rem;
+        font-size: 1.15rem;
         font-weight: 800;
         color: var(--ink);
         margin: 0;
@@ -305,7 +312,7 @@
 
     /* 8. DROP ZONE: Prominent and spacious */
     .drop-zone {
-        padding: 34px 20px;
+        padding: clamp(20px, 2.6vh, 32px) 18px;
         border: 2px dashed var(--border);
         background: var(--bg);
         border-radius: 14px;
@@ -805,6 +812,99 @@
     }
 
     /* 10. RESPONSIVE VIEWPORT ADJUSTMENTS */
+    /* Short laptop screens / 150% scaling: Optimize vertical rhythm to eliminate scroll */
+    @media (min-width: 860px) and (max-height: 820px) {
+        .forge-stage {
+            padding-top: 6px !important;
+            padding-bottom: 12px !important;
+        }
+
+        .forge-center-hub {
+            gap: 8px;
+        }
+
+        .forge-intro-col .hero-greeting {
+            font-size: 1.4rem;
+        }
+
+        .quota-status-card {
+            padding: 8px 12px;
+            gap: 6px;
+        }
+
+        .quota-stat-pill {
+            padding: 3px 6px;
+            font-size: 0.74rem;
+        }
+
+        .forge-pane {
+            padding: 12px 18px;
+            gap: 8px;
+        }
+
+        .pane-header {
+            padding-bottom: 6px;
+        }
+
+        .drop-zone {
+            padding: 14px 14px;
+        }
+
+        .upload-icon-wrap {
+            width: 32px;
+            height: 32px;
+            margin: 0 auto 4px;
+            font-size: 1.1rem;
+        }
+
+        .drop-title {
+            margin-bottom: 2px;
+            font-size: 0.90rem;
+        }
+
+        .drop-subtitle {
+            margin-bottom: 2px;
+            font-size: 0.78rem;
+        }
+
+        .bundle-meter {
+            padding: 6px 10px;
+            gap: 4px;
+        }
+
+        .forge-label {
+            margin-bottom: 2px;
+            font-size: 0.68rem;
+        }
+
+        .forge-input {
+            padding: 7px 12px;
+            min-height: 38px;
+            font-size: 0.88rem;
+        }
+
+        .option-card {
+            padding: 6px 9px;
+            gap: 2px;
+        }
+
+        .option-title {
+            font-size: 0.76rem;
+        }
+
+        .option-desc {
+            font-size: 0.65rem;
+            line-height: 1.2;
+        }
+
+        .forge-btn {
+            margin-top: 4px !important;
+            min-height: 42px;
+            padding: 9px 16px;
+            font-size: 0.98rem;
+        }
+    }
+
     @media (max-width: 859px) {
         .forge-page-wrap,
         .page.forge-page-wrap {
@@ -866,13 +966,6 @@
 
 <div class="forge-stage">
     <main class="forge-center-hub">
-        <!-- Desktop Mascot Anchor (Decorative flank outside document flow) -->
-        <aside class="forge-mascot-flank" aria-hidden="true">
-            <img src="{% static 'courses/images/mascot_course_creation_flank.png' %}" 
-                 alt="" 
-                 class="forge-mascot-img">
-        </aside>
-
         <!-- Consolidated Hero Row: Left Intro & Right Current Plan -->
         <div class="forge-hero-row">
             <!-- Left: Heading and one-line description -->
@@ -946,6 +1039,13 @@
             <div class="forge-grid">
                 <!-- LEFT PANE: Study Materials -->
                 <section class="forge-pane study-materials-pane">
+                    <!-- Desktop Mascot Anchor: Anchored directly to Study Materials card -->
+                    <aside class="forge-mascot-flank" aria-hidden="true">
+                        <img src="{% static 'courses/images/mascot_course_creation_flank.png' %}" 
+                             alt="" 
+                             class="forge-mascot-img">
+                    </aside>
+
                     <div class="pane-header">
                         <h2 class="pane-title">Study Materials</h2>
                         <span class="pane-badge" id="bundle-count-badge">0 / 3 Files</span>
@@ -1015,7 +1115,10 @@
                             <label class="forge-label" for="study-focus" style="margin-bottom: 0;">Study Focus (Optional)</label>
                             <span class="char-counter" id="focus-char-counter">0 / 100</span>
                         </div>
-                        <input type="text" id="study-focus" name="study_focus" maxlength="100" class="forge-input" value="{{ study_focus|default:'' }}" placeholder="e.g. Focus on formulas; explain like I'm 11; emphasize prelim topics">
+                        <input type="text" id="study-focus" name="study_focus" maxlength="100" class="forge-input" value="{{ study_focus|default:'' }}" placeholder="e.g. Prioritize definitions & lists; focus on formulas; explain with clear analogies">
+                        <p style="margin: 6px 0 0; font-size: 0.76rem; color: var(--muted); line-height: 1.4;">
+                            Guides what the review emphasizes without altering source facts or canonical quiz answers.
+                        </p>
                     </div>
 
                     <!-- Study Mode -->

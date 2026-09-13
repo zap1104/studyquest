@@ -227,9 +227,16 @@
                             </a>
                             <!-- Check chapter.quiz instead of chapter.has_quiz -->
                             {% if chapter.quiz or chapter.has_quiz %}
-                                <a class="btn action-btn-pill action-btn-quiz" href="{% url 'courses:chapter_quiz' chapter.pk %}">
+                                <a class="btn action-btn-pill action-btn-quiz prequiz-trigger"
+                                   href="{% url 'courses:chapter_quiz' chapter.pk %}"
+                                   data-chapter-id="{{ chapter.pk }}"
+                                   data-chapter-order="{{ chapter.order }}"
+                                   data-chapter-title="{{ chapter.title|escape }}"
+                                   data-lesson-completed="{{ chapter.lesson_completed|yesno:'true,false' }}"
+                                   data-quiz-url="{% url 'courses:chapter_quiz' chapter.pk %}"
+                                   data-review-url="{% url 'courses:chapter_review' chapter.pk %}">
                                     <span aria-hidden="true">⚡</span>
-                                    <span>{% if chapter.quiz_passed %}Retake Quiz{% else %}Take Quiz{% endif %} &rarr;</span>
+                                    <span>{% if chapter.quiz_passed %}Retake Quiz{% elif not chapter.lesson_completed %}Try Quiz First{% else %}Take Quiz{% endif %}</span>
                                 </a>
                             {% endif %}
                         {% endif %}
@@ -323,6 +330,7 @@
     </div>
 </div>
 
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const optionsBtn = document.getElementById('course-options-btn');
@@ -344,7 +352,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const editCourseModal = document.getElementById('edit-course-modal');
     const deleteCourseModal = document.getElementById('delete-course-modal');
     const renameChapterModal = document.getElementById('rename-chapter-modal');
-
     document.getElementById('open-edit-course-btn')?.addEventListener('click', () => {
         setModalOpen(editCourseModal, true);
     });
