@@ -2699,14 +2699,14 @@ body.quiz-completed .page.quiz-page {
     bottom: 0;
     z-index: 1301;
 
-    /* Scaled up comfortably to occupy the center stage over results card */
-    width: min(940px, calc(100vw - 32px));
+    /* Scaled comfortably to occupy the center stage over results card */
+    width: min(780px, calc(100vw - 32px));
     min-height: auto;
 
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    gap: clamp(16px, 2.8vw, 36px);
+    gap: clamp(14px, 2.2vw, 24px);
 
     opacity: 0;
     visibility: hidden;
@@ -2729,12 +2729,12 @@ body.show-result-mascot .result-presentation {
         visibility 0s;
 }
 
-/* Mascot Stage: Enlarged to fill empty center space with high presence */
+/* Mascot Stage: Proportionate scaling to sit cleanly above results sheet */
 .result-mascot-stage {
     position: relative;
     width: auto;
-    height: clamp(280px, 42vh, 460px);
-    overflow: visible;
+    height: clamp(155px, 21vh, 215px);
+    overflow: hidden;
     flex-shrink: 0;
 
     display: flex;
@@ -2744,25 +2744,25 @@ body.show-result-mascot .result-presentation {
 
 .result-mascot-img {
     height: 100%;
-    max-height: clamp(280px, 42vh, 460px);
+    max-height: clamp(155px, 21vh, 215px);
     width: auto;
     display: block;
     object-fit: contain;
     object-position: center bottom;
-    filter: drop-shadow(0 22px 42px rgba(0, 0, 0, 0.6));
+    filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.45));
 }
 
-/* Dialogue Speech Bubble: Enlarged to comfortably match larger mascot */
+/* Dialogue Speech Bubble: Scaled to match companion mascot */
 .result-guidance {
     position: relative;
-    max-width: clamp(340px, 38vw, 500px);
-    margin-bottom: clamp(70px, 12vh, 145px);
+    max-width: clamp(260px, 30vw, 360px);
+    margin-bottom: clamp(12px, 2vh, 24px);
     margin-left: 0;
-    padding: clamp(18px, 2.4vh, 28px) clamp(22px, 2.4vw, 32px);
+    padding: clamp(12px, 1.6vh, 18px) clamp(16px, 1.8vw, 22px);
     border: 1.5px solid rgba(108, 92, 231, 0.45);
-    border-radius: 20px;
+    border-radius: 16px;
     background: rgba(17, 26, 49, 0.96);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
 }
@@ -2796,9 +2796,9 @@ body.show-result-mascot .result-presentation {
 
 .result-guidance-title {
     display: block;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     color: #ffffff;
-    font-size: clamp(1.25rem, 1.9vw, 1.6rem);
+    font-size: clamp(1.05rem, 1.35vw, 1.22rem);
     font-weight: 900;
     line-height: 1.25;
 }
@@ -2806,8 +2806,8 @@ body.show-result-mascot .result-presentation {
 .result-guidance-message {
     margin: 0;
     color: rgba(255, 255, 255, 0.88);
-    font-size: clamp(0.98rem, 1.3vw, 1.18rem);
-    line-height: 1.6;
+    font-size: clamp(0.84rem, 1.05vw, 0.94rem);
+    line-height: 1.5;
 }
 
 .result-guidance-message b {
@@ -2817,21 +2817,21 @@ body.show-result-mascot .result-presentation {
 
 @media (max-height: 650px) {
     .result-mascot-stage {
-        height: clamp(160px, 28vh, 220px);
+        height: clamp(120px, 18vh, 150px);
     }
     .result-mascot-img {
-        max-height: clamp(160px, 28vh, 220px);
+        max-height: clamp(120px, 18vh, 150px);
     }
     .result-guidance {
-        margin-bottom: clamp(28px, 6vh, 55px);
-        padding: 12px 18px;
-        max-width: 340px;
+        margin-bottom: clamp(8px, 1.5vh, 16px);
+        padding: 10px 14px;
+        max-width: 290px;
     }
     .result-guidance-title {
-        font-size: 1.05rem;
+        font-size: 0.95rem;
     }
     .result-guidance-message {
-        font-size: 0.86rem;
+        font-size: 0.80rem;
     }
     .result-sheet {
         max-height: 65dvh;

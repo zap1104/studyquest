@@ -97,7 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (quizContainer) {
             quizContainer.inert = true;
             quizContainer.setAttribute('aria-hidden', 'true');
-            quizContainer.hidden = true;
+            quizContainer.hidden = false;
         }
         if (resultLayer) {
             resultLayer.hidden = false;
@@ -410,8 +410,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!presentation || !resultSheet) return;
 
         const resultHeight = resultSheet.getBoundingClientRect().height;
-        const overlap = window.innerWidth <= 640 ? 20 : 36;
-        presentation.style.bottom = `${Math.max(resultHeight - overlap, 0)}px`;
+        const spacing = window.innerWidth <= 640 ? 6 : 10;
+        presentation.style.bottom = `${Math.round(resultHeight + spacing)}px`;
     }
 
     function showResultPresentation(resultData, animate = true) {
@@ -434,6 +434,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (stage) stage.style.display = 'none';
         const answerBoard = document.getElementById('quiz-answer-board');
         if (answerBoard) answerBoard.style.display = 'none';
+        const inlineFb = document.getElementById('quiz-inline-feedback');
+        if (inlineFb) inlineFb.style.display = 'none';
         const metaDot = document.getElementById('quiz-meta-dot');
         if (metaDot) metaDot.style.display = 'none';
         const typeBadge = document.getElementById('quiz-type-badge');
@@ -469,6 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         // Reset Inline Feedback to Check State
+        if (inlineFeedback) inlineFeedback.style.display = '';
         showCheckState();
 
         // Update Progress Bar
@@ -706,6 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (stage) stage.style.display = 'none';
         const answerBoard = document.getElementById('quiz-answer-board');
         if (answerBoard) answerBoard.style.display = 'none';
+        if (inlineFeedback) inlineFeedback.style.display = 'none';
         const metaDot = document.getElementById('quiz-meta-dot');
         if (metaDot) metaDot.style.display = 'none';
         const typeBadge = document.getElementById('quiz-type-badge');

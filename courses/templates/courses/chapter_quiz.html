@@ -199,7 +199,7 @@
 
     .quiz-answer-board {
         width: 100%;
-        margin-top: 4px;
+        margin-top: clamp(8px, 1.4vh, 16px);
     }
 
     /* Standard Layout choices */
@@ -333,29 +333,31 @@
 
     /* Region 3: Inline Reserved Feedback Area */
     .quiz-inline-feedback {
-        height: clamp(112px, 15vh, 148px);
-        min-height: 112px;
+        min-height: clamp(118px, 16vh, 150px);
+        height: auto;
         border: 0;
         background: transparent;
         flex-shrink: 0;
         padding-inline: 4px;
         box-sizing: border-box;
+        margin-bottom: clamp(12px, 1.8vh, 18px);
     }
 
     .quiz-inline-feedback-content {
-        height: 100%;
+        min-height: clamp(118px, 16vh, 150px);
+        max-height: clamp(190px, 26vh, 250px);
         overflow-y: auto;
         overscroll-behavior: contain;
-        scrollbar-gutter: stable;
         border: 1px solid var(--border);
         border-left: 4px solid var(--border);
         border-radius: 14px;
         background: var(--surface);
-        padding: 10px 16px;
+        padding: 12px 18px;
         box-sizing: border-box;
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
+        justify-content: flex-start;
+        gap: 4px;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
     }
 
@@ -715,6 +717,23 @@
         margin: 0;
     }
 
+    body[data-quiz-layout="standard"] .quiz-inline-feedback {
+        height: auto;
+        min-height: 80px;
+        margin-bottom: 16px;
+    }
+
+    body[data-quiz-layout="standard"] .quiz-inline-feedback-content {
+        height: auto;
+        max-height: none;
+        overflow-y: visible;
+    }
+
+    body[data-quiz-layout="standard"] .enumeration-inputs {
+        max-height: none;
+        overflow-y: visible;
+    }
+
     /* Typed Fields (Identification & Enumeration) */
     .quiz-typed-answer {
         display: grid;
@@ -741,8 +760,9 @@
     .enumeration-inputs {
         display: grid;
         gap: clamp(6px, 1vh, 10px);
-        max-height: min(240px, 30dvh);
+        max-height: min(440px, 52dvh);
         overflow-y: auto;
+        padding-right: 4px;
     }
 
     /* ================= 5. PRIMARY ACTION BUTTON BASE ================= */
@@ -859,13 +879,33 @@
         pointer-events: none !important;
     }
 
-    body.show-result-mascot .quiz-page-container,
-    body:has(#result-sheet.open) .quiz-page-container,
-    .quiz-page:has(#result-sheet.open) .quiz-page-container,
     body.show-result-mascot .quiz-style-dropdown-wrap,
     body:has(#result-sheet.open) .quiz-style-dropdown-wrap,
-    .quiz-page:has(#result-sheet.open) .quiz-style-dropdown-wrap {
+    .quiz-page:has(#result-sheet.open) .quiz-style-dropdown-wrap,
+    body.show-result-mascot #quiz-question-stage,
+    body:has(#result-sheet.open) #quiz-question-stage,
+    body.show-result-mascot #quiz-inline-feedback,
+    body:has(#result-sheet.open) #quiz-inline-feedback,
+    body.show-result-mascot #quiz-answer-board,
+    body:has(#result-sheet.open) #quiz-answer-board,
+    body.show-result-mascot #quiz-action-bar,
+    body:has(#result-sheet.open) #quiz-action-bar,
+    body.show-result-mascot #quiz-meta-dot,
+    body:has(#result-sheet.open) #quiz-meta-dot,
+    body.show-result-mascot #quiz-type-badge,
+    body:has(#result-sheet.open) #quiz-type-badge {
         display: none !important;
+    }
+
+    body.show-result-mascot .quiz-page-container,
+    body:has(#result-sheet.open) .quiz-page-container {
+        justify-content: flex-start !important;
+        pointer-events: none;
+    }
+
+    body.show-result-mascot .quiz-exit-btn,
+    body:has(#result-sheet.open) .quiz-exit-btn {
+        pointer-events: auto;
     }
 
     .review-drawer-backdrop {
@@ -1123,7 +1163,7 @@
             ]
         }
     </script>
-    <script src="{% static 'courses/js/chapter_quiz.js' %}?v=6"></script>
+    <script src="{% static 'courses/js/chapter_quiz.js' %}?v=7"></script>
 {% else %}
     <div style="padding: 60px 20px; text-align: center;">
         <p class="empty-state">No quiz questions yet for this chapter.</p>
