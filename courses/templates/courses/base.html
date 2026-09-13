@@ -26,6 +26,7 @@
         .topbar-profile-link:hover { background:rgba(108,92,231,.18); border-color:var(--primary); }
         .profile-chip-avatar { width:22px; height:22px; border-radius:50%; background:var(--primary); color:#ffffff; display:flex; align-items:center; justify-content:center; font-size:.68rem; font-weight:900; }
     </style>
+    {% block extra_css %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
     <header class="topbar">
@@ -44,7 +45,7 @@
                 <a href="{% url 'courses:course_list' %}" class="topbar-link">Course Library</a>
                 <a href="{% url 'courses:course_create' %}" class="topbar-link">Create Course</a>
                 <a href="{% url 'courses:leaderboard' %}" class="topbar-link">Rank &amp; Tiers</a>
-                <a href="{% url 'dungeon:launch' %}" class="topbar-link">Dungeon Quest</a>
+                <a href="{% url 'dungeon:launch' %}" class="topbar-link topbar-dungeon-link" {% block nav_dungeon_aria %}{% endblock %}><span aria-hidden="true">🔑</span> Dungeon Quest</a>
             </nav>
 
             <div class="stats topbar-desktop-stats">
@@ -196,7 +197,7 @@
                 <a href="{% url 'courses:course_list' %}">📚 Course Library</a>
                 <a href="{% url 'courses:course_create' %}">⚡ Create Course</a>
                 <a href="{% url 'courses:leaderboard' %}">🏆 Rank &amp; Tiers</a>
-                <a href="{% url 'dungeon:launch' %}">🗝️ Dungeon Quest</a>
+                <a href="{% url 'dungeon:launch' %}" class="topbar-dungeon-link" {% block nav_dungeon_aria_mobile %}{% endblock %}>🗝️ Dungeon Quest</a>
                 <a href="{% url 'courses:profile' %}">👤 My Profile</a>
             </div>
 
@@ -364,5 +365,6 @@
 
     </script>
     {% include 'courses/components/quiz_launch_modal.html' %}
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -1,11 +1,11 @@
-{% extends 'courses/base.html' %}
+{% extends 'dungeon/base_dungeon.html' %}
 {% load static %}
 
 {% block title %}Dungeon Quest — StudyQuest{% endblock %}
 {% block page_class %}dungeon-page dungeon-lobby-page{% endblock %}
+{% block dungeon_body_class %}dungeon-lobby-page{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{% static 'courses/dungeon/css/dungeon.css' %}">
 
 <div class="portal-atmosphere" aria-hidden="true">
     <div class="glow-orb orb-primary"></div>
