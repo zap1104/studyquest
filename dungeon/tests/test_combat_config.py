@@ -148,3 +148,71 @@ class PresentationScaleTests(SimpleTestCase):
         self.assertIsInstance(combat_config.MIN_BOARD_SCALE, int)
         self.assertIsInstance(combat_config.MAX_BOARD_SCALE, int)
         self.assertLessEqual(combat_config.MIN_BOARD_SCALE, combat_config.MAX_BOARD_SCALE)
+
+
+class SpriteManifestContractTests(SimpleTestCase):
+    """ART_GUIDE.md is the artist's contract; this enforces it. Dropping in a
+    sprite at the wrong size fails here instead of rendering blurry."""
+
+    TILE_KEYS = {
+        "tiles": ["floor", "wall", "grass", "door_locked", "door_unlocked"],
+        "actors": ["player_down", "player_up", "player_left", "player_right", "enemy_default"],
+    }
+    ICON_KEYS = {
+        "items": ["key_piece", "final_key", "skip_potion", "health_potion"],
+        "ui": ["heart_full", "heart_empty"],
+    }
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        import json
+        from pathlib import Path
+
+        from django.conf import settings
+
+        cls.root = Path(settings.BASE_DIR) / "courses" / "static" / "courses" / "dungeon"
+        cls.manifest = json.loads((cls.root / "sprites.json").read_text(encoding="utf-8"))
+
+    def entry(self, group, key):
+        value = self.manifest[group][key]
+        return {"file": value, "frames": 1} if isinstance(value, str) else value
+
+    def png_size(self, relative_path):
+        import struct
+
+        data = (self.root / relative_path).read_bytes()
+        self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n", f"{relative_path} is not a PNG")
+        return struct.unpack(">II", data[16:24])
+
+    def assert_sprite(self, group, key, frame_size):
+        entry = self.entry(group, key)
+        self.assertTrue((self.root / entry["file"]).is_file(), f"missing file for {group}.{key}")
+        width, height = self.png_size(entry["file"])
+        frames = entry.get("frames", 1)
+        self.assertEqual(
+            (width, height), (frame_size * frames, frame_size),
+            f"{group}.{key} is {width}x{height}; expected {frame_size * frames}x{frame_size}",
+        )
+
+    def test_manifest_mirrors_the_configured_sizes(self):
+        self.assertEqual(self.manifest["tile_size"], combat_config.TILE_SIZE)
+        self.assertEqual(self.manifest["icon_size"], combat_config.ICON_SIZE)
+
+    def test_tiles_and_actors_are_tile_sized(self):
+        for group, keys in self.TILE_KEYS.items():
+            for key in keys:
+                with self.subTest(sprite=f"{group}.{key}"):
+                    self.assert_sprite(group, key, combat_config.TILE_SIZE)
+
+    def test_items_and_hearts_are_icon_sized(self):
+        for group, keys in self.ICON_KEYS.items():
+            for key in keys:
+                with self.subTest(sprite=f"{group}.{key}"):
+                    self.assert_sprite(group, key, combat_config.ICON_SIZE)
+
+    def test_panel_frame_is_a_square_nine_slice(self):
+        entry = self.entry("ui", "panel_frame")
+        slice_size = entry["slice"]
+        self.assertGreater(slice_size, 0)
+        self.assertEqual(self.png_size(entry["file"]), (slice_size * 3, slice_size * 3))

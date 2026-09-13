@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="{% static 'courses/dungeon/css/dungeon.css' %}">
 
 {# Pixel sizes come from dungeon/combat_config.py; the CSS and JS read them from here. #}
-<div style="--dq-tile: {{ tile_size }}px; --dq-icon: {{ icon_size }}px;">
+<div class="dungeon-scale-root" style="--dq-tile: {{ tile_size }}px; --dq-icon: {{ icon_size }}px; --dq-ui-scale: {{ ui_scale }};">
 
     <div class="page-header">
         <div>
@@ -41,7 +41,7 @@
             <p class="dungeon-sr-only" data-board-description></p>
         </div>
 
-        <aside class="dungeon-hud" data-hud aria-label="Run status">
+        <aside class="dungeon-hud" data-hud data-panel-frame aria-label="Run status">
             <div>
                 <h2 class="dungeon-hud-title">Health</h2>
                 <div class="dungeon-hearts" data-hearts role="img" aria-hidden="true"></div>
@@ -61,7 +61,7 @@
         </aside>
     </div>
 
-    <section class="dungeon-battle" data-battle hidden aria-labelledby="dungeon-battle-title">
+    <section class="dungeon-battle" data-battle data-panel-frame hidden aria-labelledby="dungeon-battle-title">
         <header class="dungeon-battle-header">
             <div>
                 <h2 class="dungeon-battle-title" id="dungeon-battle-title"

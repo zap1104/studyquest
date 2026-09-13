@@ -12,10 +12,14 @@
 .dungeon-page {
     --dq-gap: 16px;
     --dq-panel-radius: 14px;
-    /* Icons are drawn at 1x but shown at 2x: still a whole-number scale, and
-       legible next to body text. Both numbers derive from config. */
-    --dq-icon-display: calc(var(--dq-icon, 16px) * 2);
     max-width: 1100px;
+}
+
+/* Derived sizes must be computed on the element that carries their inputs:
+   a custom property's var() resolves where it is declared, so declaring this
+   on an ancestor would silently fall back and ignore the server's values. */
+.dungeon-scale-root {
+    --dq-icon-display: calc(var(--dq-icon) * var(--dq-ui-scale));
 }
 
 /* The run needs width: the board only steps up to the next whole-number scale
@@ -523,8 +527,10 @@
 .dungeon-dpad[data-visible="true"] { display: grid; }
 
 .dungeon-dpad button {
-    width: calc(var(--dq-tile) * 1.75);
-    height: calc(var(--dq-tile) * 1.75);
+    /* A finger-sized touch target (WCAG 2.5.5 asks for at least 44px), kept
+       independent of tile size: smaller art must not mean smaller buttons. */
+    width: 56px;
+    height: 56px;
     border: 1px solid var(--border);
     border-radius: 12px;
     background: var(--surface);
@@ -540,6 +546,19 @@
 .dungeon-dpad [data-direction="left"] { grid-area: left; }
 .dungeon-dpad [data-direction="right"] { grid-area: right; }
 .dungeon-dpad [data-direction="down"] { grid-area: down; }
+
+/* The ui.panel_frame sprite as a 9-slice border. The engine fills in the image,
+   slice and width from the manifest once sprites load; until then (or if the
+   sprite is missing) panels keep their ordinary themed border. */
+[data-panel-frame][data-framed="true"] {
+    border-style: solid;
+    border-width: var(--dq-frame-width);
+    border-image-source: var(--dq-frame-source);
+    border-image-slice: var(--dq-frame-slice);
+    border-image-repeat: stretch;
+    border-radius: 0;
+    image-rendering: pixelated;
+}
 
 .dungeon-toast {
     position: fixed;

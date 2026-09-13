@@ -80,7 +80,11 @@
         var value = section[key];
         if (!value) { return null; }
         if (typeof value === 'string') { return { file: value, frames: 1 }; }
-        return { file: value.file, frames: Math.max(parseInt(value.frames, 10) || 1, 1) };
+        return {
+            file: value.file,
+            frames: Math.max(parseInt(value.frames, 10) || 1, 1),
+            slice: parseInt(value.slice, 10) || 0
+        };
     };
 
     Renderer.prototype.resolve = function (file) {

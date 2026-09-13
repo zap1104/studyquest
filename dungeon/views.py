@@ -105,6 +105,7 @@ def room(request, pk):
         "run": run,
         "tile_size": display["tile_size"],
         "icon_size": display["icon_size"],
+        "ui_scale": display["ui_scale"],
         # One JSON payload for the client: the run state plus every endpoint it
         # may call. Rendered through json_script, so it is escaped, not inlined.
         "bootstrap": {

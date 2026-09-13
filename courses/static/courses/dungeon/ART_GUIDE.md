@@ -74,7 +74,7 @@ the board.
 | --- | --- | --- | --- | --- |
 | `heart_full` | `sprites/heart_full.png` | 16 × 16 | pink heart | One point of remaining HP. The bar draws one per HP, so a Plus run draws 15 of them — keep it readable when repeated. |
 | `heart_empty` | `sprites/heart_empty.png` | 16 × 16 | grey heart | One point of lost HP. |
-| `panel_frame` | `sprites/panel_frame.png` | 24 × 24 | purple frame | A 9-slice border used as `border-image` around the battle and inventory panels. **Corners must be 8 × 8** and the middle must be transparent; the edges are stretched. |
+| `panel_frame` | `sprites/panel_frame.png` | 24 × 24 | purple frame | A 9-slice border used as `border-image` around the battle and inventory panels. **Corners must be 8 × 8** (the `"slice"` value in `sprites.json` — change both together) and the middle must be transparent; the edges are stretched. |
 
 ## Animated sprites (optional)
 

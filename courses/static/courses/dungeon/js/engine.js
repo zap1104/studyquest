@@ -109,6 +109,7 @@
 
         return this.renderer.load().then(function () {
             self.renderer.setState(self.state);
+            self.applyPanelFrame();
             self.inventory.render(self.state);
             self.describeBoard();
             self.bindInput();
@@ -119,6 +120,23 @@
             }
         }).catch(function (error) {
             self.announce('The dungeon art could not be loaded: ' + error.message);
+        });
+    };
+
+    /** Dress panels in the ui.panel_frame 9-slice. Slice size comes from the
+     *  manifest and display scale from the server, so this names no numbers. */
+    Engine.prototype.applyPanelFrame = function () {
+        var entry = this.renderer.entry('ui', 'panel_frame');
+        if (!entry || !entry.slice || !this.renderer.sprite('ui', 'panel_frame')) { return; }
+
+        var source = 'url("' + this.renderer.urlFor('ui', 'panel_frame') + '")';
+        var width = (entry.slice * this.state.display.ui_scale) + 'px';
+
+        document.querySelectorAll('[data-panel-frame]').forEach(function (panel) {
+            panel.style.setProperty('--dq-frame-source', source);
+            panel.style.setProperty('--dq-frame-slice', String(entry.slice));
+            panel.style.setProperty('--dq-frame-width', width);
+            panel.dataset.framed = 'true';
         });
     };
 
@@ -147,12 +165,16 @@
                 if (button) { self.move(button.dataset.direction); }
             });
 
-            // CSS already shows the pad for coarse pointers and phone widths;
-            // this catches touch-capable desktops that report a fine pointer.
-            // Everyone can reach the buttons by tab regardless.
-            if ('ontouchstart' in global || navigator.maxTouchPoints > 0) {
-                this.dpad.dataset.visible = 'true';
-            }
+            // CSS shows the pad when touch is the *primary* input (phones,
+            // tablets) or the screen is narrow. A hybrid laptop with a
+            // touchscreen reports touch support while its user types and
+            // mouses, so there the pad appears only once they actually touch.
+            var dpad = this.dpad;
+            document.addEventListener('pointerdown', function revealOnTouch(event) {
+                if (event.pointerType !== 'touch') { return; }
+                dpad.dataset.visible = 'true';
+                document.removeEventListener('pointerdown', revealOnTouch);
+            }, { passive: true });
         }
 
         global.addEventListener('resize', function () {

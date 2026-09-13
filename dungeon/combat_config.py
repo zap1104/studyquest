@@ -199,6 +199,10 @@ TILE_SIZE = 32
 # Icons (inventory items, hearts) are drawn at half a tile.
 ICON_SIZE = TILE_SIZE // 2
 
+# HUD art (icons, the panel frame) is shown at this whole-number multiple of its
+# source size, so it stays crisp and legible beside body text.
+UI_SCALE = 2
+
 # Integer-only upscaling, so pixel art never lands on a fractional edge.
 MIN_BOARD_SCALE = 1
 MAX_BOARD_SCALE = 3

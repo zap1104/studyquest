@@ -37,6 +37,7 @@ from .combat_config import (
     PARTIAL_ANSWER_DAMAGES_ENEMY,
     PARTIAL_ANSWER_DAMAGES_PLAYER,
     TILE_SIZE,
+    UI_SCALE,
     XP_REASON_TEMPLATE,
     calculate_run_xp,
     enemy_count_for_questions,
@@ -731,6 +732,7 @@ def display_settings():
         "min_scale": MIN_BOARD_SCALE,
         "max_scale": MAX_BOARD_SCALE,
         "vertical_reserve": BOARD_VERTICAL_RESERVE,
+        "ui_scale": UI_SCALE,
     }
 
 

@@ -212,6 +212,7 @@ class BootstrapPayloadTests(DungeonViewTestCase):
         self.assertEqual(response.context["tile_size"], expected["tile_size"])
         self.assertEqual(response.context["icon_size"], expected["icon_size"])
         self.assertContains(response, f"--dq-tile: {expected['tile_size']}px")
+        self.assertContains(response, f"--dq-ui-scale: {expected['ui_scale']}")
 
 
 class RunApiTests(DungeonViewTestCase):

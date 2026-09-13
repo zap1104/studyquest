@@ -26,6 +26,6 @@
   "ui": {
     "heart_full": "sprites/heart_full.png",
     "heart_empty": "sprites/heart_empty.png",
-    "panel_frame": "sprites/panel_frame.png"
+    "panel_frame": { "file": "sprites/panel_frame.png", "slice": 8 }
   }
 }
