@@ -48,8 +48,12 @@
         this.messageComboTextEl = document.querySelector('[data-message-combo-text]');
         this.messagePrimaryEl = document.querySelector('[data-message-primary]');
         this.messageAnswerEl = document.querySelector('[data-message-answer]');
+        this.messageStatusEl = document.querySelector('[data-message-status]');
+        this.messageToggleExplanationBtn = document.querySelector('[data-toggle-explanation]');
         this.messageExplanationEl = document.querySelector('[data-message-explanation]');
-        this.messageCaretEl = document.querySelector('[data-message-caret]');
+        this.messageBodyEl = document.querySelector('[data-dungeon-message-body]');
+        this.scrollUpBtn = document.querySelector('[data-message-scroll-up]');
+        this.scrollDownBtn = document.querySelector('[data-message-scroll-down]');
 
         this.idleEl = this.root.parentElement
             ? this.root.parentElement.querySelector('[data-battle-idle]')
@@ -61,6 +65,24 @@
         this.formEl.addEventListener('submit', this.submit.bind(this));
         this.continueEl.addEventListener('click', this.continueAfterFeedback.bind(this));
         this.root.addEventListener('keydown', this.handleKeydown.bind(this));
+
+        if (this.messageToggleExplanationBtn) {
+            this.messageToggleExplanationBtn.addEventListener('click', this.toggleExplanation.bind(this));
+        }
+        if (this.scrollUpBtn) {
+            this.scrollUpBtn.addEventListener('click', this.scrollMessageUp.bind(this));
+        }
+        if (this.scrollDownBtn) {
+            this.scrollDownBtn.addEventListener('click', this.scrollMessageDown.bind(this));
+        }
+        if (this.messageBodyEl) {
+            this.messageBodyEl.addEventListener('scroll', this.updateMessageOverflowState.bind(this));
+            if (typeof ResizeObserver !== 'undefined') {
+                this.messageResizeObserver = new ResizeObserver(this.refreshMessageOverflow.bind(this));
+                this.messageResizeObserver.observe(this.messageBodyEl);
+            }
+        }
+        global.addEventListener('resize', this.refreshMessageOverflow.bind(this));
     }
 
     Battle.prototype.isOpen = function () {
@@ -135,7 +157,33 @@
             }
         }
 
-        if (this.messageExplanationEl) {
+        if (this.messageStatusEl) {
+            if (options.status) {
+                this.messageStatusEl.textContent = options.status;
+                this.messageStatusEl.hidden = false;
+            } else {
+                this.messageStatusEl.textContent = '';
+                this.messageStatusEl.hidden = true;
+            }
+        }
+
+        if (this.messageToggleExplanationBtn && this.messageExplanationEl) {
+            if (state === 'graded' && explanation) {
+                this.messageToggleExplanationBtn.hidden = false;
+                this.messageToggleExplanationBtn.setAttribute('aria-expanded', 'false');
+                this.messageToggleExplanationBtn.innerHTML = 'View Explanation <span aria-hidden="true">▾</span>';
+                this.messageExplanationEl.hidden = true;
+                this.messageExplanationEl.textContent = explanation;
+            } else if (state !== 'graded' && explanation) {
+                this.messageToggleExplanationBtn.hidden = true;
+                this.messageExplanationEl.hidden = false;
+                this.messageExplanationEl.textContent = explanation;
+            } else {
+                this.messageToggleExplanationBtn.hidden = true;
+                this.messageExplanationEl.hidden = true;
+                this.messageExplanationEl.textContent = '';
+            }
+        } else if (this.messageExplanationEl) {
             if (explanation) {
                 this.messageExplanationEl.textContent = explanation;
                 this.messageExplanationEl.hidden = false;
@@ -145,9 +193,77 @@
             }
         }
 
-        if (this.messageCaretEl) {
-            this.messageCaretEl.hidden = !showCaret;
+        if (this.messageBodyEl) {
+            this.messageBodyEl.scrollTop = 0;
         }
+
+        this.refreshMessageOverflow();
+    };
+
+    Battle.prototype.refreshMessageOverflow = function () {
+        var self = this;
+        if (global.requestAnimationFrame) {
+            global.requestAnimationFrame(function () {
+                self.updateMessageOverflowState();
+            });
+        } else {
+            this.updateMessageOverflowState();
+        }
+    };
+
+    Battle.prototype.updateMessageOverflowState = function () {
+        var body = this.messageBodyEl;
+        var box = this.messageBoxEl;
+        if (!body || !box) { return; }
+
+        var hasOverflow = body.scrollHeight > (body.clientHeight + 1);
+        var isAtTop = body.scrollTop <= 4;
+        var isAtBottom = (body.scrollTop + body.clientHeight) >= (body.scrollHeight - 4);
+
+        box.classList.toggle('has-overflow', hasOverflow);
+        box.classList.toggle('is-at-top', isAtTop);
+        box.classList.toggle('is-at-bottom', isAtBottom);
+
+        body.tabIndex = hasOverflow ? 0 : -1;
+
+        if (this.scrollUpBtn) {
+            this.scrollUpBtn.hidden = !hasOverflow || isAtTop;
+        }
+        if (this.scrollDownBtn) {
+            this.scrollDownBtn.hidden = !hasOverflow || isAtBottom;
+        }
+    };
+
+    Battle.prototype.scrollMessageUp = function () {
+        if (!this.messageBodyEl) return;
+        var delta = Math.max(72, this.messageBodyEl.clientHeight * 0.7);
+        this.messageBodyEl.scrollBy({
+            top: -delta,
+            behavior: this.reducedMotion ? 'auto' : 'smooth'
+        });
+    };
+
+    Battle.prototype.scrollMessageDown = function () {
+        if (!this.messageBodyEl) return;
+        var delta = Math.max(72, this.messageBodyEl.clientHeight * 0.7);
+        this.messageBodyEl.scrollBy({
+            top: delta,
+            behavior: this.reducedMotion ? 'auto' : 'smooth'
+        });
+    };
+
+    Battle.prototype.toggleExplanation = function () {
+        if (!this.messageToggleExplanationBtn || !this.messageExplanationEl) return;
+        var isExpanded = this.messageToggleExplanationBtn.getAttribute('aria-expanded') === 'true';
+        var nextExpanded = !isExpanded;
+
+        this.messageToggleExplanationBtn.setAttribute('aria-expanded', String(nextExpanded));
+        this.messageExplanationEl.hidden = !nextExpanded;
+        this.messageToggleExplanationBtn.innerHTML = nextExpanded
+            ? 'Hide Explanation <span aria-hidden="true">▴</span>'
+            : 'View Explanation <span aria-hidden="true">▾</span>';
+
+        this.refreshMessageOverflow();
     };
 
     Battle.prototype.renderCombatResult = function (options) {
@@ -182,7 +298,7 @@
         this.renderCombatMessage({
             state: 'awaiting-answer',
             outcome: 'turn',
-            title: 'Your Turn',
+            title: 'YOUR TURN',
             combo: {
                 visible: true,
                 count: count,
@@ -190,8 +306,9 @@
                 text: 'Combo ' + count + '/' + threshold
             },
             primary: 'Choose an answer on the right, then attack.',
-            explanation: comboHint,
+            status: comboHint,
             answer: '',
+            explanation: '',
             showCaret: false
         });
 
@@ -214,7 +331,8 @@
         this.root.hidden = true;
         if (this.feedbackEl) { this.feedbackEl.hidden = true; }
         if (this.idleEl) { this.idleEl.hidden = false; }
-        if (this.messageCaretEl) { this.messageCaretEl.hidden = true; }
+        if (this.scrollUpBtn) { this.scrollUpBtn.hidden = true; }
+        if (this.scrollDownBtn) { this.scrollDownBtn.hidden = true; }
     };
 
     Battle.prototype.render = function () {
@@ -460,37 +578,40 @@
         var feedback = result.feedback || {};
         var combatEvent = result.combat_event || {};
         var isPowerStrike = (combatEvent.code === 'power_strike') || (result.combo && result.combo.is_power_strike);
+        var isReviewRun = result.is_review_run || (this.battle && this.battle.is_review_run);
 
-        var title = 'Direct Hit!';
-        var meta = '1 Damage';
+        var title = 'DIRECT HIT!';
+        var meta = '1 DAMAGE';
         var outcome = result.outcome || 'correct';
-        var primary = 'Your strike hits true!';
+        var primary = '';
         var answer = '';
-        var explanation = '';
+        var status = '';
+        var explanation = feedback.explanation || '';
 
         if (isPowerStrike) {
             outcome = 'power_strike';
-            title = 'Power Strike!';
-            meta = '2 Damage';
+            title = 'POWER STRIKE!';
+            meta = '2 DAMAGE';
             primary = 'Combo threshold reached! Devastating blow landed.';
         } else if (result.outcome === 'correct') {
-            title = 'Direct Hit!';
-            meta = '1 Damage';
+            title = 'DIRECT HIT!';
+            meta = '1 DAMAGE';
             primary = 'Your strike hits true!';
         } else if (result.outcome === 'incorrect') {
-            title = 'You Took a Hit!';
-            meta = (result.damage_to_player > 0 ? result.damage_to_player : 1) + ' HP Lost';
+            title = 'YOU TOOK A HIT!';
+            var lostHp = (result.damage_to_player > 0 ? result.damage_to_player : 1);
+            meta = lostHp + ' HP LOST';
             primary = 'The enemy counterattacks!';
         } else if (result.outcome === 'partial') {
-            title = 'Glancing Blow';
-            meta = '0 Damage';
-            primary = 'Partial credit awarded — nobody takes damage.';
+            title = 'GLANCING BLOW';
+            meta = 'PARTIAL CREDIT';
+            primary = 'Glancing blow — nobody takes full damage.';
         } else if (result.outcome === 'skipped') {
-            title = 'Slipped Past';
-            meta = '0 Damage';
+            title = 'SLIPPED PAST';
+            meta = '0 DAMAGE';
             primary = 'You slipped safely past the question.';
         } else {
-            title = 'Turn Graded';
+            title = 'TURN GRADED';
             meta = '';
             primary = 'Turn resolved.';
         }
@@ -501,24 +622,47 @@
             } else if (feedback.canonical_answer) {
                 answer = 'Correct answer: ' + feedback.canonical_answer;
             }
+
             if (feedback.missing_items && feedback.missing_items.length) {
-                var missed = 'Missed: ' + feedback.missing_items.join(', ');
-                answer = answer ? (answer + ' | ' + missed) : missed;
+                var missingCount = feedback.missing_items.length;
+                if (missingCount <= 3) {
+                    var missedList = feedback.missing_items.join(' · ');
+                    answer = answer ? (answer + ' | Missing: ' + missedList) : ('Missing: ' + missedList);
+                } else {
+                    var missedSummary = 'Missing ' + missingCount + ' answers · View expected list below';
+                    answer = answer ? (answer + ' | ' + missedSummary) : missedSummary;
+                    var fullMissingList = 'Expected items: ' + feedback.missing_items.join(', ');
+                    explanation = explanation ? (fullMissingList + '\n\n' + explanation) : fullMissingList;
+                }
+            }
+        } else if (result.outcome === 'correct') {
+            if (feedback.correct_choice_text) {
+                answer = 'Correct answer: ' + feedback.correct_choice_text;
+            } else if (feedback.canonical_answer) {
+                answer = 'Correct answer: ' + feedback.canonical_answer;
             }
         }
 
-        if (feedback.explanation) {
-            explanation = feedback.explanation;
-        } else if (result.outcome === 'correct') {
-            explanation = isPowerStrike
-                ? 'Combo threshold reached! Massive damage dealt.'
-                : 'Well done! The enemy takes damage.';
-        } else if (result.outcome === 'partial') {
-            explanation = 'Partial credit awarded — nobody takes damage.';
-        } else if (result.outcome === 'skipped') {
-            explanation = 'You slipped past the question.';
+        if (isReviewRun) {
+            if (result.outcome === 'correct') {
+                status = 'Remediation question mastered!';
+            } else {
+                status = 'Remediation item not yet mastered.';
+            }
         } else {
-            explanation = 'Review the correct answer before proceeding.';
+            if (result.outcome === 'correct') {
+                if (isPowerStrike) {
+                    status = 'Power Strike triggered!';
+                } else {
+                    var count = (result.combo && typeof result.combo.count !== 'undefined') ? result.combo.count : 1;
+                    var threshold = (result.combo && result.combo.threshold) || 3;
+                    status = 'Combo increased to ' + count + ' of ' + threshold + '.';
+                }
+            } else if (result.outcome === 'incorrect') {
+                status = 'Review this concept after the encounter.';
+            } else if (result.outcome === 'partial') {
+                status = 'Your combo was preserved.';
+            }
         }
 
         this.renderCombatMessage({
@@ -529,15 +673,15 @@
             combo: null,
             primary: primary,
             answer: answer,
-            explanation: explanation,
-            showCaret: true
+            status: status,
+            explanation: explanation
         });
 
         if (this.feedbackEl) {
             this.feedbackEl.hidden = true;
         }
 
-        var announceText = title + ': ' + meta + '. ' + primary + (answer ? ' ' + answer + '.' : '') + ' ' + explanation;
+        var announceText = title + ': ' + meta + '. ' + primary + (answer ? ' ' + answer + '.' : '') + ' ' + (status ? ' ' + status + '.' : '');
         this.announce(announceText);
 
         if (global.innerWidth < 768 && this.messageBoxEl) {
@@ -570,7 +714,7 @@
             this.renderCombatMessage({
                 state: 'awaiting-answer',
                 outcome: 'turn',
-                title: 'Your Turn',
+                title: 'YOUR TURN',
                 combo: {
                     visible: true,
                     count: count,
@@ -578,8 +722,9 @@
                     text: 'Combo ' + count + '/' + threshold
                 },
                 primary: 'Choose an answer on the right, then attack.',
-                explanation: comboHint,
+                status: comboHint,
                 answer: '',
+                explanation: '',
                 showCaret: false
             });
         } else {

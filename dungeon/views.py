@@ -150,7 +150,14 @@ def summary(request, pk):
         user=request.user,
         quiz=run.quiz,
         status=DungeonRun.STATUS_IN_PROGRESS,
-    ).exclude(pk=run.pk).first()
+    ).exclude(pk=run.pk).select_related("quiz__chapter").first()
+
+    other_active_run = active_run
+    if other_active_run is None:
+        other_active_run = DungeonRun.objects.filter(
+            user=request.user,
+            status=DungeonRun.STATUS_IN_PROGRESS,
+        ).exclude(pk=run.pk).select_related("quiz__chapter").first()
 
     return render(request, "dungeon/summary.html", {
         "run": run,
@@ -162,7 +169,8 @@ def summary(request, pk):
         "still_to_review_count": max(targeted - mastered, 0),
         "unresolved_count": unresolved_count,
         "active_run": active_run,
-        "active_run_url": reverse("dungeon:room", args=[active_run.pk]) if active_run else None,
+        "other_active_run": other_active_run,
+        "active_run_url": reverse("dungeon:room", args=[other_active_run.pk]) if other_active_run else None,
         "review_action_blocked": active_run is not None,
         "enemies_defeated": sum(1 for enemy in enemies if enemy.is_defeated),
         "enemy_count": len(enemies),

@@ -103,18 +103,26 @@
                         <span class="dungeon-message-meta dq-type-impact" data-message-meta hidden></span>
                     </header>
 
-                    <div class="dungeon-message-body">
+                    <div class="dungeon-message-body" data-dungeon-message-body aria-label="Combat result and explanation">
                         <p class="dungeon-message-primary dq-type-body" data-message-primary>
                             Find an enemy in the tall grass.
                         </p>
 
                         <p class="dungeon-message-answer dq-type-body" data-message-answer hidden></p>
-                        <p class="dungeon-message-secondary dq-type-body" data-message-explanation>
+                        <p class="dungeon-message-status dq-type-body" data-message-status hidden></p>
+
+                        <button type="button" class="dungeon-btn-explanation dq-type-label" data-toggle-explanation aria-expanded="false" aria-controls="dungeon-message-explanation" hidden>
+                            View Explanation <span aria-hidden="true">▾</span>
+                        </button>
+
+                        <div id="dungeon-message-explanation" class="dungeon-message-explanation dq-type-body" data-message-explanation hidden>
                             Explore the room using movement keys or on-screen D-pad.
-                        </p>
+                        </div>
                     </div>
 
-                    <span class="dungeon-message-caret" data-message-caret aria-hidden="true" hidden></span>
+                    <!-- Accessible Scroll Buttons -->
+                    <button type="button" class="dungeon-message-scroll-btn dungeon-message-scroll-up" data-message-scroll-up aria-label="Scroll combat message up" hidden>▲</button>
+                    <button type="button" class="dungeon-message-scroll-btn dungeon-message-scroll-down" data-message-scroll-down aria-label="Scroll combat message down" hidden>▼</button>
                 </section>
             </main>
 

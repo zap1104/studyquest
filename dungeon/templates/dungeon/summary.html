@@ -169,8 +169,11 @@
 
         {% elif verdict_code == 'review_incomplete' %}
             <a class="btn btn-primary btn-sm" href="{{ relaunch_url }}">Back to Dungeon Quest</a>
-            {% if review_action_blocked %}
-                <a class="btn btn-secondary btn-sm" href="{{ active_run_url }}">Resume Active Run</a>
+            {% if review_action_blocked and other_active_run %}
+                <div class="dungeon-other-run-action">
+                    <span class="dungeon-other-run-label">Another expedition is active: {{ other_active_run.quiz.chapter.title }}</span>
+                    <a class="btn btn-secondary btn-sm" href="{{ active_run_url }}">Resume Other Run</a>
+                </div>
             {% elif unresolved_count > 0 %}
                 <form method="post" action="{% url 'dungeon:start_run' %}" style="margin:0;">
                     {% csrf_token %}
@@ -186,8 +189,11 @@
         {% else %}
             <!-- Classic Cleared -->
             <a class="btn btn-primary btn-sm" href="{{ relaunch_url }}">Back to Dungeon Quest</a>
-            {% if review_action_blocked %}
-                <a class="btn btn-secondary btn-sm" href="{{ active_run_url }}">Resume Active Run</a>
+            {% if review_action_blocked and other_active_run %}
+                <div class="dungeon-other-run-action">
+                    <span class="dungeon-other-run-label">Another expedition is active: {{ other_active_run.quiz.chapter.title }}</span>
+                    <a class="btn btn-secondary btn-sm" href="{{ active_run_url }}">Resume Other Run</a>
+                </div>
             {% elif unresolved_count > 0 %}
                 <form method="post" action="{% url 'dungeon:start_run' %}" style="margin:0;">
                     {% csrf_token %}

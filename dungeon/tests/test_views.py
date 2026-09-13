@@ -590,5 +590,6 @@ class SummaryViewAndThemeTests(DungeonViewTestCase):
         response = self.client.get(reverse("dungeon:summary", args=[old_run.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["review_action_blocked"])
-        self.assertContains(response, "Resume Active Run")
+        self.assertContains(response, "Resume Other Run")
+        self.assertContains(response, "Another expedition is active:")
         self.assertContains(response, reverse("dungeon:room", args=[active_run.pk]))

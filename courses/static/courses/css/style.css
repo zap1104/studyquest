@@ -1414,6 +1414,33 @@ body {
 }
 .topbar-link:hover { color: var(--primary); }
 
+/* Dungeon Quest Nav Pill Button (Seamless across all StudyQuest pages) */
+.topbar-desktop-nav .topbar-dungeon-link {
+    color: #ffd36a;
+    background: rgba(232, 163, 61, 0.10);
+    border: 1px solid rgba(232, 163, 61, 0.30);
+    border-radius: 999px;
+    padding: 6px 13px;
+    font-weight: 700;
+    box-shadow: 0 0 12px rgba(232, 163, 61, 0.15);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+
+.topbar-desktop-nav .topbar-dungeon-link:hover {
+    color: #ffd75a;
+    background: rgba(232, 163, 61, 0.18);
+    border-color: rgba(232, 163, 61, 0.50);
+    box-shadow: 0 0 16px rgba(232, 163, 61, 0.28);
+}
+
+.topbar-desktop-nav .topbar-dungeon-link:focus-visible {
+    outline: 2px solid #e8a33d;
+    outline-offset: 2px;
+}
+
 .mobile-menu-button {
     display: none;
     align-items: center;
@@ -1454,6 +1481,18 @@ body {
     text-decoration: none;
     font-weight: 700;
     font-size: 0.95rem;
+}
+
+.mobile-nav-links a.topbar-dungeon-link {
+    color: #ffd36a;
+    background: rgba(232, 163, 61, 0.10);
+    border-color: rgba(232, 163, 61, 0.35);
+}
+
+.mobile-nav-links a.topbar-dungeon-link:hover {
+    background: rgba(232, 163, 61, 0.18);
+    border-color: rgba(232, 163, 61, 0.55);
+    color: #ffd75a;
 }
 
 .mobile-nav-stats {
