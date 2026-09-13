@@ -1166,3 +1166,53 @@ class ReviewRunServiceTests(DungeonTestCase):
         self.assertEqual(beta_group["display_run"], run_b1)
         self.assertFalse(beta_group["has_cleared"])
 
+
+class VerdictCodeTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="delver_verdict", password="password123")
+        self.quiz = make_quiz(self.user, question_count=10)
+
+    def test_verdict_code_abandoned(self):
+        run = services.start_or_resume_run(self.user, self.quiz)
+        services.abandon_run(run)
+        self.assertEqual(services.get_run_verdict_code(run), "abandoned")
+        self.assertEqual(run.verdict_code, "abandoned")
+
+    def test_verdict_code_failed(self):
+        run = services.start_or_resume_run(self.user, self.quiz)
+        run.status = DungeonRun.STATUS_FAILED
+        run.save()
+        self.assertEqual(services.get_run_verdict_code(run), "failed")
+        self.assertEqual(run.verdict_code, "failed")
+
+    def test_verdict_code_classic_cleared(self):
+        run = services.start_or_resume_run(self.user, self.quiz)
+        run.status = DungeonRun.STATUS_CLEARED
+        run.save()
+        self.assertEqual(services.get_run_verdict_code(run), "cleared")
+        self.assertEqual(run.verdict_code, "cleared")
+
+    def test_verdict_code_review_mastered(self):
+        run = DungeonRun.objects.create(
+            user=self.user,
+            quiz=self.quiz,
+            run_type=DungeonRun.TYPE_REVIEW,
+            status=DungeonRun.STATUS_CLEARED,
+            review_question_ids=[1, 2],
+            review_mastered_question_ids=[1, 2],
+        )
+        self.assertEqual(services.get_run_verdict_code(run), "review_mastered")
+        self.assertEqual(run.verdict_code, "review_mastered")
+
+    def test_verdict_code_review_incomplete(self):
+        run = DungeonRun.objects.create(
+            user=self.user,
+            quiz=self.quiz,
+            run_type=DungeonRun.TYPE_REVIEW,
+            status=DungeonRun.STATUS_CLEARED,
+            review_question_ids=[1, 2],
+            review_mastered_question_ids=[1],
+        )
+        self.assertEqual(services.get_run_verdict_code(run), "review_incomplete")
+        self.assertEqual(run.verdict_code, "review_incomplete")
+
