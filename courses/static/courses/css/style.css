@@ -1923,8 +1923,51 @@ html.modal-open {
 
 /* Pre-Quiz Launch & Style Selector Modal */
 .quiz-launch-box {
-    width: min(100%, 520px) !important;
-    padding: 20px 22px 18px !important;
+    width: min(720px, calc(100vw - 32px)) !important;
+    padding: 24px 26px 20px !important;
+}
+
+.quiz-launch-box .sq-modal-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.quiz-launch-box .sq-modal-actions button,
+.quiz-launch-box .sq-modal-actions a {
+    white-space: nowrap;
+    min-height: 46px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 18px;
+    font-size: 0.94rem;
+}
+
+#quiz-launch-cancel-btn {
+    flex: 0 0 auto;
+    min-width: 95px;
+}
+
+#quiz-launch-read-btn {
+    flex: 1 1 auto;
+}
+
+#quiz-launch-confirm-btn {
+    flex: 1.2 1 auto;
+    font-weight: 800;
+}
+
+@media (max-width: 620px) {
+    .quiz-launch-box .sq-modal-actions {
+        flex-direction: column-reverse;
+        gap: 8px;
+    }
+    .quiz-launch-box .sq-modal-actions button,
+    .quiz-launch-box .sq-modal-actions a {
+        width: 100% !important;
+        white-space: normal !important;
+    }
 }
 
 .quiz-prereq-box {

@@ -278,18 +278,37 @@
     .quiz-option.is-correct .quiz-letter { background: #00c2a8; color: #fff; border-color: #00c2a8; }
     .quiz-option.is-incorrect .quiz-letter { background: var(--danger); color: #fff; border-color: var(--danger); }
 
-    /* ================= 4B. QUICK PLAY MODE OVERRIDES ================= */
+    /* Shared interaction width for choices, inline feedback, and action bar */
+    .quiz-interaction-width {
+        width: 100%;
+        max-width: 960px;
+        margin-inline: auto;
+        box-sizing: border-box;
+    }
+    body[data-quiz-layout="game_board"] .quiz-interaction-width,
+    body[data-quiz-layout="quick_play"] .quiz-interaction-width {
+        max-width: 1080px;
+    }
+    body[data-quiz-layout="standard"] .quiz-interaction-width {
+        max-width: 820px;
+    }
+
+    /* ================= 4B. GAME BOARD MODE OVERRIDES ================= */
+    body[data-quiz-layout="game_board"] .quiz-page-container,
     body[data-quiz-layout="quick_play"] .quiz-page-container {
         max-width: 1180px;
         height: 100%;
         max-height: 100%;
+        display: flex;
+        flex-direction: column;
         justify-content: space-between;
-        overflow: hidden;
-        padding-bottom: max(24px, env(safe-area-inset-bottom));
+        overflow: visible;
+        padding-bottom: max(20px, env(safe-area-inset-bottom));
         box-sizing: border-box;
     }
 
-    /* Region 2: Flexible Centered Question Stage */
+    /* Region 2: Question Stage */
+    body[data-quiz-layout="game_board"] .quiz-question-stage,
     body[data-quiz-layout="quick_play"] .quiz-question-stage {
         flex: 1 1 auto;
         min-height: 0;
@@ -297,11 +316,12 @@
         align-items: center;
         justify-content: center;
         text-align: center;
-        padding: clamp(8px, 1.6vh, 20px) clamp(16px, 3vw, 40px);
+        padding: clamp(6px, 1.2vh, 16px) clamp(14px, 2.5vw, 36px);
     }
 
+    body[data-quiz-layout="game_board"] .quiz-question-text,
     body[data-quiz-layout="quick_play"] .quiz-question-text {
-        font-size: clamp(1.25rem, 2.1vw, 2rem);
+        font-size: clamp(1.2rem, 2vw, 1.85rem);
         font-weight: 800;
         line-height: 1.35;
         max-width: 960px;
@@ -311,33 +331,158 @@
         color: var(--ink);
     }
 
-    /* Region 3: Bottom Answer Board - Stationary Choice Grid & Permanent Response Dock */
+    /* Region 3: Inline Reserved Feedback Area */
+    .quiz-inline-feedback {
+        height: clamp(112px, 15vh, 148px);
+        min-height: 112px;
+        border: 0;
+        background: transparent;
+        flex-shrink: 0;
+        padding-inline: 4px;
+        box-sizing: border-box;
+    }
+
+    .quiz-inline-feedback-content {
+        height: 100%;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--border);
+        border-radius: 14px;
+        background: var(--surface);
+        padding: 10px 16px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+
+    .quiz-inline-feedback-content[hidden] {
+        display: none !important;
+    }
+
+    .quiz-inline-feedback-content.is-correct {
+        border-left-color: var(--accent);
+        box-shadow: 0 8px 24px rgba(0, 194, 168, 0.12);
+    }
+    .quiz-inline-feedback-content.is-partial {
+        border-left-color: var(--gold);
+        box-shadow: 0 8px 24px rgba(255, 184, 0, 0.12);
+    }
+    .quiz-inline-feedback-content.is-incorrect {
+        border-left-color: var(--danger);
+        box-shadow: 0 8px 24px rgba(239, 68, 68, 0.12);
+    }
+
+    .feedback-sheet-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 4px;
+        flex-shrink: 0;
+    }
+
+    .feedback-status-pill {
+        font-size: 0.74rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 3px 8px;
+        border-radius: 6px;
+    }
+    .quiz-inline-feedback-content.is-correct .feedback-status-pill { background: rgba(0, 194, 168, 0.14); color: var(--accent); }
+    .quiz-inline-feedback-content.is-partial .feedback-status-pill { background: rgba(255, 184, 0, 0.14); color: var(--gold); }
+    .quiz-inline-feedback-content.is-incorrect .feedback-status-pill { background: rgba(239, 68, 68, 0.14); color: var(--danger); }
+
+    .feedback-points-pill {
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 800;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        padding: 2px 8px;
+        border-radius: 6px;
+    }
+
+    .feedback-answer-stage {
+        margin: 2px 0 4px;
+        flex-shrink: 0;
+    }
+
+    .feedback-answer-label {
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 2px;
+    }
+    .quiz-inline-feedback-content.is-correct .feedback-answer-label { color: var(--accent); }
+    .quiz-inline-feedback-content.is-partial .feedback-answer-label { color: var(--gold); }
+    .quiz-inline-feedback-content.is-incorrect .feedback-answer-label { color: var(--danger); }
+
+    .feedback-title-text {
+        margin: 0;
+        font-size: clamp(0.96rem, 1.35vh, 1.14rem);
+        font-weight: 800;
+        color: var(--ink);
+        line-height: 1.3;
+    }
+
+    .feedback-expl-text {
+        margin: 3px 0 5px;
+        color: var(--muted);
+        font-size: clamp(0.80rem, 1.1vh, 0.88rem);
+        line-height: 1.4;
+        flex-shrink: 0;
+    }
+
+    .feedback-extra-wrap {
+        display: grid;
+        gap: 3px;
+        margin-bottom: 5px;
+        font-size: clamp(0.75rem, 1vh, 0.82rem);
+        color: var(--muted);
+        flex-shrink: 0;
+    }
+    .feedback-extra-wrap strong { color: var(--ink); }
+
+    /* Region 4: Answer Board & Stationary Choice Grid */
+    body[data-quiz-layout="game_board"] .quiz-answer-board,
     body[data-quiz-layout="quick_play"] .quiz-answer-board {
         width: 100%;
         flex-shrink: 0;
-        display: grid;
-        grid-template-rows: minmax(140px, auto) clamp(165px, 21vh, 194px);
-        gap: 14px;
-        margin: 0;
+        margin: 0 auto;
         overflow: visible;
+        padding-inline: 4px;
+        box-sizing: border-box;
     }
 
+    body[data-quiz-layout="game_board"] .quiz-choices,
     body[data-quiz-layout="quick_play"] .quiz-choices {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: clamp(8px, 1.3vh, 12px);
         width: 100%;
+        overflow: visible;
     }
 
+    body[data-quiz-layout="game_board"] .quiz-choices > button:last-child:nth-child(odd),
     body[data-quiz-layout="quick_play"] .quiz-choices > button:last-child:nth-child(odd) {
         grid-column: span 2;
     }
 
+    body[data-quiz-layout="game_board"] .quiz-choices.tf-layout,
     body[data-quiz-layout="quick_play"] .quiz-choices.tf-layout {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: clamp(10px, 1.5vh, 14px);
     }
 
+    body[data-quiz-layout="game_board"] .quiz-option,
     body[data-quiz-layout="quick_play"] .quiz-option {
         position: relative;
         border: none;
@@ -359,6 +504,7 @@
         box-sizing: border-box;
     }
 
+    body[data-quiz-layout="game_board"] .quiz-choices.tf-layout .quiz-option,
     body[data-quiz-layout="quick_play"] .quiz-choices.tf-layout .quiz-option {
         height: clamp(80px, 12vh, 105px);
         min-height: 80px;
@@ -366,26 +512,34 @@
         font-size: clamp(1.1rem, 1.5vw, 1.3rem);
     }
 
+    body[data-quiz-layout="game_board"] .quiz-option.qp-opt-0,
     body[data-quiz-layout="quick_play"] .quiz-option.qp-opt-0 {
         background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
     }
+    body[data-quiz-layout="game_board"] .quiz-option.qp-opt-1,
     body[data-quiz-layout="quick_play"] .quiz-option.qp-opt-1 {
         background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
     }
+    body[data-quiz-layout="game_board"] .quiz-option.qp-opt-2,
     body[data-quiz-layout="quick_play"] .quiz-option.qp-opt-2 {
         background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
     }
+    body[data-quiz-layout="game_board"] .quiz-option.qp-opt-3,
     body[data-quiz-layout="quick_play"] .quiz-option.qp-opt-3 {
         background: linear-gradient(135deg, #059669 0%, #047857 100%);
     }
 
+    body[data-quiz-layout="game_board"] .quiz-choices.tf-layout .quiz-option.qp-tf-true,
     body[data-quiz-layout="quick_play"] .quiz-choices.tf-layout .quiz-option.qp-tf-true {
         background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
     }
+    body[data-quiz-layout="game_board"] .quiz-choices.tf-layout .quiz-option.qp-tf-false,
     body[data-quiz-layout="quick_play"] .quiz-choices.tf-layout .quiz-option.qp-tf-false {
         background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
     }
 
+    /* Option Symbols & Sizing */
+    body[data-quiz-layout="game_board"] .quiz-letter,
     body[data-quiz-layout="quick_play"] .quiz-letter {
         width: clamp(38px, 4.5vh, 46px);
         height: clamp(38px, 4.5vh, 46px);
@@ -402,68 +556,89 @@
         text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
     }
 
+    body[data-quiz-layout="game_board"] .quiz-letter svg,
+    body[data-quiz-layout="quick_play"] .quiz-letter svg {
+        display: block;
+        width: clamp(20px, 2.6vh, 24px);
+        height: clamp(20px, 2.6vh, 24px);
+    }
+
+    body[data-quiz-layout="game_board"] .quiz-option:hover:not(.locked),
     body[data-quiz-layout="quick_play"] .quiz-option:hover:not(.locked) {
         transform: translateY(-2px) scale(1.01);
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35);
     }
 
+    /* INSET OUTLINES PREVENT CUT EDGES */
+    body[data-quiz-layout="game_board"] .quiz-option.selected,
     body[data-quiz-layout="quick_play"] .quiz-option.selected {
-        box-shadow: 0 0 0 3px #ffffff, 0 8px 28px rgba(0, 0, 0, 0.5);
+        box-shadow: inset 0 0 0 3px #ffffff, 0 8px 28px rgba(0, 0, 0, 0.5);
         transform: translateY(-2px);
     }
+    body[data-quiz-layout="game_board"] .quiz-option.selected .quiz-letter,
     body[data-quiz-layout="quick_play"] .quiz-option.selected .quiz-letter {
         background: #ffffff;
         color: #1e1e2f;
         border-color: #ffffff;
     }
 
+    body[data-quiz-layout="game_board"] .quiz-option.is-correct,
     body[data-quiz-layout="quick_play"] .quiz-option.is-correct {
         background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
-        box-shadow: 0 0 0 3px #34d399, 0 8px 28px rgba(16, 185, 129, 0.4) !important;
+        box-shadow: inset 0 0 0 3px #34d399, 0 8px 28px rgba(16, 185, 129, 0.4) !important;
         color: #ffffff !important;
         opacity: 1 !important;
     }
+    body[data-quiz-layout="game_board"] .quiz-option.is-correct .quiz-letter,
     body[data-quiz-layout="quick_play"] .quiz-option.is-correct .quiz-letter {
         background: #34d399;
         color: #064e3b;
         border-color: #34d399;
     }
 
+    body[data-quiz-layout="game_board"] .quiz-option.is-incorrect,
     body[data-quiz-layout="quick_play"] .quiz-option.is-incorrect {
         background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
-        box-shadow: 0 0 0 3px #f87171, 0 8px 28px rgba(239, 68, 68, 0.4) !important;
+        box-shadow: inset 0 0 0 3px #f87171, 0 8px 28px rgba(239, 68, 68, 0.4) !important;
         color: #ffffff !important;
         opacity: 1 !important;
     }
+    body[data-quiz-layout="game_board"] .quiz-option.is-incorrect .quiz-letter,
     body[data-quiz-layout="quick_play"] .quiz-option.is-incorrect .quiz-letter {
         background: #f87171;
         color: #7f1d1d;
         border-color: #f87171;
     }
 
+    body[data-quiz-layout="game_board"] .quiz-option.is-dimmed,
     body[data-quiz-layout="quick_play"] .quiz-option.is-dimmed {
         opacity: 0.3;
         filter: grayscale(0.5);
         transform: none !important;
     }
 
-    body[data-quiz-layout="quick_play"] .quiz-action-btn {
+    /* Region 5: Full-width Action Bar */
+    .quiz-action-bar {
         width: 100%;
-        min-height: clamp(42px, 5.2vh, 48px);
-        margin: 0;
-        font-size: clamp(0.92rem, 1.25vw, 1.02rem);
-        font-weight: 800;
+        margin-top: clamp(6px, 1vh, 12px);
+        flex-shrink: 0;
+        padding-inline: 4px;
+        box-sizing: border-box;
     }
 
-    body[data-quiz-layout="quick_play"] .quiz-feedback-sheet {
+    body[data-quiz-layout="game_board"] #action-btn,
+    body[data-quiz-layout="quick_play"] #action-btn {
+        width: 100%;
+        min-height: clamp(54px, 7.5vh, 62px);
+        border-radius: 14px;
+        font-size: clamp(1rem, 1.3vw, 1.12rem);
+        font-weight: 800;
         margin: 0;
-        max-height: min(210px, 26dvh);
-        overflow-y: auto;
     }
 
     /* ================= 4C. STANDARD LAYOUT OVERRIDES ================= */
     body[data-quiz-layout="standard"] .quiz-page-container {
-        max-width: 840px;
+        max-width: 860px;
         height: 100%;
         max-height: 100%;
         justify-content: flex-start;
@@ -471,12 +646,12 @@
     }
 
     body[data-quiz-layout="standard"] .quiz-question-stage {
-        margin: auto auto clamp(14px, 2.2vh, 22px);
+        margin: 8px auto 14px;
         width: 100%;
         background: var(--surface);
         border: 1px solid var(--border);
         border-radius: 16px;
-        padding: clamp(18px, 2.8vh, 28px) clamp(20px, 3vw, 32px);
+        padding: clamp(16px, 2.5vh, 24px) clamp(18px, 2.5vw, 28px);
         text-align: center;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
         flex-shrink: 0;
@@ -497,7 +672,7 @@
         display: flex;
         flex-direction: column;
         gap: 10px;
-        margin: 0 auto auto;
+        margin: 0 auto;
     }
 
     body[data-quiz-layout="standard"] .quiz-choices {
@@ -531,16 +706,13 @@
         transition: all 0.16s ease;
     }
 
-    body[data-quiz-layout="standard"] .quiz-action-btn {
+    body[data-quiz-layout="standard"] #action-btn {
         width: 100%;
         min-height: 48px;
-        margin-top: 4px;
-    }
-
-    body[data-quiz-layout="standard"] .quiz-feedback-sheet {
+        border-radius: 12px;
+        font-size: 0.98rem;
+        font-weight: 700;
         margin: 0;
-        max-height: min(240px, 30dvh);
-        overflow-y: auto;
     }
 
     /* Typed Fields (Identification & Enumeration) */
@@ -573,13 +745,14 @@
         overflow-y: auto;
     }
 
-    /* ================= 5. PRIMARY CHECK ACTION BUTTON ================= */
+    /* ================= 5. PRIMARY ACTION BUTTON BASE ================= */
     .quiz-action-btn {
         display: block;
         width: 100%;
-        min-height: clamp(42px, 5.2vh, 48px);
-        padding: clamp(8px, 1.2vh, 12px);
-        font-size: 0.98rem;
+        min-height: clamp(48px, 6vh, 58px);
+        padding: clamp(8px, 1.2vh, 14px);
+        font-size: 1rem;
+        font-weight: 800;
     }
     .quiz-action-btn:disabled {
         opacity: 0.45;
@@ -588,188 +761,6 @@
         box-shadow: none !important;
     }
 
-    /* ================= 6. PERMANENT RESPONSE DOCK ================= */
-    .quiz-response-dock {
-        width: 100%;
-        height: clamp(165px, 21vh, 194px);
-        min-height: clamp(165px, 21vh, 194px);
-        max-height: clamp(165px, 21vh, 194px);
-        padding: 14px 16px;
-        overflow: hidden;
-        border: 1px solid var(--border);
-        border-radius: 18px;
-        background: var(--surface);
-        box-sizing: border-box;
-        transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .quiz-response-dock.is-correct {
-        border-left: 5px solid var(--accent);
-        box-shadow: 0 8px 24px rgba(0, 194, 168, 0.12);
-    }
-    .quiz-response-dock.is-partial {
-        border-left: 5px solid var(--gold);
-        box-shadow: 0 8px 24px rgba(255, 184, 0, 0.12);
-    }
-    .quiz-response-dock.is-incorrect {
-        border-left: 5px solid var(--danger);
-        box-shadow: 0 8px 24px rgba(239, 68, 68, 0.12);
-    }
-
-    /* Check State: Vertically centered Check Answer */
-    .quiz-response-state-check {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .quiz-response-state-check[hidden] {
-        display: none !important;
-    }
-
-    .quiz-response-state-check #action-btn {
-        width: min(100%, 760px);
-        min-height: 56px;
-        margin: 0;
-        border-radius: 14px;
-        font-size: 1.05rem;
-        font-weight: 900;
-    }
-
-    /* Feedback State: Internally scrollable to prevent dock expansion */
-    .quiz-response-state-feedback {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        scrollbar-gutter: stable;
-        box-sizing: border-box;
-    }
-
-    .quiz-response-state-feedback[hidden] {
-        display: none !important;
-    }
-
-    .feedback-sheet-heading {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 4px;
-        flex-shrink: 0;
-    }
-
-    .feedback-status-pill {
-        font-size: 0.74rem;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        padding: 3px 8px;
-        border-radius: 6px;
-    }
-    .quiz-response-dock.is-correct .feedback-status-pill { background: rgba(0, 194, 168, 0.14); color: var(--accent); }
-    .quiz-response-dock.is-partial .feedback-status-pill { background: rgba(255, 184, 0, 0.14); color: var(--gold); }
-    .quiz-response-dock.is-incorrect .feedback-status-pill { background: rgba(239, 68, 68, 0.14); color: var(--danger); }
-
-    .feedback-points-pill {
-        color: var(--muted);
-        font-size: 0.78rem;
-        font-weight: 800;
-        background: var(--bg);
-        border: 1px solid var(--border);
-        padding: 2px 8px;
-        border-radius: 6px;
-    }
-
-    .feedback-answer-stage {
-        margin: 2px 0 4px;
-        flex-shrink: 0;
-    }
-
-    .feedback-answer-label {
-        display: block;
-        font-size: 0.68rem;
-        font-weight: 900;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--muted);
-        margin-bottom: 2px;
-    }
-    .quiz-response-dock.is-correct .feedback-answer-label { color: var(--accent); }
-    .quiz-response-dock.is-partial .feedback-answer-label { color: var(--gold); }
-    .quiz-response-dock.is-incorrect .feedback-answer-label { color: var(--danger); }
-
-    .feedback-title-text {
-        margin: 0;
-        font-size: clamp(0.96rem, 1.35vh, 1.14rem);
-        font-weight: 800;
-        color: var(--ink);
-        line-height: 1.3;
-    }
-
-    .feedback-expl-text {
-        margin: 3px 0 5px;
-        color: var(--muted);
-        font-size: clamp(0.80rem, 1.1vh, 0.88rem);
-        line-height: 1.4;
-        flex-shrink: 0;
-    }
-
-    .feedback-extra-wrap {
-        display: grid;
-        gap: 3px;
-        margin-bottom: 5px;
-        font-size: clamp(0.75rem, 1vh, 0.82rem);
-        color: var(--muted);
-        flex-shrink: 0;
-    }
-    .feedback-extra-wrap strong { color: var(--ink); }
-
-    .quiz-next-question {
-        width: 100%;
-        min-height: clamp(40px, 4.8vh, 46px);
-        margin-top: auto;
-        border-radius: 13px;
-        font-size: 0.95rem;
-        font-weight: 800;
-        flex-shrink: 0;
-    }
-
-    /* Short-screen safeguard: compact dock for heights <= 760px */
-    @media (max-height: 760px) and (min-width: 641px) {
-        .quiz-response-dock {
-            height: 150px;
-            min-height: 150px;
-            max-height: 150px;
-            padding: 10px 14px;
-        }
-
-        .quiz-response-state-check #action-btn {
-            min-height: 48px;
-        }
-
-        .feedback-title-text {
-            font-size: 0.92rem;
-        }
-
-        .feedback-expl-text {
-            margin: 2px 0 4px;
-            font-size: 0.78rem;
-            line-height: 1.35;
-        }
-
-        .quiz-next-question {
-            min-height: 38px;
-            margin-top: 4px;
-        }
-    }
     /* ================= 7. MOBILE OVERRIDES (<= 640px) ================= */
     @media (max-width: 640px) {
         html:has(.quiz-page),
@@ -789,6 +780,7 @@
             padding: 14px 12px calc(86px + env(safe-area-inset-bottom)) !important;
         }
 
+        body[data-quiz-layout="game_board"] .quiz-page-container,
         body[data-quiz-layout="quick_play"] .quiz-page-container,
         body[data-quiz-layout="standard"] .quiz-page-container {
             height: auto !important;
@@ -816,13 +808,16 @@
             gap: 8px;
         }
 
+        body[data-quiz-layout="game_board"] .quiz-choices,
         body[data-quiz-layout="quick_play"] .quiz-choices {
             grid-template-columns: 1fr !important;
             gap: 10px;
         }
+        body[data-quiz-layout="game_board"] .quiz-choices > button:last-child:nth-child(odd),
         body[data-quiz-layout="quick_play"] .quiz-choices > button:last-child:nth-child(odd) {
             grid-column: span 1 !important;
         }
+        body[data-quiz-layout="game_board"] .quiz-option,
         body[data-quiz-layout="quick_play"] .quiz-option {
             min-height: 56px;
             padding: 10px 14px;
@@ -840,52 +835,36 @@
             min-height: 50px;
         }
 
-        /* Mobile Response Dock Adjustments */
-        .quiz-answer-board {
-            grid-template-rows: auto auto !important;
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 12px !important;
-        }
-
-        .quiz-response-dock {
+        .quiz-inline-feedback {
             height: auto !important;
-            min-height: 136px !important;
-            max-height: none !important;
-            padding: 14px !important;
-            border-radius: 16px !important;
+            min-height: 104px !important;
         }
-
-        .quiz-response-state-feedback {
+        .quiz-inline-feedback-content {
             overflow: visible !important;
         }
 
-        .quiz-response-state-check {
-            min-height: 56px !important;
-        }
-
-        .quiz-response-state-check #action-btn {
-            min-height: 52px;
-            font-size: 1rem;
+        .quiz-action-bar #action-btn {
+            min-height: 52px !important;
+            font-size: 1rem !important;
         }
     }
 
     /* ================= 8. RESULT SHEET & REVIEW DRAWER ================= */
+    [hidden],
+    .quiz-result-layer[hidden] {
+        display: none !important;
+    }
+
+    .quiz-result-layer[inert] * {
+        pointer-events: none !important;
+    }
+
+    body.show-result-mascot .quiz-page-container,
+    body:has(#result-sheet.open) .quiz-page-container,
+    .quiz-page:has(#result-sheet.open) .quiz-page-container,
     body.show-result-mascot .quiz-style-dropdown-wrap,
     body:has(#result-sheet.open) .quiz-style-dropdown-wrap,
-    .quiz-page:has(#result-sheet.open) .quiz-style-dropdown-wrap,
-    body.show-result-mascot #quiz-question-stage,
-    body:has(#result-sheet.open) #quiz-question-stage,
-    body.show-result-mascot #quiz-answer-board,
-    body:has(#result-sheet.open) #quiz-answer-board,
-    body.show-result-mascot #quiz-response-dock,
-    body:has(#result-sheet.open) #quiz-response-dock,
-    body.show-result-mascot .quiz-response-dock,
-    body:has(#result-sheet.open) .quiz-response-dock,
-    body.show-result-mascot #quiz-meta-dot,
-    body:has(#result-sheet.open) #quiz-meta-dot,
-    body.show-result-mascot #quiz-type-badge,
-    body:has(#result-sheet.open) #quiz-type-badge {
+    .quiz-page:has(#result-sheet.open) .quiz-style-dropdown-wrap {
         display: none !important;
     }
 
@@ -964,7 +943,7 @@
             </div>
             <div class="quiz-style-dropdown-wrap" id="quiz-style-dropdown-wrap">
                 <button type="button" class="quiz-style-toggle-pill" id="quiz-style-dropdown-btn" aria-haspopup="true" aria-expanded="false" title="Quiz presentation options">
-                    <span id="quiz-style-label">⚡ Quick Play</span>
+                    <span id="quiz-style-label">🎮 Game Board</span>
                     <span class="pill-caret" aria-hidden="true">▾</span>
                 </button>
                 <div class="quiz-style-dropdown-menu" id="quiz-style-dropdown-menu" hidden>
@@ -1000,85 +979,103 @@
             <h2 class="quiz-question-text" id="quiz-question-text"></h2>
         </div>
 
-        <!-- Region 3 Bottom Answer Board: Stationary Choices & Permanent Response Dock -->
-        <div class="quiz-answer-board" id="quiz-answer-board">
-            <div id="quiz-question-wrap"></div>
-
-            <!-- Permanent Response Dock (Fixed footprint for both Check Answer and Feedback) -->
-            <div class="quiz-response-dock" id="quiz-response-dock">
-                <!-- Check State: Vertically centered Check Answer button -->
-                <div class="quiz-response-state-check" id="quiz-dock-check-state">
-                    <button type="button" id="action-btn" class="btn btn-primary btn-chunky quiz-action-btn" disabled>
-                        Check Answer
-                    </button>
+        <!-- Region 3: Reserved Inline Feedback Region (Stationary Slot between Question and Choices) -->
+        <div class="quiz-inline-feedback quiz-interaction-width" id="quiz-inline-feedback" aria-live="polite">
+            <section class="quiz-inline-feedback-content" id="quiz-feedback-sheet" hidden>
+                <div class="feedback-sheet-heading">
+                    <span class="feedback-status-pill" id="sheet-status-pill">CORRECT</span>
+                    <span class="feedback-points-pill" id="sheet-points-pill">1 / 1 point</span>
                 </div>
 
-                <!-- Feedback State: Internally scrollable post-submission feedback -->
-                <section class="quiz-response-state-feedback" id="quiz-feedback-sheet" aria-live="polite" hidden>
-                    <div class="feedback-sheet-heading">
-                        <span class="feedback-status-pill" id="sheet-status-pill">CORRECT</span>
-                        <span class="feedback-points-pill" id="sheet-points-pill">1 / 1 point</span>
-                    </div>
+                <div class="feedback-answer-stage" id="sheet-answer-stage">
+                    <span class="feedback-answer-label" id="sheet-answer-label">CORRECT ANSWER</span>
+                    <h3 class="feedback-title-text" id="sheet-title-text"></h3>
+                </div>
 
-                    <div class="feedback-answer-stage" id="sheet-answer-stage">
-                        <span class="feedback-answer-label" id="sheet-answer-label">CORRECT ANSWER</span>
-                        <h3 class="feedback-title-text" id="sheet-title-text"></h3>
-                    </div>
+                <p class="feedback-expl-text" id="sheet-expl-text"></p>
+                <div class="feedback-extra-wrap" id="sheet-extra-wrap"></div>
+            </section>
+        </div>
 
-                    <p class="feedback-expl-text" id="sheet-expl-text"></p>
-                    <div class="feedback-extra-wrap" id="sheet-extra-wrap"></div>
+        <!-- Region 4: Stationary Answer Choices Board -->
+        <div class="quiz-answer-board quiz-interaction-width" id="quiz-answer-board">
+            <div id="quiz-question-wrap"></div>
+        </div>
 
-                    <button type="button" class="btn btn-primary btn-chunky feedback-continue-btn quiz-next-question" id="sheet-continue-btn">
-                        Next Question
-                    </button>
-                </section>
-            </div>
+        <!-- Region 5: Full-width Action Button Bar -->
+        <div class="quiz-action-bar quiz-interaction-width" id="quiz-action-bar">
+            <button type="button" id="action-btn" class="btn btn-primary btn-chunky quiz-action-btn" disabled>
+                Check Answer
+            </button>
         </div>
     </div>
 
-<!-- Teaching-Focused Academic Results Sheet -->
-    <div id="result-sheet" class="result-sheet" role="dialog" aria-modal="true" aria-labelledby="result-heading">
-        <div class="result-card-header">
-            <span class="result-badge" id="result-pass-badge">Passed</span>
-            <h2 id="result-heading" class="result-title">Quiz Results</h2>
-            <p id="result-summary-text" class="result-subtitle">See what you understood and what to revisit.</p>
+    <!-- Master Result Layer (hidden, inert, and aria-hidden during active quiz to prevent tab navigation) -->
+    <div id="quiz-result-layer" class="quiz-result-layer" hidden inert aria-hidden="true">
+        <!-- Teaching-Focused Academic Results Sheet -->
+        <div id="result-sheet" class="result-sheet" role="dialog" aria-modal="true" aria-labelledby="result-heading">
+            <div class="result-card-header">
+                <span class="result-badge" id="result-pass-badge">Passed</span>
+                <h2 id="result-heading" class="result-title" tabindex="-1">Quiz Results</h2>
+                <p id="result-summary-text" class="result-subtitle">See what you understood and what to revisit.</p>
+            </div>
+
+            <div class="result-metric-grid">
+                <div class="result-metric">
+                    <span>Score</span>
+                    <strong id="sheet-score">0 / 0</strong>
+                </div>
+                <div class="result-metric">
+                    <span>Percentage</span>
+                    <strong id="sheet-percentage">0%</strong>
+                </div>
+                <div class="result-metric">
+                    <span>XP Earned</span>
+                    <strong id="sheet-xp" style="color: var(--accent);">+0 XP</strong>
+                </div>
+            </div>
+
+            <div class="result-actions-stack">
+                <button type="button" class="result-btn result-btn-primary" id="open-review-btn">
+                    <span>Review Answers</span>
+                </button>
+                <a href="{% url 'courses:chapter_quiz' chapter.pk %}" class="result-btn result-btn-secondary" id="retake-quiz-btn">
+                    <span class="btn-icon" aria-hidden="true">⚡</span>
+                    <span>Retake Quiz</span>
+                </a>
+                <a href="{% url 'courses:chapter_review' chapter.pk %}" class="result-btn result-btn-ghost" id="return-course-btn">
+                    <span>Return to Chapter Review</span>
+                </a>
+            </div>
         </div>
 
-        <div class="result-metric-grid">
-            <div class="result-metric">
-                <span>Score</span>
-                <strong id="sheet-score">0 / 0</strong>
+        <div class="result-presentation" id="result-presentation">
+            <div class="result-mascot-stage" aria-hidden="true">
+                <img
+                    id="result-mascot-img"
+                    class="result-mascot-img"
+                    src="{% static 'courses/images/mascot_result_review.png' %}"
+                    alt=""
+                />
             </div>
-            <div class="result-metric">
-                <span>Percentage</span>
-                <strong id="sheet-percentage">0%</strong>
-            </div>
-            <div class="result-metric">
-                <span>XP Earned</span>
-                <strong id="sheet-xp" style="color: var(--accent);">+0 XP</strong>
-            </div>
-        </div>
 
-        <div class="result-actions-stack">
-            <button type="button" class="result-btn result-btn-primary" id="open-review-btn">
-                <span>Review Answers</span>
-            </button>
-            <a href="{% url 'courses:chapter_quiz' chapter.pk %}" class="result-btn result-btn-secondary" id="retake-quiz-btn">
-                <span class="btn-icon" aria-hidden="true">⚡</span>
-                <span>Retake Quiz</span>
-            </a>
-            <a href="{% url 'courses:chapter_review' chapter.pk %}" class="result-btn result-btn-ghost" id="return-course-btn">
-                <span>Return to Chapter Review</span>
-            </a>
+            <div class="result-guidance" role="status" aria-live="polite">
+                <strong class="result-guidance-title" id="result-guidance-title">
+                    Review recommended
+                </strong>
+                <p class="result-guidance-message" id="result-guidance-message">
+                    Review the chapter concepts, then retake the quiz when ready.
+                </p>
+            </div>
         </div>
     </div>
 
     <!-- Structured Answer Review Drawer / Modal -->
-    <div class="review-drawer-backdrop" id="review-drawer-modal" aria-hidden="true" hidden>
+    <div class="review-drawer-backdrop" id="review-drawer-modal" aria-hidden="true" hidden inert>
         <section class="review-drawer-card" role="dialog" aria-modal="true" aria-labelledby="review-drawer-title">
             <header class="review-drawer-header">
                 <div>
-                    <h2 id="review-drawer-title">Answer Review</h2>
+                    <h2 id="review-drawer-title" tabindex="-1">Answer Review</h2>
                     <p class="review-drawer-sub">Review your responses, awarded points, and explanations.</p>
                 </div>
                 <button type="button" class="review-close-btn" id="close-review-btn" aria-label="Close answer review">&times;</button>
@@ -1093,26 +1090,6 @@
                 <a href="{% url 'courses:chapter_review' chapter.pk %}" class="btn btn-primary">Review Chapter</a>
             </footer>
         </section>
-    </div>
-
-    <div class="result-presentation" id="result-presentation">
-        <div class="result-mascot-stage" aria-hidden="true">
-            <img
-                id="result-mascot-img"
-                class="result-mascot-img"
-                src="{% static 'courses/images/mascot_result_review.png' %}"
-                alt=""
-            />
-        </div>
-
-        <div class="result-guidance" role="status" aria-live="polite">
-            <strong class="result-guidance-title" id="result-guidance-title">
-                Review recommended
-            </strong>
-            <p class="result-guidance-message" id="result-guidance-message">
-                Review the chapter concepts, then retake the quiz when ready.
-            </p>
-        </div>
     </div>
 
     {{ latest_attempt.review_data|json_script:"latest-review-data" }}

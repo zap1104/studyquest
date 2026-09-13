@@ -3,16 +3,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!rawData) return;
     const quiz = JSON.parse(rawData.textContent);
 
+    const quizContainer = document.querySelector('.quiz-page-container');
     const wrap = document.getElementById('quiz-question-wrap');
     const progressFill = document.getElementById('quiz-progress-fill');
     const progressLabel = document.getElementById('quiz-progress-label');
     const actionBtn = document.getElementById('action-btn');
 
-    // Permanent Response Dock & Feedback Elements
-    const responseDock = document.getElementById('quiz-response-dock');
-    const checkState = document.getElementById('quiz-dock-check-state');
-    const sheet = document.getElementById('quiz-feedback-sheet');
-    const sheetContinue = document.getElementById('sheet-continue-btn');
+    // Inline Feedback Elements
+    const inlineFeedback = document.getElementById('quiz-inline-feedback');
+    const feedbackSheet = document.getElementById('quiz-feedback-sheet');
     const sheetAnswerLabel = document.getElementById('sheet-answer-label');
     const sheetTitleText = document.getElementById('sheet-title-text');
     const sheetExplText = document.getElementById('sheet-expl-text');
@@ -20,13 +19,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const sheetStatusPill = document.getElementById('sheet-status-pill');
     const sheetPointsPill = document.getElementById('sheet-points-pill');
 
-    // Result & Review Modals
+    // Result & Review Modals & Layers
+    const resultLayer = document.getElementById('quiz-result-layer');
     const resultSheet = document.getElementById('result-sheet');
     const reviewModal = document.getElementById('review-drawer-modal');
     const reviewContainer = document.getElementById('review-items-container');
 
     // Required Elements Guard
-    if (!wrap || !actionBtn || !sheet) {
+    if (!wrap || !actionBtn || !feedbackSheet) {
         console.error('Quiz initialization aborted: missing essential DOM elements.');
         return;
     }
@@ -37,7 +37,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const letters = ['A', 'B', 'C', 'D'];
-    const qpShapes = ['▲', '◆', '●', '■'];
+    const qpShapes = [
+        '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><polygon points="12,3 22,21 2,21"/></svg>',
+        '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><polygon points="12,2 22,12 12,22 2,12"/></svg>',
+        '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/></svg>',
+        '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/></svg>'
+    ];
 
     let currentIndex = 0;
     let selectedAnswers = {};
@@ -45,28 +50,94 @@ document.addEventListener('DOMContentLoaded', () => {
     let isCurrentGraded = false;
     let serverReviewData = null;
 
+    // ================= ACCESSIBILITY STATE MANAGEMENT =================
+    function setResultControlsEnabled(enabled) {
+        const resultControls = document.querySelectorAll(
+            '#quiz-result-layer button, ' +
+            '#quiz-result-layer a, ' +
+            '#quiz-result-layer input, ' +
+            '#quiz-result-layer select, ' +
+            '#quiz-result-layer textarea, ' +
+            '#review-drawer-modal button, ' +
+            '#review-drawer-modal a'
+        );
+        resultControls.forEach(control => {
+            if ('disabled' in control) {
+                control.disabled = !enabled;
+            }
+            if (!enabled) {
+                control.setAttribute('tabindex', '-1');
+            } else {
+                control.removeAttribute('tabindex');
+            }
+        });
+    }
+
+    function enterLiveQuizState() {
+        if (quizContainer) {
+            quizContainer.hidden = false;
+            quizContainer.inert = false;
+            quizContainer.setAttribute('aria-hidden', 'false');
+        }
+        if (resultLayer) {
+            resultLayer.hidden = true;
+            resultLayer.inert = true;
+            resultLayer.setAttribute('aria-hidden', 'true');
+        }
+        if (reviewModal) {
+            reviewModal.hidden = true;
+            reviewModal.inert = true;
+            reviewModal.setAttribute('aria-hidden', 'true');
+            reviewModal.classList.remove('is-active');
+        }
+        setResultControlsEnabled(false);
+    }
+
+    function enterResultState() {
+        if (quizContainer) {
+            quizContainer.inert = true;
+            quizContainer.setAttribute('aria-hidden', 'true');
+            quizContainer.hidden = true;
+        }
+        if (resultLayer) {
+            resultLayer.hidden = false;
+            resultLayer.inert = false;
+            resultLayer.setAttribute('aria-hidden', 'false');
+        }
+        if (resultSheet) {
+            resultSheet.classList.add('open');
+        }
+        setResultControlsEnabled(true);
+
+        requestAnimationFrame(() => {
+            const resultTitle = document.getElementById('result-heading');
+            if (resultTitle) {
+                resultTitle.setAttribute('tabindex', '-1');
+                resultTitle.focus();
+            }
+        });
+    }
+
+    enterLiveQuizState();
+
     function showCheckState() {
-        if (responseDock) {
-            responseDock.classList.remove('is-correct', 'is-partial', 'is-incorrect');
-            responseDock.hidden = false;
+        if (feedbackSheet) {
+            feedbackSheet.hidden = true;
+            feedbackSheet.classList.remove('is-correct', 'is-partial', 'is-incorrect');
         }
-        if (checkState) {
-            checkState.hidden = false;
-        }
-        if (sheet) {
-            sheet.hidden = true;
-        }
+        const q = quiz.questions[currentIndex];
+        actionBtn.disabled = !selectedAnswers[q?.id];
+        actionBtn.textContent = 'Check Answer';
     }
 
     function populateFeedback(data, q) {
         const earned = Number(data.points_awarded ?? data.earned_points ?? (data.is_correct ? 1 : 0));
         const maxPts = Number(data.maximum_points ?? q.max_points ?? 1);
         const status = data.status || (earned >= maxPts && maxPts > 0 ? 'correct' : (earned > 0 ? 'partial' : 'incorrect'));
-        const isLast = currentIndex === quiz.questions.length - 1;
 
-        if (responseDock) {
-            responseDock.classList.remove('is-correct', 'is-partial', 'is-incorrect');
-            responseDock.classList.add(`is-${status}`);
+        if (feedbackSheet) {
+            feedbackSheet.classList.remove('is-correct', 'is-partial', 'is-incorrect');
+            feedbackSheet.classList.add(`is-${status}`);
         }
 
         if (sheetStatusPill) {
@@ -108,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 label = missing.length === 1 ? 'MISSING ANSWER' : 'MISSING ANSWERS';
                 heading = missing.join(', ');
                 if (expected.length) {
-                    extraHtml = `<div>Expected full list: <strong>${expected.join(', ')}</strong></div>`;
+                    extraHtml = `<div>Expected answers: <strong>${expected.join(', ')}</strong></div>`;
                 }
             } else {
                 label = expected.length === 1 ? 'EXPECTED ANSWER' : 'EXPECTED ANSWERS';
@@ -120,26 +191,47 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sheetTitleText) sheetTitleText.textContent = heading;
         if (sheetExplText) sheetExplText.textContent = data.explanation || '';
         if (sheetExtraWrap) sheetExtraWrap.innerHTML = extraHtml;
-        if (sheetContinue) sheetContinue.textContent = isLast ? 'Complete Quiz' : 'Next Question';
     }
 
     function showFeedbackState(data, q) {
         populateFeedback(data, q);
-        if (checkState) checkState.hidden = true;
-        if (sheet) {
-            sheet.hidden = false;
-            sheet.scrollTop = 0;
+        const isLast = currentIndex === quiz.questions.length - 1;
+        if (feedbackSheet) {
+            feedbackSheet.hidden = false;
+            feedbackSheet.scrollTop = 0;
         }
+        actionBtn.disabled = false;
+        actionBtn.textContent = isLast ? 'View Results' : 'Next Question';
     }
 
-    // Layout configuration: URL param > persistent preference > session preference > 'quick_play'
-    let currentLayout = new URLSearchParams(window.location.search).get('layout')
+    // ================= LAYOUT CONFIGURATION & MIGRATION =================
+    const DEFAULT_QUIZ_LAYOUT = 'standard';
+
+    function normalizeQuizLayout(value) {
+        if (value === 'quick_play') {
+            return 'game_board';
+        }
+        return value === 'game_board' ? 'game_board' : 'standard';
+    }
+
+    // Migrate any legacy 'quick_play' stored value immediately
+    try {
+        const pref = localStorage.getItem('studyquest_quiz_style_preference');
+        if (pref === 'quick_play') {
+            localStorage.setItem('studyquest_quiz_style_preference', 'game_board');
+        }
+        const sess = sessionStorage.getItem('studyquest_quiz_style_session');
+        if (sess === 'quick_play') {
+            sessionStorage.setItem('studyquest_quiz_style_session', 'game_board');
+        }
+    } catch (e) {}
+
+    let currentLayout = normalizeQuizLayout(
+        new URLSearchParams(window.location.search).get('layout')
         || localStorage.getItem('studyquest_quiz_style_preference')
         || sessionStorage.getItem('studyquest_quiz_style_session')
-        || 'quick_play';
-    if (currentLayout !== 'quick_play' && currentLayout !== 'standard') {
-        currentLayout = 'quick_play';
-    }
+        || DEFAULT_QUIZ_LAYOUT
+    );
     document.body.dataset.quizLayout = currentLayout;
 
     let isQuizCompleted = false;
@@ -178,12 +270,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         if (styleLabel) {
-            styleLabel.textContent = currentLayout === 'quick_play' ? '⚡ Quick Play' : '📄 Standard';
+            styleLabel.textContent = currentLayout === 'game_board' ? '🎮 Game Board' : '📄 Standard';
         }
         if (switchTitle) {
-            const nextMode = currentLayout === 'quick_play' ? 'Standard' : 'Quick Play';
-            const nextIcon = currentLayout === 'quick_play' ? '📄' : '⚡';
-            const nextSub = currentLayout === 'quick_play' ? 'Compact, focused layout' : 'Full answer board';
+            const nextMode = currentLayout === 'game_board' ? 'Standard' : 'Game Board';
+            const nextIcon = currentLayout === 'game_board' ? '📄' : '🎮';
+            const nextSub = currentLayout === 'game_board' ? 'Compact, focused layout' : 'Large, full-width answer board';
             if (switchIcon) switchIcon.textContent = nextIcon;
             switchTitle.textContent = `Switch to ${nextMode}`;
             if (switchSubtitle) {
@@ -228,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showQuizToast('Layout is locked after answering Question 1.');
                 return;
             }
-            currentLayout = currentLayout === 'quick_play' ? 'standard' : 'quick_play';
+            currentLayout = currentLayout === 'game_board' ? 'standard' : 'game_board';
             document.body.dataset.quizLayout = currentLayout;
             if (localStorage.getItem('studyquest_quiz_style_preference')) {
                 localStorage.setItem('studyquest_quiz_style_preference', currentLayout);
@@ -240,10 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 dropdownBtn?.setAttribute('aria-expanded', 'false');
                 dropdownWrap?.classList.remove('open');
             }
-            if (!isQuizCompleted && quiz && quiz.questions && quiz.questions[currentIndex]) {
-                renderQuestion();
-            }
-        });
+            renderQuestion();
     }
 
     if (forgetBtn) {
@@ -327,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function showResultPresentation(resultData, animate = true) {
         setResultPresentation(resultData);
 
-        // Hide style dropdown, action button, question wrapper, stage, board, response dock, and badges completely on results
+        // Hide style dropdown, action button, question wrapper, stage, board, and badges completely on results
         if (dropdownWrap) {
             dropdownWrap.style.display = 'none';
             dropdownWrap.hidden = true;
@@ -340,10 +429,6 @@ document.addEventListener('DOMContentLoaded', () => {
             actionBtn.classList.add('is-hidden');
             actionBtn.style.display = 'none';
         }
-        if (responseDock) {
-            responseDock.style.display = 'none';
-            responseDock.hidden = true;
-        }
         const stage = document.getElementById('quiz-question-stage');
         if (stage) stage.style.display = 'none';
         const answerBoard = document.getElementById('quiz-answer-board');
@@ -352,6 +437,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (metaDot) metaDot.style.display = 'none';
         const typeBadge = document.getElementById('quiz-type-badge');
         if (typeBadge) typeBadge.style.display = 'none';
+
+        enterResultState();
 
         if (animate) {
             document.body.classList.remove('show-result-mascot');
@@ -371,26 +458,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const q = quiz.questions[currentIndex];
         if (!q) return;
 
-        const isQuickPlay = currentLayout === 'quick_play';
+        const isGameBoard = currentLayout === 'game_board' || currentLayout === 'quick_play';
         const isTF = q.type === 'true_false';
         const typeLabels = {
             multiple_choice: 'Multiple Choice',
             true_false: 'True or False',
-            identification: isQuickPlay ? 'Written Response' : 'Identification',
+            identification: isGameBoard ? 'Written Response' : 'Identification',
             enumeration: 'Enumeration'
         };
 
-        // Reset Response Dock to Check State & Restore Wrap
-        if (responseDock) {
-            responseDock.style.display = '';
-            responseDock.hidden = false;
-        }
+        // Reset Inline Feedback to Check State
         showCheckState();
-        if (wrap) wrap.style.display = '';
-
-        // Restore action button state
-        actionBtn.disabled = !selectedAnswers[q.id];
-        actionBtn.textContent = 'Check Answer';
 
         // Update Progress Bar
         const pct = Math.round(((currentIndex + 1) / quiz.questions.length) * 100);
@@ -428,10 +506,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${q.choices.map((c, i) => {
                         let badge = '';
                         let extraClass = '';
-                        if (isQuickPlay) {
+                        if (isGameBoard) {
                             if (isTF) {
                                 const isTrue = c.text.trim().toLowerCase().startsWith('t');
-                                badge = isTrue ? '▲' : '◆';
+                                badge = isTrue
+                                    ? '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><polygon points="12,3 22,21 2,21"/></svg>'
+                                    : '<svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><polygon points="12,2 22,12 12,22 2,12"/></svg>';
                                 extraClass = isTrue ? 'qp-tf-true' : 'qp-tf-false';
                             } else {
                                 badge = qpShapes[i % qpShapes.length] || '';
@@ -583,28 +663,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    actionBtn.addEventListener('click', handleCheckAnswer);
-
-    sheetContinue?.addEventListener('click', () => {
-        if (currentIndex < quiz.questions.length - 1) {
-            currentIndex++;
-            renderQuestion();
+    function handleActionClick() {
+        if (!isCurrentGraded) {
+            handleCheckAnswer();
         } else {
-            finalizeQuiz();
+            if (currentIndex < quiz.questions.length - 1) {
+                currentIndex++;
+                renderQuestion();
+            } else {
+                finalizeQuiz();
+            }
         }
-    });
+    }
+
+    actionBtn.addEventListener('click', handleActionClick);
 
     async function finalizeQuiz() {
         isQuizCompleted = true;
-        if (responseDock) {
-            responseDock.style.display = 'none';
-            responseDock.hidden = true;
-        }
-        if (sheet) {
-            sheet.hidden = true;
-        }
-        if (checkState) {
-            checkState.hidden = true;
+        if (feedbackSheet) {
+            feedbackSheet.hidden = true;
         }
 
         // Completely hide the style switcher dropdown
@@ -623,9 +700,11 @@ document.addEventListener('DOMContentLoaded', () => {
             actionBtn.disabled = true;
         }
 
-        // Hide question stage and meta indicators immediately during evaluation
+        // Hide question stage, board, and meta indicators immediately during evaluation
         const stage = document.getElementById('quiz-question-stage');
         if (stage) stage.style.display = 'none';
+        const answerBoard = document.getElementById('quiz-answer-board');
+        if (answerBoard) answerBoard.style.display = 'none';
         const metaDot = document.getElementById('quiz-meta-dot');
         if (metaDot) metaDot.style.display = 'none';
         const typeBadge = document.getElementById('quiz-type-badge');
@@ -647,6 +726,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p style="margin: 6px 0 0; color: var(--muted); font-size: 0.9rem;">Compiling your answer review.</p>
             </div>
         `;
+        wrap.style.display = '';
 
         try {
             const res = await fetch(quiz.submitUrl, {
@@ -676,13 +756,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Clear loading text and hide wrap and answer board before presenting the final result.
             wrap.innerHTML = '';
             wrap.style.display = 'none';
-            const answerBoard = document.getElementById('quiz-answer-board');
             if (answerBoard) answerBoard.style.display = 'none';
 
-            if (resultSheet) {
-                resultSheet.classList.add('open');
-                showResultPresentation(data, true);
-            }
+            showResultPresentation(data, true);
         } catch (err) {
             console.error('Finalize error:', err);
             wrap.style.display = '';
@@ -799,9 +875,17 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('open-review-btn')?.addEventListener('click', () => {
         buildReviewModal();
         if (reviewModal) {
+            setResultControlsEnabled(true);
             reviewModal.hidden = false;
+            reviewModal.inert = false;
+            reviewModal.setAttribute('aria-hidden', 'false');
             reviewModal.classList.add('is-active');
             document.body.classList.add('modal-open');
+            const reviewTitle = document.getElementById('review-drawer-title');
+            if (reviewTitle) {
+                reviewTitle.setAttribute('tabindex', '-1');
+                reviewTitle.focus();
+            }
         }
     });
 
@@ -816,8 +900,11 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = chapterReviewUrl;
         } else if (reviewModal) {
             reviewModal.hidden = true;
+            reviewModal.inert = true;
+            reviewModal.setAttribute('aria-hidden', 'true');
             reviewModal.classList.remove('is-active');
             document.body.classList.remove('modal-open');
+            document.getElementById('open-review-btn')?.focus();
         }
     }
 
@@ -831,6 +918,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // ================= KEYBOARD SHORTCUTS =================
     document.addEventListener('keydown', (event) => {
         if (event.repeat) return;
+
+        if (event.key === 'Escape') {
+            if (reviewModal && !reviewModal.hidden) {
+                event.preventDefault();
+                exitReviewDrawer();
+                return;
+            }
+            if (dropdownMenu && !dropdownMenu.hidden) {
+                event.preventDefault();
+                dropdownMenu.hidden = true;
+                dropdownBtn?.setAttribute('aria-expanded', 'false');
+                dropdownWrap?.classList.remove('open');
+                dropdownBtn?.focus();
+                return;
+            }
+        }
 
         // Disengage if result summary or review modal is active
         if (resultSheet?.classList.contains('open')) return;
@@ -899,13 +1002,13 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 2. After Grading (Drawer open: Next Question)
+        // 2. After Grading (Next Question / View Results)
         if (isSpace || isEnter) {
             if (isTyping) return;
             event.preventDefault();
             event.stopPropagation();
             if (activeEl && typeof activeEl.blur === 'function') activeEl.blur();
-            sheetContinue?.click();
+            handleActionClick();
         }
     });
 
@@ -956,9 +1059,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             buildReviewModal();
             if (reviewModal) {
+                setResultControlsEnabled(true);
                 reviewModal.hidden = false;
+                reviewModal.inert = false;
+                reviewModal.setAttribute('aria-hidden', 'false');
                 reviewModal.classList.add('is-active');
                 document.body.classList.add('modal-open');
+                const reviewTitle = document.getElementById('review-drawer-title');
+                if (reviewTitle) {
+                    reviewTitle.setAttribute('tabindex', '-1');
+                    reviewTitle.focus();
+                }
             }
         } else {
             wrap.innerHTML = `

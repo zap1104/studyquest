@@ -4,11 +4,11 @@
         <div class="sq-modal-header">
             <div>
                 <h3 id="quiz-modal-main-title" style="display: flex; align-items: center; gap: 8px; margin: 0 0 4px;">
-                    <span>⚡</span>
-                    <span>Choose Your Quiz Style</span>
+                    <span>🎮</span>
+                    <span>Choose Your Quiz Layout</span>
                 </h3>
                 <p style="margin: 0; color: var(--muted); font-size: 0.82rem;">
-                    The questions, points, and passing score stay the same. Only the quiz layout changes.
+                    The questions, points, and passing score stay the same. Only the visual presentation changes.
                 </p>
             </div>
             <button type="button" class="sq-modal-close" id="quiz-launch-modal-close" aria-label="Close dialog">✕</button>
@@ -56,15 +56,15 @@
                     </div>
                 </label>
 
-                <!-- QUICK PLAY STYLE CARD -->
-                <label class="quiz-style-card" id="launch-style-card-quickplay">
+                <!-- GAME BOARD STYLE CARD -->
+                <label class="quiz-style-card" id="launch-style-card-gameboard">
                     <div class="quiz-style-header">
-                        <span class="quiz-style-name">⚡ QUICK PLAY</span>
-                        <input type="radio" name="universal_quiz_style" value="quick_play" class="quiz-style-radio">
+                        <span class="quiz-style-name">🎮 GAME BOARD</span>
+                        <input type="radio" name="universal_quiz_style" value="game_board" class="quiz-style-radio">
                     </div>
-                    <div class="quiz-style-sub">Full answer board</div>
+                    <div class="quiz-style-sub">Large, full-width answer board</div>
 
-                    <!-- Composition Preview for Quick Play -->
+                    <!-- Composition Preview for Game Board -->
                     <div class="composition-preview qp-preview" aria-hidden="true">
                         <div class="preview-stage-header">
                             <div class="preview-mini-track qp-track"></div>
@@ -89,14 +89,14 @@
             </label>
         </div>
 
-        <div class="sq-modal-actions" style="display: flex; gap: 10px; margin-top: 16px;">
-            <button type="button" class="btn btn-secondary" id="quiz-launch-cancel-btn" style="flex: 1; justify-content: center;">
+        <div class="sq-modal-actions quiz-launch-actions">
+            <button type="button" class="btn btn-secondary" id="quiz-launch-cancel-btn">
                 Cancel
             </button>
-            <a href="#" id="quiz-launch-read-btn" class="btn btn-secondary" style="display: none; flex: 1; justify-content: center;">
+            <a href="#" id="quiz-launch-read-btn" class="btn btn-secondary" style="display: none;">
                 📖 Read Lesson First
             </a>
-            <button type="button" class="btn btn-primary btn-chunky" id="quiz-launch-confirm-btn" style="flex: 1; justify-content: center;">
+            <button type="button" class="btn btn-primary btn-chunky" id="quiz-launch-confirm-btn">
                 ⚡ Start Quiz
             </button>
         </div>
@@ -106,9 +106,25 @@
 <script>
 (() => {
     let targetQuizUrl = '';
+    const DEFAULT_QUIZ_LAYOUT = 'standard';
 
-    // One-time cleanup of legacy test key so user sees the modal on their first quiz launch
+    function normalizeQuizLayout(value) {
+        if (value === 'quick_play') {
+            return 'game_board';
+        }
+        return value === 'game_board' ? 'game_board' : 'standard';
+    }
+
+    // Migrate any legacy 'quick_play' stored value to 'game_board'
     try {
+        const pref = localStorage.getItem('studyquest_quiz_style_preference');
+        if (pref === 'quick_play') {
+            localStorage.setItem('studyquest_quiz_style_preference', 'game_board');
+        }
+        const sess = sessionStorage.getItem('studyquest_quiz_style_session');
+        if (sess === 'quick_play') {
+            sessionStorage.setItem('studyquest_quiz_style_session', 'game_board');
+        }
         if (localStorage.getItem('studyquest_quiz_style') && !localStorage.getItem('studyquest_style_migrated_v2')) {
             localStorage.removeItem('studyquest_quiz_style');
             localStorage.setItem('studyquest_style_migrated_v2', 'true');
@@ -121,23 +137,24 @@
 
     function getSelectedLaunchStyle() {
         const checked = document.querySelector('input[name="universal_quiz_style"]:checked');
-        return checked ? checked.value : 'standard';
+        return normalizeQuizLayout(checked ? checked.value : DEFAULT_QUIZ_LAYOUT);
     }
 
     function syncLaunchCardUI() {
         const val = getSelectedLaunchStyle();
         const stdCard = document.getElementById('launch-style-card-standard');
-        const qpCard = document.getElementById('launch-style-card-quickplay');
+        const gbCard = document.getElementById('launch-style-card-gameboard');
         if (stdCard) stdCard.classList.toggle('is-selected', val === 'standard');
-        if (qpCard) qpCard.classList.toggle('is-selected', val === 'quick_play');
+        if (gbCard) gbCard.classList.toggle('is-selected', val === 'game_board');
     }
 
     function initLaunchModal() {
         const modal = getLaunchModal();
         if (!modal) return;
 
-        // Init radio selection from saved preference if exists
-        const preferredStyle = localStorage.getItem('studyquest_quiz_style_preference') || sessionStorage.getItem('studyquest_quiz_style_session') || 'quick_play';
+        // Init radio selection from saved preference if exists, otherwise fallback to standard
+        const savedPref = localStorage.getItem('studyquest_quiz_style_preference') || sessionStorage.getItem('studyquest_quiz_style_session');
+        const preferredStyle = savedPref ? normalizeQuizLayout(savedPref) : DEFAULT_QUIZ_LAYOUT;
         const radios = modal.querySelectorAll('input[name="universal_quiz_style"]');
         radios.forEach(radio => {
             if (radio.value === preferredStyle) radio.checked = true;
@@ -198,7 +215,8 @@
             // Check persistent preference (remembered indefinitely) or session preference (remembered for this tab/session)
             const persistentStyle = localStorage.getItem('studyquest_quiz_style_preference');
             const sessionStyle = sessionStorage.getItem('studyquest_quiz_style_session');
-            const activeStyle = persistentStyle || sessionStyle;
+            const rawStyle = persistentStyle || sessionStyle;
+            const activeStyle = rawStyle ? normalizeQuizLayout(rawStyle) : null;
 
             if (activeStyle) {
                 const sep = quizUrl.includes('?') ? '&' : '?';
