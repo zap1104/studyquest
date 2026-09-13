@@ -20,6 +20,9 @@ from django.views.decorators.http import require_POST
 from . import services
 from .models import DungeonRun
 
+# How many finished runs the launch screen lists.
+RECENT_RUN_COUNT = 5
+
 
 def _get_run_or_404(request, pk):
     return get_object_or_404(
@@ -47,21 +50,29 @@ def _service_call(handler):
 # --------------------------------------------------
 # PAGES
 # --------------------------------------------------
-@login_required
-def launch(request):
-    active_runs = (
-        DungeonRun.objects.filter(user=request.user, status=DungeonRun.STATUS_IN_PROGRESS)
-        .select_related("quiz__chapter__course")
-    )
-    return render(request, "dungeon/launch.html", {
+def _launch_context(request, launch_error=None):
+    """Everything the launch screen renders, including the rules this player
+    will actually play under - the template never states a number itself."""
+    return {
         "catalog": services.build_launch_catalog(request.user),
-        "active_runs": active_runs,
+        "rules": services.rules_for_user(request.user),
+        "active_runs": (
+            DungeonRun.objects.filter(
+                user=request.user, status=DungeonRun.STATUS_IN_PROGRESS
+            ).select_related("quiz__chapter__course")
+        ),
         "recent_runs": (
             DungeonRun.objects.filter(user=request.user)
             .exclude(status=DungeonRun.STATUS_IN_PROGRESS)
-            .select_related("quiz__chapter__course")[:5]
+            .select_related("quiz__chapter__course")[:RECENT_RUN_COUNT]
         ),
-    })
+        "launch_error": launch_error,
+    }
+
+
+@login_required
+def launch(request):
+    return render(request, "dungeon/launch.html", _launch_context(request))
 
 
 @login_required
@@ -74,18 +85,9 @@ def start_run(request):
     try:
         run = services.start_or_resume_run(request.user, quiz)
     except services.LaunchBlocked as error:
-        return render(request, "dungeon/launch.html", {
-            "catalog": services.build_launch_catalog(request.user),
-            "active_runs": DungeonRun.objects.filter(
-                user=request.user, status=DungeonRun.STATUS_IN_PROGRESS
-            ).select_related("quiz__chapter__course"),
-            "recent_runs": (
-                DungeonRun.objects.filter(user=request.user)
-                .exclude(status=DungeonRun.STATUS_IN_PROGRESS)
-                .select_related("quiz__chapter__course")[:5]
-            ),
-            "launch_error": str(error),
-        }, status=400)
+        return render(
+            request, "dungeon/launch.html", _launch_context(request, str(error)), status=400
+        )
 
     return redirect("dungeon:room", pk=run.pk)
 

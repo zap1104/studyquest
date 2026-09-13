@@ -353,3 +353,31 @@ class ExitAndXpTests(DungeonViewTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context["enemies_defeated"], run.enemies.count())
         self.assertContains(response, "DUNGEON CLEARED")
+
+
+class LaunchCopyTests(DungeonViewTestCase):
+    """The launch screen explains the rules, so it must read them from config
+    rather than restate them - otherwise retuning the game silently makes the
+    page lie."""
+
+    def test_rules_come_from_config_not_prose(self):
+        from dungeon.combat_config import resolve_combat_rules
+
+        rules = resolve_combat_rules(plan="free")
+        response = self.client.get(reverse("dungeon:launch"))
+
+        self.assertEqual(response.context["rules"], rules)
+        self.assertContains(response, f"asks {rules.questions_per_enemy} questions")
+        self.assertContains(response, f"{rules.base_player_hp} hearts")
+
+    def test_plus_player_sees_their_own_numbers(self):
+        self.user.userprofile.plan = "plus"
+        self.user.userprofile.save(update_fields=["plan"])
+
+        from dungeon.combat_config import resolve_combat_rules
+
+        response = self.client.get(reverse("dungeon:launch"))
+
+        self.assertContains(
+            response, f"{resolve_combat_rules(plan='plus').base_player_hp} hearts"
+        )

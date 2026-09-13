@@ -2,6 +2,7 @@
   "_readme": "Sprite manifest for Dungeon Quest. Every image the game draws is resolved through this file - swapping art is a file drop plus (optionally) a path edit here, never a code edit. Paths are relative to this file. An entry may be a plain path string, or an object {\"file\": \"...\", \"frames\": n} for a horizontal animation strip. See ART_GUIDE.md for exact pixel dimensions.",
   "tile_size": 32,
   "icon_size": 16,
+  "frame_ms": 220,
   "tiles": {
     "floor": "sprites/floor.png",
     "wall": "sprites/wall.png",

@@ -24,17 +24,18 @@
         <ul class="dungeon-rules-list">
             <li>Walk the room with the arrow keys, WASD, or the on-screen pad.</li>
             <li>Tall grass hides enemies. Step into it and something may jump you.</li>
-            <li>Each enemy asks five questions from your quiz. Right answers wound it; wrong answers wound you.</li>
+            <li>Each enemy asks {{ rules.questions_per_enemy }} questions from your quiz. A right answer wounds it; a wrong one costs you {{ rules.damage_per_wrong_answer }} heart{{ rules.damage_per_wrong_answer|pluralize }}.</li>
             <li>Every enemy you beat drops a key piece — and sometimes a potion.</li>
             <li>Collect every piece to assemble the key, then walk out through the door for XP.</li>
-            <li>Run out of hearts and the run ends where it stands.</li>
+            <li>You start with {{ rules.base_player_hp }} hearts. Run out and the run ends where it stands.</li>
         </ul>
     </div>
 
     <div class="dungeon-card">
         <h2 class="dungeon-hud-title">Your delver</h2>
         <div class="dungeon-stat-row">
-            <span class="dungeon-stat">❤️ {{ user.userprofile.plan|default:"free"|capfirst }} plan</span>
+            <span class="dungeon-stat">❤️ {{ rules.base_player_hp }} starting hearts</span>
+            <span class="dungeon-stat">🎟️ {{ user.userprofile.plan|default:"free"|capfirst }} plan</span>
             <span class="dungeon-stat">🏅 Level {{ user.userprofile.current_level|default:1 }}</span>
             <span class="dungeon-stat">🔥 {{ user.userprofile.streak_days|default:0 }} day streak</span>
         </div>

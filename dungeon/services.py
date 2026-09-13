@@ -700,6 +700,11 @@ def rules_for(run):
     return resolve_combat_rules(plan=run.rules_key, quiz=run.quiz, question_count=0)
 
 
+def rules_for_user(user):
+    """The rules this user would play under right now, for the launch screen."""
+    return resolve_combat_rules(plan=_plan_of(_get_profile(user)))
+
+
 def _grid(run):
     return (run.room_data or {}).get("grid", [])
 

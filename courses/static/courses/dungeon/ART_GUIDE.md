@@ -90,8 +90,11 @@ path string to an object:
 The strip is one image, `frames × width` wide and one frame tall — so a 4-frame
 32 × 32 player walk cycle is a single **128 × 32** PNG, frames left to right.
 `frames` defaults to `1` when omitted, which is why every current entry can
-stay a plain string. The renderer cycles frames on a fixed timer and, for
-players who have **Reduce Motion** enabled, holds frame 0 instead.
+stay a plain string. The renderer cycles frames on a timer and, for players who
+have **Reduce Motion** enabled, holds frame 0 instead.
+
+Playback speed is yours too: add a top-level `"frame_ms"` to `sprites.json` to
+change how long each frame is held (default `220`).
 
 ## Conventions worth keeping
 

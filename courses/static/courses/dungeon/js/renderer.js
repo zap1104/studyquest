@@ -28,7 +28,9 @@
         right: 'player_right'
     };
 
-    var FRAME_MS = 220;
+    // Default milliseconds per animation frame; sprites.json may override it
+    // with a top-level "frame_ms", so animation speed stays an art decision.
+    var DEFAULT_FRAME_MS = 220;
 
     function Renderer(options) {
         this.canvas = options.canvas;
@@ -41,6 +43,7 @@
         this.reducedMotion = !!options.reducedMotion;
 
         this.manifest = null;
+        this.frameMs = DEFAULT_FRAME_MS;
         this.images = {};
         this.scale = this.minScale;
         this.state = null;
@@ -59,6 +62,7 @@
             })
             .then(function (manifest) {
                 self.manifest = manifest;
+                self.frameMs = parseInt(manifest.frame_ms, 10) || DEFAULT_FRAME_MS;
                 if (manifest.tile_size && manifest.tile_size !== self.tileSize) {
                     // The server is authoritative; a mismatch means the manifest
                     // and combat_config.TILE_SIZE have drifted apart.
@@ -199,7 +203,7 @@
         var frame = 0;
 
         if (sprite.frames > 1 && !this.reducedMotion) {
-            frame = Math.floor((Date.now() - this.frameStartedAt) / FRAME_MS) % sprite.frames;
+            frame = Math.floor((Date.now() - this.frameStartedAt) / this.frameMs) % sprite.frames;
         }
 
         this.context.drawImage(
