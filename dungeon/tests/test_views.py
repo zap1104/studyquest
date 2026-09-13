@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
-from courses.models import XPTransaction
+from courses.models import QuizAttempt, XPTransaction
 
 from dungeon import rooms, services
 from dungeon.models import DungeonRun
@@ -422,3 +422,89 @@ class MalformedInputTests(DungeonViewTestCase):
         run = self.start_run()
         response = self.post_json(reverse("dungeon:use_item", args=[run.pk]), {"item": ["health_potion"]})
         self.assertEqual(response.status_code, 400)
+
+
+class ReviewRunViewTests(DungeonViewTestCase):
+    def test_launch_page_shows_review_button_when_unresolved_mistakes_exist(self):
+        quiz = make_quiz(self.user, question_count=10)
+        q1 = quiz.questions.first()
+        QuizAttempt.objects.create(
+            user=self.user,
+            quiz=quiz,
+            score=0,
+            total_questions=10,
+            review_data={"review_items": [{"question_id": q1.id, "result_state": "incorrect"}]},
+        )
+
+        response = self.client.get(reverse("dungeon:launch"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Review (1 missed)")
+        self.assertContains(response, 'name="run_type" value="review"')
+
+    def test_start_review_run_redirects_to_room_and_creates_review_run(self):
+        quiz = make_quiz(self.user, question_count=10)
+        q1, q2 = quiz.questions.all()[:2]
+        QuizAttempt.objects.create(
+            user=self.user,
+            quiz=quiz,
+            score=0,
+            total_questions=10,
+            review_data={
+                "review_items": [
+                    {"question_id": q1.id, "result_state": "incorrect"},
+                    {"question_id": q2.id, "result_state": "incorrect"},
+                ]
+            },
+        )
+
+        response = self.client.post(
+            reverse("dungeon:start_run"),
+            {"quiz_id": quiz.pk, "run_type": "review"},
+        )
+        self.assertEqual(response.status_code, 302)
+
+        run = DungeonRun.objects.filter(user=self.user, quiz=quiz).first()
+        self.assertIsNotNone(run)
+        self.assertTrue(run.is_review_run)
+        self.assertEqual(set(run.review_question_ids), {q1.id, q2.id})
+        self.assertEqual(response["Location"], reverse("dungeon:room", args=[run.pk]))
+
+    def test_start_review_run_with_no_mistakes_returns_400(self):
+        quiz = make_quiz(self.user, question_count=10)
+        # No QuizAttempts exist
+        response = self.client.post(
+            reverse("dungeon:start_run"),
+            {"quiz_id": quiz.pk, "run_type": "review"},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertContains(response, "has no unresolved mistakes to review", status_code=400)
+
+    def test_summary_renders_review_run_mastery_verdict(self):
+        quiz = make_quiz(self.user, question_count=10)
+        q1 = quiz.questions.first()
+        QuizAttempt.objects.create(
+            user=self.user,
+            quiz=quiz,
+            score=0,
+            total_questions=10,
+            review_data={"review_items": [{"question_id": q1.id, "result_state": "incorrect"}]},
+        )
+
+        run = services.start_or_resume_run(self.user, quiz, run_type=DungeonRun.TYPE_REVIEW)
+        self.engage(run)
+        services.answer_question(
+            run, q1.id, {"choice_id": correct_choice_id(q1.id)}
+        )
+        run.refresh_from_db()
+
+        # Step on door to complete
+        door = run.room_data["door"]
+        run.player_x, run.player_y = door["x"], door["y"]
+        run.save(update_fields=["player_x", "player_y"])
+        services.attempt_exit(run)
+
+        response = self.client.get(reverse("dungeon:summary", args=[run.pk]))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "REVIEW RUN MASTERED")
+        self.assertContains(response, "You corrected all 1 targeted question")
+        self.assertContains(response, "1/1")

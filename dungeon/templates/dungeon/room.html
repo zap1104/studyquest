@@ -57,7 +57,7 @@
             <!-- 2. CENTER COLUMN: OBJECTIVE & ROOM -->
             <main class="dungeon-board-column" role="main">
                 <div class="dungeon-objective-bar" data-objective-bar role="status" aria-live="polite">
-                    <span class="dungeon-objective-badge dq-type-label" data-objective-badge>Objective</span>
+                    <span class="dungeon-objective-badge dq-type-label" data-objective-badge data-run-type="{{ run.run_type }}">{% if run.is_review_run %}Review Run{% else %}Objective{% endif %}</span>
                     <div class="dungeon-objective-content">
                         <strong class="dungeon-objective-label dq-type-display" data-objective-label>Loading objective...</strong>
                         <span class="dungeon-objective-detail dq-type-body" data-objective-detail></span>

@@ -8,15 +8,31 @@
 <link rel="stylesheet" href="{% static 'courses/dungeon/css/dungeon.css' %}">
 
 <div class="dungeon-summary-hero">
-    {% if run.status == 'cleared' %}
-        <p class="dungeon-summary-verdict" data-status="cleared">DUNGEON CLEARED</p>
-        <p class="subtitle">You assembled the key and walked out of {{ run.quiz.chapter.title }}.</p>
-    {% elif run.status == 'failed' %}
-        <p class="dungeon-summary-verdict" data-status="failed">YOU FELL</p>
-        <p class="subtitle">The dungeon under {{ run.quiz.chapter.title }} keeps its key for now.</p>
+    {% if is_review_run %}
+        {% if run.status == 'cleared' and is_mastered %}
+            <p class="dungeon-summary-verdict" data-status="cleared">REVIEW RUN MASTERED</p>
+            <p class="subtitle">You corrected all {{ targeted_count }} targeted question{{ targeted_count|pluralize }} from {{ run.quiz.chapter.title }}.</p>
+        {% elif run.status == 'cleared' %}
+            <p class="dungeon-summary-verdict" data-status="cleared">REVIEW RUN COMPLETE</p>
+            <p class="subtitle">You escaped! {{ mastered_count }} of {{ targeted_count }} questions mastered · {{ still_to_review_count }} question{{ still_to_review_count|pluralize }} remain for review.</p>
+        {% elif run.status == 'failed' %}
+            <p class="dungeon-summary-verdict" data-status="failed">YOU FELL</p>
+            <p class="subtitle">The review dungeon under {{ run.quiz.chapter.title }} was too perilous this time.</p>
+        {% else %}
+            <p class="dungeon-summary-verdict" data-status="abandoned">RUN ABANDONED</p>
+            <p class="subtitle">You left the review run before completing remediation.</p>
+        {% endif %}
     {% else %}
-        <p class="dungeon-summary-verdict" data-status="abandoned">RUN ABANDONED</p>
-        <p class="subtitle">You left {{ run.quiz.chapter.title }} before the key was whole.</p>
+        {% if run.status == 'cleared' %}
+            <p class="dungeon-summary-verdict" data-status="cleared">DUNGEON CLEARED</p>
+            <p class="subtitle">You assembled the key and walked out of {{ run.quiz.chapter.title }}.</p>
+        {% elif run.status == 'failed' %}
+            <p class="dungeon-summary-verdict" data-status="failed">YOU FELL</p>
+            <p class="subtitle">The dungeon under {{ run.quiz.chapter.title }} keeps its key for now.</p>
+        {% else %}
+            <p class="dungeon-summary-verdict" data-status="abandoned">RUN ABANDONED</p>
+            <p class="subtitle">You left {{ run.quiz.chapter.title }} before the key was whole.</p>
+        {% endif %}
     {% endif %}
 
     <div class="dungeon-summary-grid">
@@ -24,6 +40,12 @@
             <strong>{{ run.xp_awarded|default:0 }}</strong>
             <span>XP earned</span>
         </div>
+        {% if is_review_run %}
+            <div class="dungeon-summary-stat">
+                <strong>{{ mastered_count }}/{{ targeted_count }}</strong>
+                <span>Mastered</span>
+            </div>
+        {% endif %}
         <div class="dungeon-summary-stat">
             <strong>{{ enemies_defeated }}/{{ enemy_count }}</strong>
             <span>Enemies down</span>

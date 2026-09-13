@@ -1605,6 +1605,38 @@ body.dungeon-live-run .footer,
     text-transform: uppercase;
 }
 
+/* Review Run buttons & status tags */
+.btn-review {
+    background: #d97706;
+    color: #ffffff;
+    border: 1px solid #b45309;
+    font-family: var(--dq-font-interface);
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.btn-review:hover {
+    background: #b45309;
+    color: #ffffff;
+}
+
+.dungeon-tag-review {
+    background: rgba(217, 119, 6, 0.15);
+    color: #d97706;
+    border: 1px solid rgba(217, 119, 6, 0.4);
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+}
+
+.dungeon-objective-badge[data-run-type="review"] {
+    background: #d97706;
+    color: #ffffff;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .dungeon-hit { animation: none; }
     .dungeon-battle:not([hidden]) { animation: none; }

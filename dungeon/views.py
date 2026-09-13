@@ -84,8 +84,10 @@ def start_run(request):
     if quiz is None:
         raise Http404("Quiz not found.")
 
+    run_type = request.POST.get("run_type") or DungeonRun.TYPE_CLASSIC
+
     try:
-        run = services.start_or_resume_run(request.user, quiz)
+        run = services.start_or_resume_run(request.user, quiz, run_type=run_type)
     except services.LaunchBlocked as error:
         return render(
             request, "dungeon/launch.html", _launch_context(request, str(error)), status=400
@@ -131,8 +133,15 @@ def summary(request, pk):
         return redirect("dungeon:room", pk=run.pk)
 
     enemies = list(run.enemies.all())
+    targeted = run.targeted_count
+    mastered = run.mastered_count
     return render(request, "dungeon/summary.html", {
         "run": run,
+        "is_review_run": run.is_review_run,
+        "is_mastered": run.is_mastered,
+        "targeted_count": targeted,
+        "mastered_count": mastered,
+        "still_to_review_count": max(targeted - mastered, 0),
         "enemies_defeated": sum(1 for enemy in enemies if enemy.is_defeated),
         "enemy_count": len(enemies),
         "questions_answered": sum(len(e.answered_question_ids or []) for e in enemies),

@@ -27,9 +27,26 @@ class DungeonRun(models.Model):
         (STATUS_ABANDONED, "Abandoned"),
     ]
 
+    TYPE_CLASSIC = "classic"
+    TYPE_REVIEW = "review"
+
+    RUN_TYPE_CHOICES = [
+        (TYPE_CLASSIC, "Classic Expedition"),
+        (TYPE_REVIEW, "Review Run"),
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="dungeon_runs")
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name="dungeon_runs")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_IN_PROGRESS)
+    run_type = models.CharField(
+        max_length=20,
+        choices=RUN_TYPE_CHOICES,
+        default=TYPE_CLASSIC,
+    )
+
+    # Remediation targets and authoritative outcomes for Review Runs.
+    review_question_ids = models.JSONField(default=list, blank=True)
+    review_mastered_question_ids = models.JSONField(default=list, blank=True)
 
     current_hp = models.IntegerField(default=0)
     max_hp = models.IntegerField(default=0)
@@ -81,6 +98,22 @@ class DungeonRun(models.Model):
     @property
     def is_alive(self):
         return self.current_hp > 0
+
+    @property
+    def is_review_run(self):
+        return self.run_type == self.TYPE_REVIEW
+
+    @property
+    def targeted_count(self):
+        return len(self.review_question_ids or [])
+
+    @property
+    def mastered_count(self):
+        return len(self.review_mastered_question_ids or [])
+
+    @property
+    def is_mastered(self):
+        return self.is_review_run and self.targeted_count > 0 and self.mastered_count == self.targeted_count
 
 
 class DungeonEnemy(models.Model):

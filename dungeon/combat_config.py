@@ -136,6 +136,35 @@ def minimum_questions_required(rules):
     return rules.questions_per_enemy * MIN_ENEMIES
 
 
+def review_enemy_specs(unresolved_count, *, rules):
+    """Generate enemy specifications for a Review Run with adaptive sizing.
+
+    A learner with 2 unresolved questions receives a focused 2-question, 2-HP
+    battle rather than an inflated 5-question fight padded with mastered items.
+    Enemies are capped at MAX_ENEMIES.
+    """
+    if unresolved_count <= 0:
+        return []
+
+    specs = []
+    remaining = unresolved_count
+
+    while remaining > 0 and len(specs) < MAX_ENEMIES:
+        # If this is the last available enemy slot, give it all remaining questions
+        if len(specs) == MAX_ENEMIES - 1:
+            question_count = remaining
+        else:
+            question_count = min(remaining, rules.questions_per_enemy)
+
+        specs.append({
+            "question_count": question_count,
+            "max_hp": question_count,
+        })
+        remaining -= question_count
+
+    return specs
+
+
 # --------------------------------------------------
 # 4. DROP TABLE
 # --------------------------------------------------
@@ -196,6 +225,24 @@ def calculate_run_xp(*, cleared, enemies_defeated, hp_remaining):
 
 
 XP_REASON_TEMPLATE = "Dungeon Quest clear: {quiz_title}"
+
+# Review Run XP rules
+XP_REVIEW_CLEAR_BASE = 10
+XP_REVIEW_PER_NEW_MASTERY = 5
+XP_REVIEW_PER_SURVIVING_HP = 0
+XP_REASON_REVIEW_TEMPLATE = "Dungeon Quest review clear: {quiz_title}"
+
+
+def calculate_review_run_xp(*, mastered, questions_mastered):
+    """XP for a Review Run.
+
+    Only a mastered review run (every targeted question answered correctly)
+    awards mastery XP. Surviving HP awards 0 XP to prevent distortion on
+    short runs.
+    """
+    if not mastered:
+        return 0
+    return XP_REVIEW_CLEAR_BASE + (questions_mastered * XP_REVIEW_PER_NEW_MASTERY)
 
 
 # --------------------------------------------------

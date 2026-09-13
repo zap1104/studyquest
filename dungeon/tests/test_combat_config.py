@@ -140,6 +140,79 @@ class RunXpTests(SimpleTestCase):
         )
 
 
+class ReviewRunConfigTests(SimpleTestCase):
+    def test_review_enemy_specs_adaptive_sizing(self):
+        rules = resolve_combat_rules(plan="free")
+        # 0 questions -> no enemies
+        self.assertEqual(combat_config.review_enemy_specs(0, rules=rules), [])
+        self.assertEqual(combat_config.review_enemy_specs(-1, rules=rules), [])
+
+        # 1-5 questions -> 1 enemy with matching HP
+        self.assertEqual(
+            combat_config.review_enemy_specs(1, rules=rules),
+            [{"question_count": 1, "max_hp": 1}],
+        )
+        self.assertEqual(
+            combat_config.review_enemy_specs(2, rules=rules),
+            [{"question_count": 2, "max_hp": 2}],
+        )
+        self.assertEqual(
+            combat_config.review_enemy_specs(5, rules=rules),
+            [{"question_count": 5, "max_hp": 5}],
+        )
+
+        # 6-10 questions -> 2 enemies
+        self.assertEqual(
+            combat_config.review_enemy_specs(6, rules=rules),
+            [
+                {"question_count": 5, "max_hp": 5},
+                {"question_count": 1, "max_hp": 1},
+            ],
+        )
+        self.assertEqual(
+            combat_config.review_enemy_specs(10, rules=rules),
+            [
+                {"question_count": 5, "max_hp": 5},
+                {"question_count": 5, "max_hp": 5},
+            ],
+        )
+
+        # 12 questions -> 3 enemies
+        self.assertEqual(
+            combat_config.review_enemy_specs(12, rules=rules),
+            [
+                {"question_count": 5, "max_hp": 5},
+                {"question_count": 5, "max_hp": 5},
+                {"question_count": 2, "max_hp": 2},
+            ],
+        )
+
+        # Capped at MAX_ENEMIES (4)
+        specs = combat_config.review_enemy_specs(30, rules=rules)
+        self.assertEqual(len(specs), MAX_ENEMIES)
+
+    def test_calculate_review_run_xp(self):
+        # Unmastered earns 0 XP
+        self.assertEqual(
+            combat_config.calculate_review_run_xp(mastered=False, questions_mastered=5),
+            0,
+        )
+
+        # Mastered earns base + per-question mastery
+        self.assertEqual(
+            combat_config.calculate_review_run_xp(mastered=True, questions_mastered=1),
+            combat_config.XP_REVIEW_CLEAR_BASE + 1 * combat_config.XP_REVIEW_PER_NEW_MASTERY,
+        )
+        self.assertEqual(
+            combat_config.calculate_review_run_xp(mastered=True, questions_mastered=3),
+            25,  # 10 + 3*5
+        )
+        self.assertEqual(
+            combat_config.calculate_review_run_xp(mastered=True, questions_mastered=5),
+            35,  # 10 + 5*5
+        )
+
+
 class PresentationScaleTests(SimpleTestCase):
     def test_icon_size_is_derived_from_tile_size(self):
         self.assertEqual(combat_config.ICON_SIZE, combat_config.TILE_SIZE // 2)

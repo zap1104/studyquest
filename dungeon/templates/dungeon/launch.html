@@ -28,6 +28,7 @@
             <li>Every enemy you beat drops a key piece — and sometimes a potion.</li>
             <li>Collect every piece to assemble the key, then walk out through the door for XP.</li>
             <li>You start with {{ rules.base_player_hp }} hearts. Run out and the run ends where it stands.</li>
+            <li><strong>Review Runs:</strong> Questions you miss on chapter quizzes unlock targeted Review Runs. Master them to earn bonus mastery XP.</li>
         </ul>
     </div>
 
@@ -46,6 +47,9 @@
                     <li class="dungeon-run-history-row">
                         <div class="dungeon-run-history-main">
                             <span class="dungeon-status-tag" data-status="{{ run.status }}">{{ run.get_status_display }}</span>
+                            {% if run.is_review_run %}
+                                <span class="dungeon-status-tag dungeon-tag-review">Review</span>
+                            {% endif %}
                             <span class="dungeon-run-history-title">{{ run.quiz.chapter.title }}</span>
                             {% if run.xp_awarded %}
                                 <span class="dungeon-run-history-xp">+{{ run.xp_awarded }} XP</span>
@@ -66,9 +70,17 @@
             {% for run in active_runs %}
                 <li class="dungeon-quiz-row">
                     <div>
-                        <div class="dungeon-quiz-name">{{ run.quiz.chapter.title }}</div>
+                        <div class="dungeon-quiz-name">
+                            {{ run.quiz.chapter.title }}
+                            {% if run.is_review_run %}
+                                <span class="dungeon-status-tag dungeon-tag-review" style="margin-left:6px;">Review Run</span>
+                            {% endif %}
+                        </div>
                         <p class="dungeon-quiz-meta">
                             {{ run.quiz.chapter.course.title }} · {{ run.current_hp }}/{{ run.max_hp }} HP left
+                            {% if run.is_review_run %}
+                                · {{ run.mastered_count }}/{{ run.targeted_count }} mastered
+                            {% endif %}
                         </p>
                     </div>
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -101,18 +113,35 @@
                             {% else %}
                                 · needs at least {{ entry.minimum_questions }} to run
                             {% endif %}
+                            {% if entry.review_run_available %}
+                                · <strong style="color:var(--gold);">{{ entry.unresolved_count }} missed question{{ entry.unresolved_count|pluralize }}</strong>
+                            {% endif %}
                         </p>
                     </div>
-                    {% if entry.is_playable %}
-                        <form method="post" action="{% url 'dungeon:start_run' %}" style="margin:0;">
-                            {% csrf_token %}
-                            <input type="hidden" name="quiz_id" value="{{ entry.quiz.pk }}">
-                            <button type="submit" class="btn btn-primary btn-sm">Enter dungeon</button>
-                        </form>
-                    {% else %}
-                        <button type="button" class="btn btn-ghost btn-sm" disabled
-                                title="This quiz is too short for a dungeon run.">Too short</button>
-                    {% endif %}
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                        {% if entry.is_playable %}
+                            <form method="post" action="{% url 'dungeon:start_run' %}" style="margin:0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="quiz_id" value="{{ entry.quiz.pk }}">
+                                <input type="hidden" name="run_type" value="classic">
+                                <button type="submit" class="btn btn-primary btn-sm">Enter dungeon</button>
+                            </form>
+                        {% else %}
+                            <button type="button" class="btn btn-ghost btn-sm" disabled
+                                    title="This quiz is too short for a dungeon run.">Too short</button>
+                        {% endif %}
+                        {% if entry.review_run_available %}
+                            <form method="post" action="{% url 'dungeon:start_run' %}" style="margin:0;">
+                                {% csrf_token %}
+                                <input type="hidden" name="quiz_id" value="{{ entry.quiz.pk }}">
+                                <input type="hidden" name="run_type" value="review">
+                                <button type="submit" class="btn btn-review btn-sm"
+                                        title="Replay {{ entry.unresolved_count }} unresolved question{{ entry.unresolved_count|pluralize }} to earn mastery XP">
+                                    Review ({{ entry.unresolved_count }} missed)
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
                 </li>
             {% endfor %}
         </ul>
