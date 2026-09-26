@@ -1,342 +1,484 @@
-<!-- ================= WELCOMING GUIDED STUDY FOCUS MODAL ================= -->
+<!-- ================= STUDY FOCUS GUIDED MODAL (DF-2) ================= -->
 <div class="focus-modal-backdrop" id="focus-modal" hidden aria-hidden="true" style="
     position: fixed;
     inset: 0;
     z-index: 1050;
     background: rgba(10, 8, 6, 0.78);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     display: none;
     align-items: center;
     justify-content: center;
     padding: 16px;
     box-sizing: border-box;
 ">
-    <div class="focus-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="focus-modal-title" style="
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        width: 100%;
-        max-width: 560px;
-        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        animation: focusModalFadeIn 0.22s ease-out;
-    ">
-        <!-- Header -->
-        <div style="display: flex; align-items: flex-start; justify-content: space-between; padding: 22px 24px 16px; border-bottom: 1px solid var(--border); background: var(--surface);">
+    <div class="study-focus-modal" role="dialog" aria-modal="true" aria-labelledby="study-focus-title">
+        
+        <!-- ================= FIXED HEADER ================= -->
+        <header class="study-focus-modal__header">
             <div>
-                <span class="badge" style="background: rgba(117, 108, 243, 0.15); color: var(--primary); font-weight: 800; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.06em; padding: 3px 9px; border-radius: 999px;">
-                    🎯 Study Focus
-                </span>
-                <h2 id="focus-modal-title" style="font-size: 1.3rem; font-weight: 800; margin: 8px 0 2px; color: var(--ink); letter-spacing: -0.01em;">
-                    Let’s Find Your Study Focus
-                </h2>
-                <p id="focus-modal-subtitle" style="margin: 0; font-size: 0.88rem; color: var(--muted); line-height: 1.4;">
-                    How would you like to begin?
-                </p>
+                <span class="study-focus-badge" id="study-focus-badge">STUDY FOCUS</span>
+                <h2 id="study-focus-title">What would you like to focus on?</h2>
+                <p id="study-focus-subtitle">Choose a subject or topic that needs more attention. You can also use a result provided by your school.</p>
             </div>
-            <button type="button" class="btn btn-ghost btn-sm js-close-focus-modal" aria-label="Close" style="padding: 4px 8px; font-size: 1.25rem; line-height: 1; border-radius: 8px;">
-                ✕
-            </button>
-        </div>
+            <button type="button" class="btn btn-ghost btn-sm js-close-focus-modal" aria-label="Close dialog" style="padding: 6px 10px; font-size: 1.25rem; line-height: 1; border-radius: 8px;">✕</button>
+        </header>
 
-        <!-- Body Container -->
-        <div style="padding: 20px 24px 24px; overflow-y: auto; max-height: calc(85vh - 140px);">
-            
-            <!-- ================= VIEW 1: 4 GUIDED CHOICE CARDS ================= -->
-            <div id="focus-view-menu" class="focus-view" style="display: flex; flex-direction: column; gap: 10px;">
-                <!-- Choice 1: School Result -->
-                <button type="button" class="focus-choice-card js-switch-focus-panel" data-target="panel-school-result" style="
+        <!-- ================= SCROLLABLE BODY ================= -->
+        <div class="study-focus-modal__body">
+
+            <!-- STEP 1: STARTING CHOICE -->
+            <div id="view-step-choice" class="study-focus-step" style="display: flex; flex-direction: column; gap: 12px;">
+                <!-- Choice 1: Choose a Subject or Topic (Default Primary) -->
+                <button type="button" class="study-focus-choice-card js-select-focus-route" data-route="manual" style="
                     display: flex;
                     align-items: center;
                     gap: 16px;
-                    padding: 16px;
+                    padding: 18px 20px;
                     background: var(--bg);
-                    border: 1px solid var(--border);
-                    border-radius: 14px;
+                    border: 2px solid rgba(117, 108, 243, 0.35);
+                    border-radius: 16px;
                     text-align: left;
                     cursor: pointer;
                     width: 100%;
                     transition: all 0.16s ease;
                 ">
-                    <span style="font-size: 1.7rem; line-height: 1; flex-shrink: 0; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; background: rgba(117, 108, 243, 0.12); border-radius: 10px;">📄</span>
+                    <span style="font-size: 1.6rem; line-height: 1; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(117, 108, 243, 0.12); border-radius: 12px; flex-shrink: 0;">✍️</span>
                     <div style="flex: 1; min-width: 0;">
-                        <strong style="display: block; font-size: 0.96rem; color: var(--ink); margin-bottom: 2px;">Use a School Result</strong>
-                        <span style="display: block; font-size: 0.82rem; color: var(--muted); line-height: 1.35;">I have scores or recommendations from a school assessment.</span>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+                            <strong style="font-size: 1rem; color: var(--ink);">Choose a Subject or Topic</strong>
+                            <span class="badge" style="background: rgba(117, 108, 243, 0.15); color: var(--primary); font-size: 0.70rem; font-weight: 800; padding: 2px 7px; border-radius: 6px;">Recommended</span>
+                        </div>
+                        <span style="display: block; font-size: 0.84rem; color: var(--muted); line-height: 1.4;">I already know what I want to improve.</span>
                     </div>
-                    <span style="font-size: 1.1rem; color: var(--muted); font-weight: 700;">&rarr;</span>
+                    <span style="font-size: 1.2rem; color: var(--muted); font-weight: 700;">&rarr;</span>
                 </button>
 
-                <!-- Choice 2: Choose Subject or Topic -->
-                <button type="button" class="focus-choice-card js-switch-focus-panel" data-target="panel-manual-topic" style="
+                <!-- Choice 2: Use a School Result -->
+                <button type="button" class="study-focus-choice-card js-select-focus-route" data-route="school" style="
                     display: flex;
                     align-items: center;
                     gap: 16px;
-                    padding: 16px;
+                    padding: 18px 20px;
                     background: var(--bg);
                     border: 1px solid var(--border);
-                    border-radius: 14px;
+                    border-radius: 16px;
                     text-align: left;
                     cursor: pointer;
                     width: 100%;
                     transition: all 0.16s ease;
                 ">
-                    <span style="font-size: 1.7rem; line-height: 1; flex-shrink: 0; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; background: rgba(232, 163, 61, 0.12); border-radius: 10px;">✍️</span>
+                    <span style="font-size: 1.6rem; line-height: 1; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(232, 163, 61, 0.12); border-radius: 12px; flex-shrink: 0;">📄</span>
                     <div style="flex: 1; min-width: 0;">
-                        <strong style="display: block; font-size: 0.96rem; color: var(--ink); margin-bottom: 2px;">Choose a Subject or Topic</strong>
-                        <span style="display: block; font-size: 0.82rem; color: var(--muted); line-height: 1.35;">I already know what I want to improve.</span>
+                        <strong style="display: block; font-size: 1rem; color: var(--ink); margin-bottom: 2px;">Use a School Result</strong>
+                        <span style="display: block; font-size: 0.84rem; color: var(--muted); line-height: 1.4;">I have scores or recommendations from a school assessment.</span>
                     </div>
-                    <span style="font-size: 1.1rem; color: var(--muted); font-weight: 700;">&rarr;</span>
+                    <span style="font-size: 1.2rem; color: var(--muted); font-weight: 700;">&rarr;</span>
                 </button>
 
                 <!-- Choice 3: Select From My Courses -->
-                <button type="button" class="focus-choice-card js-switch-focus-panel" data-target="panel-from-courses" style="
+                <button type="button" class="study-focus-choice-card js-select-focus-route" data-route="courses" style="
                     display: flex;
                     align-items: center;
                     gap: 16px;
-                    padding: 16px;
+                    padding: 18px 20px;
                     background: var(--bg);
                     border: 1px solid var(--border);
-                    border-radius: 14px;
+                    border-radius: 16px;
                     text-align: left;
                     cursor: pointer;
                     width: 100%;
                     transition: all 0.16s ease;
                 ">
-                    <span style="font-size: 1.7rem; line-height: 1; flex-shrink: 0; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; background: rgba(46, 204, 113, 0.12); border-radius: 10px;">📚</span>
+                    <span style="font-size: 1.6rem; line-height: 1; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(46, 204, 113, 0.12); border-radius: 12px; flex-shrink: 0;">📚</span>
                     <div style="flex: 1; min-width: 0;">
-                        <strong style="display: block; font-size: 0.96rem; color: var(--ink); margin-bottom: 2px;">Select From My Courses</strong>
-                        <span style="display: block; font-size: 0.82rem; color: var(--muted); line-height: 1.35;">I want to focus on something I already study in StudyQuest.</span>
+                        <strong style="display: block; font-size: 1rem; color: var(--ink); margin-bottom: 2px;">Select From My Courses</strong>
+                        <span style="display: block; font-size: 0.84rem; color: var(--muted); line-height: 1.4;">I want to focus on something I already study in StudyQuest.</span>
                     </div>
-                    <span style="font-size: 1.1rem; color: var(--muted); font-weight: 700;">&rarr;</span>
+                    <span style="font-size: 1.2rem; color: var(--muted); font-weight: 700;">&rarr;</span>
                 </button>
-
-                <!-- Choice 4: Not Sure Yet -->
-                <button type="button" class="focus-choice-card js-switch-focus-panel" data-target="panel-not-sure" style="
-                    display: flex;
-                    align-items: center;
-                    gap: 16px;
-                    padding: 16px;
-                    background: var(--bg);
-                    border: 1px solid var(--border);
-                    border-radius: 14px;
-                    text-align: left;
-                    cursor: pointer;
-                    width: 100%;
-                    transition: all 0.16s ease;
-                ">
-                    <span style="font-size: 1.7rem; line-height: 1; flex-shrink: 0; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; background: rgba(52, 152, 219, 0.12); border-radius: 10px;">🚀</span>
-                    <div style="flex: 1; min-width: 0;">
-                        <strong style="display: block; font-size: 0.96rem; color: var(--ink); margin-bottom: 2px;">Not Sure Yet</strong>
-                        <span style="display: block; font-size: 0.82rem; color: var(--muted); line-height: 1.35;">Help me start with my study materials.</span>
-                    </div>
-                    <span style="font-size: 1.1rem; color: var(--muted); font-weight: 700;">&rarr;</span>
-                </button>
-
-                <!-- Dismiss Option -->
-                <div style="text-align: center; margin-top: 10px;">
-                    <button type="button" class="btn btn-ghost btn-sm js-close-focus-modal" style="color: var(--muted); font-size: 0.85rem;">
-                        Not Now
-                    </button>
-                </div>
             </div>
 
-            <!-- ================= PANEL 1: USE A SCHOOL RESULT ================= -->
-            <div id="panel-school-result" class="focus-view" style="display: none;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-                    <button type="button" class="btn btn-ghost btn-sm js-back-to-menu" style="font-size: 0.82rem; padding: 4px 8px; color: var(--primary);">
-                        &larr; Back to Options
-                    </button>
-                    <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted);">Step 2 of 2</span>
-                </div>
-
-                <form method="post" action="{% url 'courses:focus_checkin' %}" enctype="multipart/form-data" id="form-school-result">
+            <!-- STEP 2A: CHOOSE A FOCUS MANUALLY -->
+            <div id="view-step-manual" class="study-focus-step" style="display: none;">
+                <form id="form-manual-focus" method="post" action="{% url 'courses:focus_checkin' %}">
                     {% csrf_token %}
-                    <p style="font-size: 0.85rem; color: var(--muted); margin-top: 0; margin-bottom: 16px; line-height: 1.45;">
-                        Upload or enter the result from your school's assessment system. We'll turn your identified subject and topics into a personalized study plan.
-                    </p>
-
-                    <div style="margin-bottom: 16px;">
-                        <label style="display: block; font-size: 0.84rem; font-weight: 700; margin-bottom: 6px; color: var(--ink);">
-                            School Result File (.json)
-                        </label>
-                        <input type="file" name="assessment_file" accept=".json,application/json" class="forge-input" style="padding: 10px 12px; font-size: 0.85rem;">
-                        <span style="display: block; font-size: 0.75rem; color: var(--muted); margin-top: 4px;">Upload the diagnostic export file provided by your school system.</span>
+                    
+                    <div class="study-focus-field">
+                        <label for="manual-subject-name">Subject <span style="color: var(--danger);">*</span></label>
+                        <input type="text" id="manual-subject-name" name="subject_name" required placeholder="e.g. Systems Integration and Architecture">
                     </div>
 
-                    <div style="margin-bottom: 20px;">
-                        <label style="display: block; font-size: 0.84rem; font-weight: 700; margin-bottom: 6px; color: var(--ink);">
-                            Or Paste Assessment Data
-                        </label>
-                        <textarea name="assessment_json" rows="4" placeholder='{"schema_version": "1.0", "subject_results": [{"subject_name": "Networking", "topics": [...]}]}' class="forge-input" style="font-family: monospace; font-size: 0.78rem; resize: vertical;"></textarea>
+                    <div class="study-focus-field">
+                        <label for="manual-subject-code">Subject code, if available</label>
+                        <input type="text" id="manual-subject-code" name="subject_code" placeholder="e.g. SIA">
                     </div>
 
-                    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 12px;">
-                        <button type="button" class="btn btn-ghost btn-sm js-close-focus-modal">Not Now</button>
-                        <button type="submit" class="btn btn-primary btn-sm" style="font-weight: 700; padding: 10px 18px;">
-                            Continue with School Result &rarr;
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- ================= PANEL 2: CHOOSE A SUBJECT OR TOPIC ================= -->
-            <div id="panel-manual-topic" class="focus-view" style="display: none;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-                    <button type="button" class="btn btn-ghost btn-sm js-back-to-menu" style="font-size: 0.82rem; padding: 4px 8px; color: var(--primary);">
-                        &larr; Back to Options
-                    </button>
-                    <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted);">Step 2 of 2</span>
-                </div>
-
-                <form method="post" action="{% url 'courses:focus_checkin' %}" id="form-manual-topic">
-                    {% csrf_token %}
-                    <p style="font-size: 0.85rem; color: var(--muted); margin-top: 0; margin-bottom: 16px; line-height: 1.45;">
-                        Tell us which subject and specific topics need more attention. StudyQuest will organize your quizzes and Dungeon Quest practice around them.
-                    </p>
-
-                    <div style="margin-bottom: 14px;">
-                        <label style="display: block; font-size: 0.84rem; font-weight: 700; margin-bottom: 6px; color: var(--ink);">
-                            Subject Name <span style="color: var(--danger);">*</span>
-                        </label>
-                        <input type="text" name="subject_name" required placeholder="e.g. Systems Integration and Architecture" class="forge-input" style="padding: 10px 12px; font-size: 0.88rem;">
+                    <div class="study-focus-field">
+                        <label>Which topics need more attention?</label>
+                        <!-- Topic Chips Display -->
+                        <div id="topic-chips-container" style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 32px; align-items: center;"></div>
+                        <!-- Add Topic Input Row -->
+                        <div style="display: flex; gap: 8px; width: 100%; margin-top: 6px;">
+                            <input type="text" id="new-topic-input" placeholder="Type a topic and click Add...">
+                            <button type="button" id="btn-add-topic" class="btn btn-ghost" style="min-height: 50px; padding: 0 18px; border: 1px dashed var(--border); font-size: 0.88rem; font-weight: 700; white-space: nowrap; color: var(--primary);">
+                                + Add topic
+                            </button>
+                        </div>
+                        <input type="hidden" name="topic_names" id="hidden-topic-names" value="">
+                        <span style="font-size: 0.78rem; color: var(--muted);">Click "+ Add topic" or press Enter to add priority topics.</span>
                     </div>
 
-                    <div style="margin-bottom: 14px;">
-                        <label style="display: block; font-size: 0.84rem; font-weight: 700; margin-bottom: 6px; color: var(--ink);">
-                            Subject Code (Optional)
-                        </label>
-                        <input type="text" name="subject_code" placeholder="e.g. SIA" class="forge-input" style="padding: 10px 12px; font-size: 0.88rem;">
-                    </div>
-
-                    <div style="margin-bottom: 14px;">
-                        <label style="display: block; font-size: 0.84rem; font-weight: 700; margin-bottom: 6px; color: var(--ink);">
-                            Topics to Improve (Comma-separated)
-                        </label>
-                        <input type="text" name="topic_names" placeholder="e.g. Tool Sprawl, Architecture Governance" class="forge-input" style="padding: 10px 12px; font-size: 0.88rem;">
-                    </div>
-
-                    <div style="margin-bottom: 20px;">
-                        <label style="display: block; font-size: 0.84rem; font-weight: 700; margin-bottom: 6px; color: var(--ink);">
-                            Why this focus?
-                        </label>
-                        <select name="reason" class="forge-input" style="padding: 10px 12px; font-size: 0.85rem;">
-                            <option value="School assessment result">School assessment result</option>
+                    <div class="study-focus-field">
+                        <label for="manual-reason">Why are you focusing on this?</label>
+                        <select id="manual-reason" name="reason">
+                            <option value="">Choose a reason</option>
                             <option value="Upcoming examination">Upcoming examination</option>
                             <option value="Difficult lesson">Difficult lesson</option>
+                            <option value="School assessment result">School assessment result</option>
                             <option value="Instructor recommendation">Instructor recommendation</option>
                             <option value="Personal review">Personal review</option>
                         </select>
                     </div>
-
-                    <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 12px;">
-                        <button type="button" class="btn btn-ghost btn-sm js-close-focus-modal">Not Now</button>
-                        <button type="submit" class="btn btn-primary btn-sm" style="font-weight: 700; padding: 10px 18px;">
-                            Set Study Focus &rarr;
-                        </button>
-                    </div>
                 </form>
             </div>
 
-            <!-- ================= PANEL 3: SELECT FROM MY COURSES ================= -->
-            <div id="panel-from-courses" class="focus-view" style="display: none;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-                    <button type="button" class="btn btn-ghost btn-sm js-back-to-menu" style="font-size: 0.82rem; padding: 4px 8px; color: var(--primary);">
-                        &larr; Back to Options
-                    </button>
-                    <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted);">Step 2 of 2</span>
-                </div>
+            <!-- STEP 2B: USE A SCHOOL RESULT -->
+            <div id="view-step-school" class="study-focus-step" style="display: none;">
+                <form id="form-school-result" method="post" action="{% url 'courses:focus_checkin' %}" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <p style="font-size: 0.88rem; color: var(--muted); margin: 0 0 18px; line-height: 1.45;">
+                        Upload a result or recommendation from your school’s assessment system.
+                    </p>
 
-                <p style="font-size: 0.85rem; color: var(--muted); margin-top: 0; margin-bottom: 16px; line-height: 1.45;">
-                    Pick an existing course in your library to focus on for reviews, practice quizzes, and Dungeon Quest challenges.
+                    <div class="study-focus-field">
+                        <label>Assessment result</label>
+                        <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
+                            <label for="school-file-input" class="btn btn-ghost" style="min-height: 50px; border: 1px solid var(--border); display: inline-flex; align-items: center; justify-content: center; padding: 0 20px; font-weight: 700; cursor: pointer; white-space: nowrap;">
+                                Choose File
+                            </label>
+                            <input type="file" id="school-file-input" name="assessment_file" accept=".json,application/json" style="position: absolute; opacity: 0; width: 1px; height: 1px;">
+                            <span id="file-chosen-label" style="font-size: 0.88rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">No file selected</span>
+                        </div>
+                        <span style="font-size: 0.78rem; color: var(--muted);">Supported demo format: JSON</span>
+                    </div>
+
+                    <!-- Collapsible Advanced Options -->
+                    <details style="margin-top: 20px; width: 100%; border-top: 1px dashed var(--border); padding-top: 14px;">
+                        <summary style="cursor: pointer; color: var(--primary); font-size: 0.88rem; font-weight: 700; user-select: none; outline: none; margin-bottom: 8px;">
+                            Advanced import options ▾
+                        </summary>
+                        <div class="study-focus-field" style="margin-top: 10px;">
+                            <label for="paste-json-textarea">Paste assessment data</label>
+                            <textarea id="paste-json-textarea" name="assessment_json" placeholder='{"schema_version": "1.0", "subject_results": [{"subject_name": "...", "score": 58, "topics": [...]}]}' spellcheck="false"></textarea>
+                        </div>
+                    </details>
+                </form>
+            </div>
+
+            <!-- STEP 2C: SELECT FROM MY COURSES -->
+            <div id="view-step-courses" class="study-focus-step" style="display: none;">
+                <p style="font-size: 0.88rem; color: var(--muted); margin: 0 0 16px; line-height: 1.45;">
+                    Pick an existing course in your library to set as your primary focus for reviews and Dungeon Quest practice.
                 </p>
 
                 {% if courses or recent_courses %}
-                    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
                         {% for course in courses|default:recent_courses %}
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--border);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-radius: 14px; background: var(--bg); border: 1px solid var(--border);">
                                 <div style="min-width: 0; flex: 1; padding-right: 12px;">
-                                    <strong style="display: block; font-size: 0.90rem; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ course.title }}</strong>
-                                    <span style="font-size: 0.76rem; color: var(--muted);">{{ course.chapters.count }} chapters</span>
+                                    <strong style="display: block; font-size: 0.94rem; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ course.title }}</strong>
+                                    <span style="font-size: 0.78rem; color: var(--muted);">{{ course.chapters.count }} chapters</span>
                                 </div>
-                                <form method="post" action="{% url 'courses:focus_checkin' %}" style="margin: 0; flex-shrink: 0;">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="subject_name" value="{{ course.title }}">
-                                    <input type="hidden" name="reason" value="Selected from my courses">
-                                    <button type="submit" class="btn btn-primary btn-sm" style="font-size: 0.78rem; padding: 6px 12px;">
-                                        Focus Here &rarr;
-                                    </button>
-                                </form>
+                                <button type="button" class="btn btn-primary btn-sm js-pick-course-as-focus" data-title="{{ course.title }}" style="font-size: 0.80rem; padding: 8px 14px; white-space: nowrap;">
+                                    Focus Here &rarr;
+                                </button>
                             </div>
                         {% endfor %}
                     </div>
                 {% else %}
-                    <div style="padding: 24px 16px; text-align: center; background: var(--bg); border: 1px dashed var(--border); border-radius: 14px; margin-bottom: 16px;">
-                        <span style="font-size: 1.6rem; display: block; margin-bottom: 8px;">📚</span>
-                        <strong style="display: block; font-size: 0.92rem; color: var(--ink); margin-bottom: 4px;">No courses yet</strong>
-                        <p style="font-size: 0.82rem; color: var(--muted); margin: 0 0 14px;">
-                            You don't have any active courses yet. Start by uploading your study materials to create one!
+                    <div style="padding: 28px 20px; text-align: center; background: var(--bg); border: 1px dashed var(--border); border-radius: 14px;">
+                        <span style="font-size: 1.8rem; display: block; margin-bottom: 8px;">📚</span>
+                        <strong style="display: block; font-size: 0.96rem; color: var(--ink); margin-bottom: 4px;">No courses yet</strong>
+                        <p style="font-size: 0.84rem; color: var(--muted); margin: 0 0 16px;">
+                            You don't have any active courses yet. Start by uploading your study materials to create your first course!
                         </p>
                         <a href="{% url 'courses:course_create' %}" class="btn btn-primary btn-sm">
-                            Create Your First Course &rarr;
+                            Create a Course &rarr;
                         </a>
                     </div>
                 {% endif %}
-
-                <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 12px;">
-                    <button type="button" class="btn btn-ghost btn-sm js-close-focus-modal">Not Now</button>
-                </div>
             </div>
 
-            <!-- ================= PANEL 4: NOT SURE YET / START FROM MATERIALS ================= -->
-            <div id="panel-not-sure" class="focus-view" style="display: none;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
-                    <button type="button" class="btn btn-ghost btn-sm js-back-to-menu" style="font-size: 0.82rem; padding: 4px 8px; color: var(--primary);">
-                        &larr; Back to Options
-                    </button>
-                    <span style="font-size: 0.78rem; font-weight: 700; color: var(--muted);">Step 2 of 2</span>
+            <!-- STEP 3: REVIEW BEFORE SAVING (APPROVAL STEP) -->
+            <div id="view-step-review" class="study-focus-step" style="display: none;">
+                <div class="study-focus-review-card" style="
+                    background: var(--bg);
+                    border: 1px solid rgba(117, 108, 243, 0.35);
+                    border-radius: 16px;
+                    padding: 22px;
+                    margin-bottom: 16px;
+                ">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
+                        <div>
+                            <span class="badge" style="background: rgba(117, 108, 243, 0.15); color: var(--primary); font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;">
+                                Target Subject
+                            </span>
+                            <h3 id="review-subject-title" style="font-size: 1.35rem; font-weight: 800; margin: 6px 0 2px; color: var(--ink);">
+                                Systems Integration and Architecture
+                            </h3>
+                            <span id="review-subject-code" style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">SIA</span>
+                        </div>
+                        <div id="review-score-wrap" style="text-align: right; background: rgba(239, 107, 115, 0.1); border: 1px solid rgba(239, 107, 115, 0.3); border-radius: 10px; padding: 8px 14px;">
+                            <div style="font-size: 0.70rem; text-transform: uppercase; font-weight: 700; color: var(--danger);">Initial Result</div>
+                            <div id="review-score-val" style="font-size: 1.4rem; font-weight: 800; color: var(--danger); line-height: 1.1;">58%</div>
+                        </div>
+                    </div>
+
+                    <!-- Priority Topics List -->
+                    <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);">
+                        <div style="font-size: 0.82rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+                            Priority Topics
+                        </div>
+                        <ul id="review-topics-list" style="margin: 0; padding-left: 20px; font-size: 0.88rem; color: var(--ink); line-height: 1.5;">
+                            <li>Architecture Governance</li>
+                            <li>Tool Sprawl</li>
+                        </ul>
+                    </div>
+
+                    <!-- Source & Timestamp -->
+                    <div style="margin-top: 14px; font-size: 0.80rem; color: var(--muted);">
+                        Source: <strong id="review-source-label" style="color: var(--ink);">School Result · September 27, 2026</strong>
+                    </div>
                 </div>
 
-                <div style="padding: 20px; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 16px;">
-                    <strong style="display: block; font-size: 1rem; color: var(--ink); margin-bottom: 6px;">
-                        Start Directly with Your Study Materials
-                    </strong>
-                    <p style="font-size: 0.85rem; color: var(--muted); margin: 0 0 14px; line-height: 1.45;">
-                        No assessment result or prior score report is needed. Upload your syllabus, slides, or PDF notes, and StudyQuest will automatically structure everything for you:
-                    </p>
-                    <ul style="margin: 0; padding-left: 20px; font-size: 0.83rem; color: var(--ink); display: flex; flex-direction: column; gap: 6px;">
-                        <li>Breaks your materials into clear, structured chapters</li>
-                        <li>Generates bite-sized quizzes for every key concept</li>
-                        <li>Prepares Dungeon Quest adventures to reinforce tricky topics</li>
-                    </ul>
-                </div>
-
-                <div style="display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 12px;">
-                    <button type="button" class="btn btn-ghost btn-sm js-close-focus-modal">Not Now</button>
-                    <a href="{% url 'courses:course_create' %}" class="btn btn-primary btn-sm" style="font-weight: 700; padding: 10px 18px;">
-                        Create a Course from Materials &rarr;
-                    </a>
-                </div>
+                <p style="font-size: 0.86rem; color: var(--muted); margin: 0; line-height: 1.45;">
+                    StudyQuest can connect this focus to an existing course or help you create a focused study path.
+                </p>
             </div>
 
         </div>
+
+        <!-- ================= FIXED FOOTER ================= -->
+        <footer class="study-focus-modal__footer" id="study-focus-footer">
+            <!-- Dynamic Actions controlled by JavaScript -->
+        </footer>
+
     </div>
 </div>
 
 <style>
+    /* ================= STUDY FOCUS MODAL CSS ================= */
+    .study-focus-modal {
+        width: min(720px, calc(100vw - 32px));
+        max-height: min(86dvh, 760px);
+
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+
+        overflow: hidden;
+
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        background: var(--surface);
+        box-shadow: 0 28px 80px rgba(12, 16, 38, 0.34);
+        animation: focusModalFadeIn 0.22s ease-out;
+    }
+
+    .study-focus-modal__header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        padding: 24px 30px 18px;
+        border-bottom: 1px solid var(--border);
+        background: var(--surface);
+    }
+
+    .study-focus-badge {
+        display: inline-block;
+        background: rgba(117, 108, 243, 0.15);
+        color: var(--primary);
+        font-weight: 800;
+        text-transform: uppercase;
+        font-size: 0.72rem;
+        letter-spacing: 0.08em;
+        padding: 3px 10px;
+        border-radius: 999px;
+        margin-bottom: 8px;
+    }
+
+    #study-focus-title {
+        font-size: 1.35rem;
+        font-weight: 900;
+        margin: 0 0 4px;
+        color: var(--ink);
+        letter-spacing: -0.01em;
+    }
+
+    #study-focus-subtitle {
+        margin: 0;
+        font-size: 0.88rem;
+        color: var(--muted);
+        line-height: 1.45;
+    }
+
+    /* Scroll only the body when necessary */
+    .study-focus-modal__body {
+        min-height: 0;
+        overflow-y: auto;
+        padding: 26px 30px;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+    }
+
+    /* Consistent fields */
+    .study-focus-field {
+        display: grid;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .study-focus-field + .study-focus-field {
+        margin-top: 20px;
+    }
+
+    .study-focus-field label {
+        color: var(--ink);
+        font-size: 0.9rem;
+        font-weight: 800;
+    }
+
+    .study-focus-field input,
+    .study-focus-field select,
+    .study-focus-field textarea {
+        width: 100%;
+        min-width: 0;
+        min-height: 50px;
+        padding: 12px 14px;
+
+        color: var(--ink);
+        background: var(--bg);
+
+        border: 1px solid var(--border);
+        border-radius: 12px;
+
+        font: inherit;
+        box-sizing: border-box;
+    }
+
+    .study-focus-field textarea {
+        min-height: 180px;
+        resize: vertical;
+        font-family: ui-monospace, monospace;
+        line-height: 1.5;
+    }
+
+    /* Focus styles */
+    .study-focus-field input:focus,
+    .study-focus-field select:focus,
+    .study-focus-field textarea:focus {
+        outline: 3px solid rgba(108, 92, 231, 0.16);
+        border-color: var(--primary);
+    }
+
+    /* Topic Chips */
+    .study-focus-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        background: rgba(117, 108, 243, 0.12);
+        border: 1px solid rgba(117, 108, 243, 0.28);
+        border-radius: 999px;
+        color: var(--primary);
+        font-size: 0.86rem;
+        font-weight: 700;
+        animation: chipPop 0.15s ease-out;
+    }
+
+    .study-focus-chip .chip-remove {
+        background: none;
+        border: none;
+        color: var(--muted);
+        font-size: 1.15rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .study-focus-chip .chip-remove:hover {
+        color: var(--danger);
+    }
+
+    /* Footer */
+    .study-focus-modal__footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+
+        padding: 18px 30px 24px;
+
+        border-top: 1px solid var(--border);
+        background: var(--surface);
+    }
+
+    .study-focus-modal__footer .btn-primary {
+        min-height: 50px;
+        padding-inline: 24px;
+        white-space: nowrap;
+    }
+
+    .study-focus-choice-card:hover {
+        background: rgba(117, 108, 243, 0.08) !important;
+        border-color: var(--primary) !important;
+        transform: translateY(-2px);
+    }
+
     @keyframes focusModalFadeIn {
         from { opacity: 0; transform: scale(0.97) translateY(8px); }
         to { opacity: 1; transform: scale(1) translateY(0); }
     }
+
+    @keyframes chipPop {
+        from { opacity: 0; transform: scale(0.85); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
     .focus-modal-backdrop.is-open {
         display: flex !important;
     }
-    .focus-choice-card:hover {
-        background: rgba(117, 108, 243, 0.08) !important;
-        border-color: var(--primary) !important;
-        transform: translateY(-2px);
+
+    /* Responsive layout */
+    @media (max-width: 640px) {
+        .study-focus-modal {
+            width: min(100% - 20px, 720px);
+            max-height: calc(100dvh - 20px);
+            border-radius: 18px;
+        }
+
+        .study-focus-modal__header {
+            padding: 20px;
+        }
+
+        .study-focus-modal__body {
+            padding: 20px;
+        }
+
+        .study-focus-modal__footer {
+            padding: 16px 20px 20px;
+            flex-direction: column-reverse;
+            align-items: stretch;
+        }
+
+        .study-focus-modal__footer button,
+        .study-focus-modal__footer a {
+            width: 100%;
+        }
     }
 </style>
 
@@ -345,65 +487,471 @@
         const modal = document.getElementById('focus-modal');
         if (!modal) return;
 
-        const viewMenu = document.getElementById('focus-view-menu');
-        const panels = {
-            'panel-school-result': document.getElementById('panel-school-result'),
-            'panel-manual-topic': document.getElementById('panel-manual-topic'),
-            'panel-from-courses': document.getElementById('panel-from-courses'),
-            'panel-not-sure': document.getElementById('panel-not-sure')
-        };
-        const titleEl = document.getElementById('focus-modal-title');
-        const subtitleEl = document.getElementById('focus-modal-subtitle');
+        // References
+        const titleEl = document.getElementById('study-focus-title');
+        const subtitleEl = document.getElementById('study-focus-subtitle');
+        const badgeEl = document.getElementById('study-focus-badge');
+        const footerEl = document.getElementById('study-focus-footer');
 
-        const titles = {
-            'menu': { title: 'Let’s Find Your Study Focus', sub: 'How would you like to begin?' },
-            'panel-school-result': { title: 'Use a School Result', sub: 'Import assessment scores or recommendations' },
-            'panel-manual-topic': { title: 'Choose a Subject or Topic', sub: 'Specify what you want to practice and improve' },
-            'panel-from-courses': { title: 'Select From My Courses', sub: 'Target an existing course in your library' },
-            'panel-not-sure': { title: 'Start with Study Materials', sub: 'Build a course directly from syllabus, slides, or notes' }
+        const views = {
+            'choice': document.getElementById('view-step-choice'),
+            'manual': document.getElementById('view-step-manual'),
+            'school': document.getElementById('view-step-school'),
+            'courses': document.getElementById('view-step-courses'),
+            'review': document.getElementById('view-step-review'),
         };
 
-        function showPanel(targetId) {
-            if (viewMenu) viewMenu.style.display = 'none';
-            Object.values(panels).forEach(p => { if (p) p.style.display = 'none'; });
+        // Review references
+        const reviewSubjectTitle = document.getElementById('review-subject-title');
+        const reviewSubjectCode = document.getElementById('review-subject-code');
+        const reviewScoreVal = document.getElementById('review-score-val');
+        const reviewScoreWrap = document.getElementById('review-score-wrap');
+        const reviewTopicsList = document.getElementById('review-topics-list');
+        const reviewSourceLabel = document.getElementById('review-source-label');
 
-            const targetPanel = panels[targetId];
-            if (targetPanel) {
-                targetPanel.style.display = 'block';
-                if (titleEl && titles[targetId]) titleEl.textContent = titles[targetId].title;
-                if (subtitleEl && titles[targetId]) subtitleEl.textContent = titles[targetId].sub;
+        // Form elements
+        const formManual = document.getElementById('form-manual-focus');
+        const formSchool = document.getElementById('form-school-result');
+        const manualSubjectInput = document.getElementById('manual-subject-name');
+        const manualCodeInput = document.getElementById('manual-subject-code');
+        const manualReasonSelect = document.getElementById('manual-reason');
+        const topicChipsContainer = document.getElementById('topic-chips-container');
+        const newTopicInput = document.getElementById('new-topic-input');
+        const btnAddTopic = document.getElementById('btn-add-topic');
+        const hiddenTopicNames = document.getElementById('hidden-topic-names');
+
+        const schoolFileInput = document.getElementById('school-file-input');
+        const fileChosenLabel = document.getElementById('file-chosen-label');
+        const pasteJsonTextarea = document.getElementById('paste-json-textarea');
+
+        // Internal State
+        let currentStep = 'choice';
+        let previousStep = 'choice';
+        let activeTopics = [];
+        let parsedSchoolData = null;
+        let lastFocusedElement = null;
+
+        const stepHeaders = {
+            'choice': {
+                badge: 'STUDY FOCUS',
+                title: 'What would you like to focus on?',
+                subtitle: 'Choose a subject or topic that needs more attention. You can also use a result provided by your school.'
+            },
+            'manual': {
+                badge: 'CHOOSE A FOCUS',
+                title: 'What subject would you like to improve?',
+                subtitle: 'Specify your target subject and the priority topics you want to master.'
+            },
+            'school': {
+                badge: 'USE A SCHOOL RESULT',
+                title: 'Use a School Result',
+                subtitle: 'Upload a result or recommendation from your school’s assessment system.'
+            },
+            'courses': {
+                badge: 'SELECT FROM MY COURSES',
+                title: 'Select From My Courses',
+                subtitle: 'Choose a course from your library to set as your primary study focus.'
+            },
+            'review': {
+                badge: 'REVIEW YOUR STUDY FOCUS',
+                title: 'Review Your Study Focus',
+                subtitle: 'Review your study details before putting your plan into action.'
+            }
+        };
+
+        // Topic chips management
+        function renderChips() {
+            topicChipsContainer.innerHTML = '';
+            activeTopics.forEach((topic, idx) => {
+                const chip = document.createElement('span');
+                chip.className = 'study-focus-chip';
+                chip.innerHTML = `<span>${escapeHtml(topic)}</span><button type="button" class="chip-remove" data-index="${idx}" aria-label="Remove topic">&times;</button>`;
+                topicChipsContainer.appendChild(chip);
+            });
+            hiddenTopicNames.value = activeTopics.join(', ');
+
+            // Bind remove buttons
+            topicChipsContainer.querySelectorAll('.chip-remove').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const idx = parseInt(btn.getAttribute('data-index'), 10);
+                    activeTopics.splice(idx, 1);
+                    renderChips();
+                });
+            });
+        }
+
+        function addTopic(topicStr) {
+            const raw = (topicStr || '').trim();
+            if (!raw) return;
+            // Split by comma in case user pastes or types comma-separated
+            const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+            parts.forEach(p => {
+                if (!activeTopics.includes(p)) {
+                    activeTopics.push(p);
+                }
+            });
+            renderChips();
+            newTopicInput.value = '';
+        }
+
+        if (btnAddTopic && newTopicInput) {
+            btnAddTopic.addEventListener('click', (e) => {
+                e.preventDefault();
+                addTopic(newTopicInput.value);
+            });
+            newTopicInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addTopic(newTopicInput.value);
+                }
+            });
+        }
+
+        // File selection handling
+        if (schoolFileInput) {
+            schoolFileInput.addEventListener('change', (e) => {
+                const file = schoolFileInput.files && schoolFileInput.files[0];
+                if (file) {
+                    fileChosenLabel.textContent = file.name;
+                    fileChosenLabel.style.color = 'var(--ink)';
+                    // Pre-parse client side for immediate review
+                    const reader = new FileReader();
+                    reader.onload = (re) => {
+                        try {
+                            parsedSchoolData = JSON.parse(re.target.result);
+                        } catch (err) {
+                            parsedSchoolData = null;
+                        }
+                    };
+                    reader.readAsText(file);
+                } else {
+                    fileChosenLabel.textContent = 'No file selected';
+                    fileChosenLabel.style.color = 'var(--muted)';
+                    parsedSchoolData = null;
+                }
+            });
+        }
+
+        // View switching & Footer rendering
+        function setStep(step) {
+            previousStep = currentStep;
+            currentStep = step;
+
+            // Update Header
+            const header = stepHeaders[step] || stepHeaders['choice'];
+            badgeEl.textContent = header.badge;
+            titleEl.textContent = header.title;
+            subtitleEl.textContent = header.subtitle;
+
+            // Toggle view panels
+            Object.keys(views).forEach(k => {
+                if (views[k]) {
+                    views[k].style.display = (k === step) ? (k === 'choice' ? 'flex' : 'block') : 'none';
+                }
+            });
+
+            // Render matching footer
+            renderFooter(step);
+
+            // Scroll body to top
+            const bodyEl = modal.querySelector('.study-focus-modal__body');
+            if (bodyEl) bodyEl.scrollTop = 0;
+        }
+
+        function renderFooter(step) {
+            footerEl.innerHTML = '';
+
+            if (step === 'choice') {
+                const notNowBtn = document.createElement('button');
+                notNowBtn.type = 'button';
+                notNowBtn.className = 'btn btn-ghost btn-sm js-close-focus-modal';
+                notNowBtn.style.color = 'var(--muted)';
+                notNowBtn.textContent = 'Not now';
+                footerEl.appendChild(notNowBtn);
+            } else if (step === 'manual') {
+                const backBtn = document.createElement('button');
+                backBtn.type = 'button';
+                backBtn.className = 'btn btn-ghost';
+                backBtn.textContent = 'Back';
+                backBtn.addEventListener('click', () => setStep('choice'));
+
+                const reviewBtn = document.createElement('button');
+                reviewBtn.type = 'button';
+                reviewBtn.className = 'btn btn-primary';
+                reviewBtn.textContent = 'Review My Focus →';
+                reviewBtn.addEventListener('click', () => handleManualReview());
+
+                footerEl.appendChild(backBtn);
+                footerEl.appendChild(reviewBtn);
+            } else if (step === 'school') {
+                const backBtn = document.createElement('button');
+                backBtn.type = 'button';
+                backBtn.className = 'btn btn-ghost';
+                backBtn.textContent = 'Back';
+                backBtn.addEventListener('click', () => setStep('choice'));
+
+                const reviewBtn = document.createElement('button');
+                reviewBtn.type = 'button';
+                reviewBtn.className = 'btn btn-primary';
+                reviewBtn.textContent = 'Review My Result →';
+                reviewBtn.addEventListener('click', () => handleSchoolReview());
+
+                footerEl.appendChild(backBtn);
+                footerEl.appendChild(reviewBtn);
+            } else if (step === 'courses') {
+                const backBtn = document.createElement('button');
+                backBtn.type = 'button';
+                backBtn.className = 'btn btn-ghost';
+                backBtn.textContent = 'Back';
+                backBtn.addEventListener('click', () => setStep('choice'));
+
+                const notNowBtn = document.createElement('button');
+                notNowBtn.type = 'button';
+                notNowBtn.className = 'btn btn-ghost js-close-focus-modal';
+                notNowBtn.textContent = 'Not now';
+
+                footerEl.appendChild(backBtn);
+                footerEl.appendChild(notNowBtn);
+            } else if (step === 'review') {
+                const editBtn = document.createElement('button');
+                editBtn.type = 'button';
+                editBtn.className = 'btn btn-ghost';
+                editBtn.textContent = 'Edit';
+                editBtn.addEventListener('click', () => {
+                    setStep(previousStep === 'school' ? 'school' : 'manual');
+                });
+
+                const useBtn = document.createElement('button');
+                useBtn.type = 'button';
+                useBtn.className = 'btn btn-primary';
+                useBtn.textContent = 'Use This Focus →';
+                useBtn.addEventListener('click', () => commitFocusSubmission());
+
+                footerEl.appendChild(editBtn);
+                footerEl.appendChild(useBtn);
+            }
+
+            // Re-bind close modal triggers inside dynamically generated footers
+            footerEl.querySelectorAll('.js-close-focus-modal').forEach(btn => {
+                btn.addEventListener('click', () => dismissModal());
+            });
+        }
+
+        // Manual Review preparation
+        function handleManualReview() {
+            const subject = (manualSubjectInput.value || '').trim();
+            if (!subject) {
+                manualSubjectInput.focus();
+                manualSubjectInput.reportValidity();
+                return;
+            }
+
+            // If user left text in newTopicInput without clicking add, include it
+            if (newTopicInput && newTopicInput.value.trim()) {
+                addTopic(newTopicInput.value.trim());
+            }
+
+            reviewSubjectTitle.textContent = subject;
+            const code = (manualCodeInput.value || '').trim();
+            reviewSubjectCode.textContent = code ? `(${code})` : '';
+            reviewSubjectCode.style.display = code ? 'inline' : 'none';
+
+            reviewScoreWrap.style.display = 'none';
+
+            // Topics list
+            reviewTopicsList.innerHTML = '';
+            if (activeTopics.length > 0) {
+                activeTopics.forEach(t => {
+                    const li = document.createElement('li');
+                    li.textContent = t;
+                    reviewTopicsList.appendChild(li);
+                });
+            } else {
+                const li = document.createElement('li');
+                li.textContent = 'General subject comprehension and practice';
+                reviewTopicsList.appendChild(li);
+            }
+
+            const reason = manualReasonSelect.value || 'Personal study focus';
+            const todayStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            reviewSourceLabel.textContent = `Personal Selection · ${todayStr} (${reason})`;
+
+            setStep('review');
+        }
+
+        // School Result Review preparation
+        function handleSchoolReview() {
+            // Check if user pasted JSON
+            const pasted = (pasteJsonTextarea && pasteJsonTextarea.value || '').trim();
+            if (pasted) {
+                try {
+                    parsedSchoolData = JSON.parse(pasted);
+                } catch (e) {
+                    alert('The pasted data is not valid JSON. Please check the format.');
+                    pasteJsonTextarea.focus();
+                    return;
+                }
+            }
+
+            if (!parsedSchoolData && (!schoolFileInput.files || !schoolFileInput.files[0])) {
+                alert('Please choose a school result file or paste assessment data.');
+                return;
+            }
+
+            // If we have parsed JSON, extract recommendation
+            if (parsedSchoolData && parsedSchoolData.subject_results && parsedSchoolData.subject_results.length > 0) {
+                // Find weakest subject
+                const weakest = parsedSchoolData.subject_results.reduce((min, cur) => cur.score < min.score ? cur : min, parsedSchoolData.subject_results[0]);
+                reviewSubjectTitle.textContent = weakest.subject_name;
+                reviewSubjectCode.textContent = weakest.subject_code ? `(${weakest.subject_code})` : '';
+                reviewSubjectCode.style.display = weakest.subject_code ? 'inline' : 'none';
+
+                reviewScoreWrap.style.display = 'block';
+                reviewScoreVal.textContent = Math.round(weakest.score) + '%';
+
+                reviewTopicsList.innerHTML = '';
+                const topics = (weakest.topics || []).map(t => typeof t === 'string' ? t : t.name).filter(Boolean);
+                if (topics.length > 0) {
+                    topics.forEach(t => {
+                        const li = document.createElement('li');
+                        li.textContent = t;
+                        reviewTopicsList.appendChild(li);
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = 'Core subject concepts and review topics';
+                    reviewTopicsList.appendChild(li);
+                }
+
+                const todayStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                reviewSourceLabel.textContent = `School Result · ${todayStr}`;
+                setStep('review');
+            } else {
+                // If parsing client-side was skipped (binary/unparsed file), submit directly to server recommendation review
+                formSchool.submit();
             }
         }
 
-        function showMenu() {
-            Object.values(panels).forEach(p => { if (p) p.style.display = 'none'; });
-            if (viewMenu) viewMenu.style.display = 'flex';
-            if (titleEl) titleEl.textContent = titles['menu'].title;
-            if (subtitleEl) subtitleEl.textContent = titles['menu'].sub;
+        // Commit Focus Submission
+        function commitFocusSubmission() {
+            if (previousStep === 'school') {
+                formSchool.submit();
+            } else {
+                formManual.submit();
+            }
         }
 
-        // Choice card clicks
-        document.querySelectorAll('.js-switch-focus-panel').forEach(btn => {
+        // Choice route clicks
+        document.querySelectorAll('.js-select-focus-route').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                const targetId = btn.getAttribute('data-target');
-                showPanel(targetId);
+                const route = btn.getAttribute('data-route');
+                setStep(route);
             });
         });
 
-        // Back to menu buttons
-        document.querySelectorAll('.js-back-to-focus-menu, .js-back-to-menu').forEach(btn => {
+        // "Focus Here" in course list
+        document.querySelectorAll('.js-pick-course-as-focus').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                showMenu();
+                const title = btn.getAttribute('data-title');
+                manualSubjectInput.value = title;
+                manualReasonSelect.value = 'School assessment result';
+                handleManualReview();
             });
         });
 
-        // Whenever modal is closed, reset to menu
+        // Dismiss Modal & Session Storage
+        function dismissModal() {
+            try {
+                sessionStorage.setItem('study_focus_dismissed', '1');
+            } catch (err) {}
+
+            modal.hidden = true;
+            modal.setAttribute('aria-hidden', 'true');
+            modal.classList.remove('is-open');
+            document.documentElement.classList.remove('modal-open');
+            document.body.classList.remove('modal-open');
+
+            // Restore focus
+            if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+                lastFocusedElement.focus();
+            }
+
+            // Reset back to initial choice step after fade
+            setTimeout(() => {
+                setStep('choice');
+            }, 250);
+        }
+
+        // Modal open triggers
+        function openModal() {
+            lastFocusedElement = document.activeElement;
+            modal.hidden = false;
+            modal.setAttribute('aria-hidden', 'false');
+            modal.classList.add('is-open');
+            document.documentElement.classList.add('modal-open');
+            document.body.classList.add('modal-open');
+
+            setStep('choice');
+
+            // Focus first interactive element
+            requestAnimationFrame(() => {
+                const firstChoice = modal.querySelector('.study-focus-choice-card');
+                if (firstChoice) firstChoice.focus();
+            });
+        }
+
+        document.querySelectorAll('.js-open-focus-modal').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                openModal();
+            });
+        });
+
         document.querySelectorAll('.js-close-focus-modal').forEach(btn => {
-            btn.addEventListener('click', () => {
-                setTimeout(showMenu, 250);
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                dismissModal();
             });
         });
+
+        // Backdrop click dismiss
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) dismissModal();
+        });
+
+        // Escape dismiss & Focus trapping
+        document.addEventListener('keydown', (e) => {
+            if (!modal.classList.contains('is-open') || modal.hidden) return;
+
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                dismissModal();
+                return;
+            }
+
+            if (e.key === 'Tab') {
+                const focusables = modal.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+                if (focusables.length === 0) return;
+                const first = focusables[0];
+                const last = focusables[focusables.length - 1];
+
+                if (e.shiftKey && document.activeElement === first) {
+                    e.preventDefault();
+                    last.focus();
+                } else if (!e.shiftKey && document.activeElement === last) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            }
+        });
+
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // Initial setup
+        setStep('choice');
     })();
 </script>

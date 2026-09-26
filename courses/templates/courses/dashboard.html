@@ -1347,35 +1347,17 @@
             document.body.classList.toggle('modal-open', anyOpen);
         }
 
-        // Focus Check-In Modal logic
-        if (focusModal) {
-            document.querySelectorAll('.js-open-focus-modal').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    setModalState(focusModal, true);
-                });
-            });
-
-            document.querySelectorAll('.js-close-focus-modal').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    setModalState(focusModal, false);
-                });
-            });
-
-            focusModal.addEventListener('click', (e) => {
-                if (e.target === focusModal) setModalState(focusModal, false);
-            });
-
-            {% if open_focus %}
-                // Auto-open if query param or pending focus
+        // Focus Check-In Modal Auto-Open
+        {% if open_focus %}
+            if (!sessionStorage.getItem('study_focus_dismissed')) {
                 requestAnimationFrame(() => {
-                    setModalState(focusModal, true);
-                    const schoolBtn = document.querySelector('.js-switch-focus-panel[data-target="panel-school-result"]');
+                    const trigger = document.querySelector('.js-open-focus-modal');
+                    if (trigger) trigger.click();
+                    const schoolBtn = document.querySelector('.js-select-focus-route[data-route="school"]');
                     if (schoolBtn) schoolBtn.click();
                 });
-            {% endif %}
-        }
+            }
+        {% endif %}
 
         // 3. Open Sponsor Modal (Triggered by desktop ad rail button or mobile strip)
         document.querySelectorAll('.open-sponsor-trigger, .sponsor-cta').forEach(btn => {

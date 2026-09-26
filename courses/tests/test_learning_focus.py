@@ -325,11 +325,13 @@ class LearningFocusViewTests(TestCase):
         self.assertContains(response, "Explore StudyQuest")
         self.assertNotContains(response, "Import Diagnostic Assessment")
         # Modal components
-        self.assertContains(response, "Let’s Find Your Study Focus")
+        self.assertContains(response, "STUDY FOCUS")
+        self.assertContains(response, "What would you like to focus on?")
         self.assertContains(response, "Use a School Result")
         self.assertContains(response, "Choose a Subject or Topic")
         self.assertContains(response, "Select From My Courses")
-        self.assertContains(response, "Not Sure Yet")
+        self.assertContains(response, "Review Your Study Focus")
+        self.assertContains(response, "Advanced import options")
 
     def test_annotate_course_chapters_with_focus(self):
         course = Course.objects.create(user=self.user, title="DevOps Fundamentals")
