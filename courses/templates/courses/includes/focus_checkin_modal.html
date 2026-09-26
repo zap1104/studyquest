@@ -127,8 +127,8 @@
                 {% endif %}
 
                 <!-- Quiet "Not now" Action -->
-                <div style="text-align: center; margin-top: 4px;">
-                    <button type="button" class="btn btn-ghost btn-sm js-close-focus-modal" style="color: var(--muted); font-size: 0.84rem; padding: 4px 14px;">
+                <div style="text-align: center; margin-top: 8px;">
+                    <button type="button" class="btn btn-ghost btn-sm js-close-focus-modal" style="color: var(--muted); font-size: 0.86rem; padding: 6px 18px; border-radius: 8px;">
                         Not now
                     </button>
                 </div>
@@ -309,7 +309,7 @@
         </div>
 
         <!-- ================= FIXED FOOTER ================= -->
-        <footer class="study-focus-modal__footer" id="study-focus-footer">
+        <footer class="study-focus-modal__footer" id="study-focus-footer" hidden style="display: none;">
             <!-- Dynamic Actions controlled by JavaScript -->
         </footer>
 
@@ -322,8 +322,8 @@
         width: min(720px, calc(100vw - 32px));
         max-height: min(86dvh, 760px);
 
-        display: grid;
-        grid-template-rows: auto minmax(0, 1fr) auto;
+        display: flex;
+        flex-direction: column;
 
         overflow: hidden;
 
@@ -335,6 +335,7 @@
     }
 
     .study-focus-modal__header {
+        flex-shrink: 0;
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
@@ -373,9 +374,10 @@
 
     /* Scroll only the body when necessary */
     .study-focus-modal__body {
+        flex: 1 1 auto;
         min-height: 0;
         overflow-y: auto;
-        padding: 20px 28px;
+        padding: 20px 28px 24px;
         overscroll-behavior: contain;
         scrollbar-gutter: stable;
     }
@@ -480,15 +482,20 @@
 
     /* Footer */
     .study-focus-modal__footer {
+        flex-shrink: 0;
         display: flex;
         align-items: center;
-        justify-content: flex-end;
+        justify-content: space-between;
         gap: 12px;
 
         padding: 18px 30px 24px;
 
         border-top: 1px solid var(--border);
         background: var(--surface);
+    }
+
+    .study-focus-modal__footer[hidden] {
+        display: none !important;
     }
 
     .study-focus-modal__footer .btn-primary {
@@ -731,13 +738,15 @@
             footerEl.innerHTML = '';
 
             if (step === 'choice') {
-                const notNowBtn = document.createElement('button');
-                notNowBtn.type = 'button';
-                notNowBtn.className = 'btn btn-ghost btn-sm js-close-focus-modal';
-                notNowBtn.style.color = 'var(--muted)';
-                notNowBtn.textContent = 'Not now';
-                footerEl.appendChild(notNowBtn);
-            } else if (step === 'manual') {
+                footerEl.hidden = true;
+                footerEl.style.display = 'none';
+                return;
+            }
+
+            footerEl.hidden = false;
+            footerEl.style.display = 'flex';
+
+            if (step === 'manual') {
                 const backBtn = document.createElement('button');
                 backBtn.type = 'button';
                 backBtn.className = 'btn btn-ghost';
