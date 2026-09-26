@@ -267,3 +267,4 @@ def generate_course_creation_prefill(focus: LearningFocus) -> Dict[str, Any]:
         "subject_name": focus.subject_name,
         "topic_names": focus.topic_names,
     }
+

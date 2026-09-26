@@ -1,0 +1,75 @@
+{% if active_focus %}
+<!-- Today's Study Focus Card -->
+<div class="card focus-dashboard-card" id="focus-card" style="
+    background: linear-gradient(135deg, rgba(117, 108, 243, 0.08) 0%, rgba(232, 163, 61, 0.06) 100%), var(--surface);
+    border: 1px solid rgba(117, 108, 243, 0.35);
+    border-radius: 16px;
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 16px;
+    text-align: left;
+    width: 100%;
+    box-sizing: border-box;
+">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span class="badge" style="background: rgba(117, 108, 243, 0.18); color: var(--primary); font-weight: 700; text-transform: uppercase; font-size: 0.70rem; letter-spacing: 0.05em; padding: 3px 8px; border-radius: 999px;">
+                    🎯 Today's Study Focus
+                </span>
+                {% if active_focus.initial_score is not None %}
+                    <span style="font-size: 0.75rem; font-weight: 700; color: var(--danger); background: rgba(239, 107, 115, 0.12); padding: 2px 8px; border-radius: 6px;">
+                        Diagnostic: {{ active_focus.initial_score|floatformat:0 }}%
+                    </span>
+                {% endif %}
+            </div>
+            <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0; color: var(--ink);">
+                {{ active_focus.subject_name }}
+                {% if active_focus.subject_code %}<span style="font-weight: 600; color: var(--muted); font-size: 0.95rem;">({{ active_focus.subject_code }})</span>{% endif %}
+            </h2>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 6px;">
+            <button type="button" class="btn btn-ghost btn-sm js-open-focus-modal" style="font-size: 0.78rem;">
+                Update
+            </button>
+            <form method="post" action="{% url 'courses:focus_dismiss' active_focus.pk %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-ghost btn-sm" style="font-size: 0.78rem; color: var(--muted);" title="Dismiss Focus">
+                    ✕
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Topics pills -->
+    {% if active_focus.topic_names %}
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;">
+            <span style="font-size: 0.76rem; color: var(--muted); align-self: center; font-weight: 600;">Priority:</span>
+            {% for topic in active_focus.topic_names %}
+                <span style="font-size: 0.76rem; font-weight: 600; background: rgba(232, 163, 61, 0.12); color: var(--gold); border: 1px solid rgba(232, 163, 61, 0.25); padding: 2px 8px; border-radius: 6px;">
+                    {{ topic }}
+                </span>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Action row -->
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        {% if active_focus.linked_course %}
+            <a href="{% url 'courses:course_detail' active_focus.linked_course.pk %}" class="btn btn-primary btn-sm">
+                Continue Focused Course →
+            </a>
+            <a href="{% url 'courses:focus_recommendation' active_focus.pk %}" class="btn btn-ghost btn-sm">
+                Focus Details
+            </a>
+        {% else %}
+            <a href="{% url 'courses:focus_recommendation' active_focus.pk %}" class="btn btn-primary btn-sm">
+                Connect Course or Materials →
+            </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+

@@ -357,4 +357,4 @@ class LearningFocus(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.user.username} Focus: {self.subject_name} ({self.status})"
+        return f"{self.user.username} Focus: {self.subject_name} ({self.status})"

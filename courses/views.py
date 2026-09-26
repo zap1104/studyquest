@@ -25,11 +25,26 @@ from .models import (
     ChapterCompletion,
     Choice,
     Course,
+    LearningFocus,
     Question,
     Quiz,
     QuizAttempt,
     UserCourseCompletion,
     UserProfile,
+)
+from .learning_focus_service import (
+    validate_external_assessment_payload,
+    import_external_assessment,
+    create_manual_learning_focus,
+    activate_learning_focus,
+    dismiss_learning_focus,
+    complete_learning_focus,
+    link_focus_to_course,
+    get_active_learning_focus,
+    get_pending_learning_focus,
+    find_matching_courses,
+    generate_course_creation_prefill,
+    DiagnosticPayloadError,
 )
 from .dashboard_service import (
     get_dashboard_next_action,
@@ -253,6 +268,9 @@ def dashboard(request):
     achievement_preview = get_achievement_preview(request.user)
     eligibility = get_generation_eligibility(profile)
 
+    active_focus = get_active_learning_focus(request.user)
+    pending_focus = get_pending_learning_focus(request.user)
+
     return render(request, "courses/dashboard.html", {
         "profile": profile,
         "tier_info": tier_info,
@@ -263,6 +281,9 @@ def dashboard(request):
         "weekly_momentum": weekly_momentum,
         "achievement_preview": achievement_preview,
         "eligibility": eligibility,
+        "active_focus": active_focus,
+        "pending_focus": pending_focus,
+        "open_focus": request.GET.get("open_focus") == "1" or bool(pending_focus),
     })
 
 
@@ -293,10 +314,26 @@ def course_create(request):
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
     eligibility = get_generation_eligibility(profile)
 
+    focus_id = request.GET.get("focus_id") or request.POST.get("focus_id")
+    learning_focus = None
+    initial_title = ""
+    initial_focus = ""
+
+    if focus_id:
+        learning_focus = LearningFocus.objects.filter(pk=focus_id, user=request.user).first()
+        if learning_focus:
+            prefill = generate_course_creation_prefill(learning_focus)
+            initial_title = prefill.get("title", "")
+            initial_focus = prefill.get("review_emphasis", "")[:100]
+
     if request.method == "GET":
         return render(request, "courses/course_form.html", {
             "eligibility": eligibility,
             "profile": profile,
+            "custom_title": initial_title,
+            "study_focus": initial_focus,
+            "focus_id": focus_id,
+            "learning_focus": learning_focus,
         })
 
     if request.method == "POST":
@@ -304,7 +341,7 @@ def course_create(request):
             return render(
                 request,
                 "courses/course_form.html",
-                {"eligibility": eligibility, "profile": profile},
+                {"eligibility": eligibility, "profile": profile, "focus_id": focus_id, "learning_focus": learning_focus},
                 status=403,
             )
 
@@ -324,6 +361,8 @@ def course_create(request):
                 "generation_error": "Please select at least one study file to generate a course.",
                 "custom_title": custom_title,
                 "study_focus": study_focus,
+                "focus_id": focus_id,
+                "learning_focus": learning_focus,
             })
 
         if len(content_files) > 3:
@@ -334,6 +373,8 @@ def course_create(request):
                 "generation_error": "You can upload a maximum of 3 files per course.",
                 "custom_title": custom_title,
                 "study_focus": study_focus,
+                "focus_id": focus_id,
+                "learning_focus": learning_focus,
             })
 
         preference_data = {
@@ -351,6 +392,8 @@ def course_create(request):
                 "generation_error": "The selected study settings were invalid.",
                 "custom_title": custom_title,
                 "study_focus": study_focus,
+                "focus_id": focus_id,
+                "learning_focus": learning_focus,
             })
 
         dummy_course = Course(title=custom_title or "Untitled Course", user=request.user)
@@ -375,6 +418,11 @@ def course_create(request):
                     custom_title=custom_title,
                 )
                 consume_generation_credit(request.user, course)
+                if focus_id:
+                    target_focus = LearningFocus.objects.filter(pk=focus_id, user=request.user).first()
+                    if target_focus:
+                        link_focus_to_course(target_focus, course)
+                        activate_learning_focus(target_focus)
 
             return redirect("courses:course_detail", pk=course.pk)
 
@@ -390,6 +438,8 @@ def course_create(request):
                 "max_chars": err.max_chars,
                 "custom_title": custom_title,
                 "study_focus": study_focus,
+                "focus_id": focus_id,
+                "learning_focus": learning_focus,
             })
         except CourseGenerationError as err:
             logger.error(f"[Course Generation Pipeline Interrupted]: {err}")
@@ -400,6 +450,8 @@ def course_create(request):
                 "generation_error": str(err),
                 "custom_title": custom_title,
                 "study_focus": study_focus,
+                "focus_id": focus_id,
+                "learning_focus": learning_focus,
             })
         except Exception as error:
             logger.error(f"[Course Generation Failed Unexpectedly]: {repr(error)}")
@@ -410,6 +462,8 @@ def course_create(request):
                 "generation_error": "Course generation encountered an unexpected error. Please try again.",
                 "custom_title": custom_title,
                 "study_focus": study_focus,
+                "focus_id": focus_id,
+                "learning_focus": learning_focus,
             })
 
 
@@ -1007,3 +1061,105 @@ def leaderboard_view(request):
         "total_learners": standings_data["total_learners"],
     }
     return render(request, "courses/leaderboard.html", context)
+
+
+# --------------------------------------------------
+# 7. DIAGNOSTIC FOCUS & EXTERNAL ASSESSMENT INTEGRATION
+# --------------------------------------------------
+@login_required
+def focus_checkin(request):
+    """Handles manual focus creation or JSON upload/paste from an external diagnostic system."""
+    if request.method == "POST":
+        assessment_file = request.FILES.get("assessment_file")
+        raw_json = request.POST.get("assessment_json", "").strip()
+
+        # 1. JSON Import Pathway
+        if assessment_file or raw_json:
+            try:
+                if assessment_file:
+                    payload = json.loads(assessment_file.read().decode("utf-8"))
+                else:
+                    payload = json.loads(raw_json)
+
+                focus, created, msg = import_external_assessment(request.user, payload)
+                messages.success(request, msg)
+                return redirect("courses:focus_recommendation", pk=focus.pk)
+            except json.JSONDecodeError:
+                messages.error(request, "Invalid JSON file or text. Please check the format.")
+                return redirect("courses:dashboard")
+            except DiagnosticPayloadError as e:
+                messages.error(request, f"Assessment format error: {e}")
+                return redirect("courses:dashboard")
+            except Exception as e:
+                logger.error(f"Error importing diagnostic assessment: {e}")
+                messages.error(request, "Could not import assessment result.")
+                return redirect("courses:dashboard")
+
+        # 2. Manual Selection Pathway
+        subject_name = request.POST.get("subject_name", "").strip()
+        if subject_name:
+            raw_topics = request.POST.get("topic_names", "")
+            topic_names = [t.strip() for t in raw_topics.split(",") if t.strip()]
+            subject_code = request.POST.get("subject_code", "").strip()
+            reason = request.POST.get("reason", "").strip()
+
+            focus = create_manual_learning_focus(
+                user=request.user,
+                subject_name=subject_name,
+                topic_names=topic_names,
+                subject_code=subject_code,
+                reason=reason,
+                activate=True,
+            )
+            messages.success(request, f"Study focus set to {focus.subject_name}!")
+            return redirect("courses:focus_recommendation", pk=focus.pk)
+
+        messages.warning(request, "Please enter a subject name or upload an assessment file.")
+        return redirect("courses:dashboard")
+
+    return redirect("/?open_focus=1")
+
+
+@login_required
+def focus_recommendation(request, pk):
+    """Presents the approved/recommended study focus, showing matching courses and creation options."""
+    focus = get_object_or_404(LearningFocus, pk=pk, user=request.user)
+    matching_courses = find_matching_courses(request.user, focus)
+
+    return render(request, "courses/focus_recommendation.html", {
+        "focus": focus,
+        "matching_courses": matching_courses,
+        "prefill": generate_course_creation_prefill(focus),
+    })
+
+
+@login_required
+@require_POST
+def focus_activate(request, pk):
+    """Approves and activates a pending or inactive LearningFocus."""
+    focus = get_object_or_404(LearningFocus, pk=pk, user=request.user)
+    activate_learning_focus(focus)
+    messages.success(request, f"Activated study focus for {focus.subject_name}!")
+    return redirect("courses:focus_recommendation", pk=focus.pk)
+
+
+@login_required
+@require_POST
+def focus_dismiss(request, pk):
+    """Dismisses a LearningFocus so it stops appearing on the dashboard."""
+    focus = get_object_or_404(LearningFocus, pk=pk, user=request.user)
+    dismiss_learning_focus(focus)
+    messages.info(request, "Study focus dismissed.")
+    return redirect("courses:dashboard")
+
+
+@login_required
+@require_POST
+def focus_link_course(request, pk, course_id):
+    """Links a LearningFocus to an existing course."""
+    focus = get_object_or_404(LearningFocus, pk=pk, user=request.user)
+    course = get_object_or_404(Course, pk=course_id, user=request.user)
+    link_focus_to_course(focus, course)
+    activate_learning_focus(focus)
+    messages.success(request, f"Connected focus '{focus.subject_name}' to course '{course.title}'!")
+    return redirect("courses:course_detail", pk=course.pk)

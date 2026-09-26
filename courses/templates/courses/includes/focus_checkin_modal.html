@@ -1,0 +1,162 @@
+<!-- ================= FOCUS CHECK-IN MODAL ================= -->
+<div class="focus-modal-backdrop" id="focus-modal" hidden aria-hidden="true" style="
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    background: rgba(10, 8, 6, 0.78);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+">
+    <div class="focus-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="focus-modal-title" style="
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        width: 100%;
+        max-width: 540px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: focusModalFadeIn 0.22s ease-out;
+    ">
+        <!-- Header -->
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; padding: 20px 24px 16px; border-bottom: 1px solid var(--border);">
+            <div>
+                <span class="badge" style="background: rgba(117, 108, 243, 0.15); color: var(--primary); font-weight: 700; text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.05em; padding: 3px 8px; border-radius: 999px;">
+                    Academic Focus
+                </span>
+                <h2 id="focus-modal-title" style="font-size: 1.25rem; font-weight: 800; margin: 8px 0 2px; color: var(--ink);">
+                    Choose Your Study Focus
+                </h2>
+                <p style="margin: 0; font-size: 0.84rem; color: var(--muted); line-height: 1.4;">
+                    Target your weakest subject or import an assessment result.
+                </p>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm js-close-focus-modal" aria-label="Close" style="padding: 4px 8px; font-size: 1.2rem; line-height: 1;">
+                ✕
+            </button>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div style="display: flex; padding: 12px 24px 0; gap: 8px; background: rgba(0, 0, 0, 0.08); border-bottom: 1px solid var(--border);">
+            <button type="button" id="tab-btn-import" class="focus-tab-btn is-active" style="
+                background: transparent;
+                border: none;
+                border-bottom: 2px solid var(--primary);
+                color: var(--primary);
+                font-weight: 700;
+                font-size: 0.85rem;
+                padding: 8px 12px 10px;
+                cursor: pointer;
+            ">
+                📄 Import Assessment
+            </button>
+            <button type="button" id="tab-btn-manual" class="focus-tab-btn" style="
+                background: transparent;
+                border: none;
+                border-bottom: 2px solid transparent;
+                color: var(--muted);
+                font-weight: 700;
+                font-size: 0.85rem;
+                padding: 8px 12px 10px;
+                cursor: pointer;
+            ">
+                ✍️ Manual Selection
+            </button>
+        </div>
+
+        <!-- Form Body -->
+        <div style="padding: 20px 24px; overflow-y: auto; max-height: calc(85vh - 160px);">
+            
+            <!-- Panel 1: Import Assessment -->
+            <form method="post" action="{% url 'courses:focus_checkin' %}" enctype="multipart/form-data" id="panel-import" class="focus-tab-panel">
+                {% csrf_token %}
+                <p style="font-size: 0.82rem; color: var(--muted); margin-top: 0; margin-bottom: 14px;">
+                    Upload the diagnostic JSON export from your school's assessment system.
+                </p>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 6px; color: var(--ink);">
+                        Assessment File (.json)
+                    </label>
+                    <input type="file" name="assessment_file" accept=".json,application/json" class="forge-input" style="padding: 8px 12px; font-size: 0.85rem;">
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 6px; color: var(--ink);">
+                        Or Paste JSON Payload
+                    </label>
+                    <textarea name="assessment_json" rows="4" placeholder='{"schema_version": "1.0", "external_assessment_id": "...", "subject_results": [...]}' class="forge-input" style="font-family: monospace; font-size: 0.78rem; resize: vertical;"></textarea>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+                    <button type="button" class="btn btn-ghost btn-sm js-close-focus-modal">Not Now</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Import & Review Focus →</button>
+                </div>
+            </form>
+
+            <!-- Panel 2: Manual Selection -->
+            <form method="post" action="{% url 'courses:focus_checkin' %}" id="panel-manual" class="focus-tab-panel" style="display: none;">
+                {% csrf_token %}
+                <p style="font-size: 0.82rem; color: var(--muted); margin-top: 0; margin-bottom: 14px;">
+                    Select the subject and specific topics you want to practice and reinforce.
+                </p>
+
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 6px; color: var(--ink);">
+                        Subject Name <span style="color: var(--danger);">*</span>
+                    </label>
+                    <input type="text" name="subject_name" required placeholder="e.g. Systems Integration and Architecture" class="forge-input" style="padding: 8px 12px; font-size: 0.88rem;">
+                </div>
+
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 6px; color: var(--ink);">
+                        Subject Code (Optional)
+                    </label>
+                    <input type="text" name="subject_code" placeholder="e.g. SIA" class="forge-input" style="padding: 8px 12px; font-size: 0.88rem;">
+                </div>
+
+                <div style="margin-bottom: 14px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 6px; color: var(--ink);">
+                        Priority Topics (Comma-separated)
+                    </label>
+                    <input type="text" name="topic_names" placeholder="e.g. Tool Sprawl, Architecture Governance" class="forge-input" style="padding: 8px 12px; font-size: 0.88rem;">
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 6px; color: var(--ink);">
+                        Reason for Focus
+                    </label>
+                    <select name="reason" class="forge-input" style="padding: 8px 12px; font-size: 0.85rem;">
+                        <option value="Low assessment score">Low assessment score</option>
+                        <option value="Upcoming examination">Upcoming examination</option>
+                        <option value="Difficult lesson">Difficult lesson</option>
+                        <option value="Instructor recommendation">Instructor recommendation</option>
+                        <option value="Personal review">Personal review</option>
+                    </select>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px;">
+                    <button type="button" class="btn btn-ghost btn-sm js-close-focus-modal">Not Now</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Set Study Focus</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    @keyframes focusModalFadeIn {
+        from { opacity: 0; transform: scale(0.97) translateY(8px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .focus-modal-backdrop.is-open {
+        display: flex !important;
+    }
+</style>
+

@@ -185,3 +185,133 @@ class LearningFocusServiceTests(TestCase):
         self.assertIn("Deadlocks, Memory Paging", prefill["review_emphasis"])
         self.assertIn("48%", prefill["review_emphasis"])
         self.assertEqual(prefill["focus_id"], focus.id)
+
+
+class LearningFocusViewTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="student1", password="password123")
+        self.client.login(username="student1", password="password123")
+        self.sample_payload = {
+            "schema_version": "1.0",
+            "external_assessment_id": "assessment-view-001",
+            "student_reference": "23-22-040",
+            "assessment_title": "BSIT Diagnostic Assessment",
+            "subject_results": [
+                {
+                    "subject_code": "SIA",
+                    "subject_name": "Systems Integration and Architecture",
+                    "score": 55,
+                    "weak_topics": [
+                        {"topic": "Tool Sprawl"},
+                        {"topic": "Architecture Governance"},
+                    ],
+                }
+            ],
+            "recommended_focus": {
+                "subject_code": "SIA",
+                "topics": ["Tool Sprawl", "Architecture Governance"],
+            },
+        }
+
+    def test_dashboard_displays_active_focus(self):
+        create_manual_learning_focus(
+            self.user,
+            subject_name="Enterprise Systems",
+            topic_names=["SOA", "Microservices"],
+            subject_code="ES101",
+        )
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Enterprise Systems")
+        self.assertContains(response, "SOA")
+        self.assertContains(response, "Study Focus")
+        self.assertIn("Today's Study Focus", response.content.decode())
+
+    def test_dashboard_displays_active_focus_with_courses(self):
+        from courses.models import Course, Chapter
+        course = Course.objects.create(
+            user=self.user,
+            title="Software Architecture",
+        )
+        Chapter.objects.create(
+            course=course,
+            title="Intro to Arch",
+            order=1,
+            review_content="Content",
+        )
+        create_manual_learning_focus(
+            self.user,
+            subject_name="Cloud Computing",
+            topic_names=["Serverless", "Containers"],
+            subject_code="CS402",
+        )
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Cloud Computing")
+        self.assertContains(response, "Serverless")
+        self.assertIn("Today's Study Focus", response.content.decode())
+
+    def test_focus_checkin_json_post(self):
+        import json
+        response = self.client.post("/focus/checkin/", {
+            "assessment_json": json.dumps(self.sample_payload)
+        })
+        self.assertEqual(response.status_code, 302)
+        focus = LearningFocus.objects.filter(user=self.user, external_assessment_id="assessment-view-001").first()
+        self.assertIsNotNone(focus)
+        self.assertEqual(focus.status, LearningFocus.STATUS_PENDING)
+        self.assertIn(f"/focus/{focus.id}/recommendation/", response.url)
+
+    def test_focus_checkin_manual_post(self):
+        response = self.client.post("/focus/checkin/", {
+            "subject_name": "Network Security",
+            "topic_names": "Firewalls, Encryption",
+            "subject_code": "NETSEC",
+            "reason": "Upcoming examination",
+        })
+        self.assertEqual(response.status_code, 302)
+        focus = LearningFocus.objects.filter(user=self.user, subject_name="Network Security").first()
+        self.assertIsNotNone(focus)
+        self.assertEqual(focus.status, LearningFocus.STATUS_ACTIVE)
+        self.assertEqual(len(focus.topic_names), 2)
+
+    def test_focus_activate_view(self):
+        focus, _, _ = import_external_assessment(self.user, self.sample_payload)
+        self.assertEqual(focus.status, LearningFocus.STATUS_PENDING)
+
+        response = self.client.post(f"/focus/{focus.id}/activate/")
+        self.assertEqual(response.status_code, 302)
+        focus.refresh_from_db()
+        self.assertEqual(focus.status, LearningFocus.STATUS_ACTIVE)
+
+    def test_focus_dismiss_view(self):
+        focus = create_manual_learning_focus(self.user, "Software Engineering")
+        self.assertEqual(focus.status, LearningFocus.STATUS_ACTIVE)
+
+        response = self.client.post(f"/focus/{focus.id}/dismiss/")
+        self.assertEqual(response.status_code, 302)
+        focus.refresh_from_db()
+        self.assertEqual(focus.status, LearningFocus.STATUS_DISMISSED)
+
+    def test_focus_link_course_view(self):
+        focus = create_manual_learning_focus(self.user, "Information Security")
+        course = Course.objects.create(user=self.user, title="InfoSec Course")
+
+        response = self.client.post(f"/focus/{focus.id}/link-course/{course.id}/")
+        self.assertEqual(response.status_code, 302)
+        focus.refresh_from_db()
+        self.assertEqual(focus.linked_course, course)
+
+    def test_course_create_prefill_with_focus_id(self):
+        focus = create_manual_learning_focus(
+            self.user,
+            "Systems Architecture",
+            topic_names=["Cloud Migration", "Kubernetes"],
+        )
+        response = self.client.get(f"/courses/new/?focus_id={focus.id}")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Focus Mode Active")
+        self.assertContains(response, "Systems Architecture Focus Review")
+        self.assertContains(response, "Cloud Migration, Kubernetes")
+
+

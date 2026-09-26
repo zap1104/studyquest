@@ -978,15 +978,22 @@
                     </div>
                 </div>
 
-                <div class="streak-status-pill streak-{{ streak_status.status }}">
-                    <span class="streak-icon">{{ streak_status.icon }}</span>
-                    <span class="streak-message">{{ streak_status.message }}</span>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-ghost btn-sm js-open-focus-modal" style="display: inline-flex; align-items: center; gap: 6px; border: 1px dashed var(--border); font-size: 0.8rem; padding: 6px 12px; border-radius: 999px;">
+                        🎯 {% if active_focus %}Focus: {{ active_focus.subject_name|truncatechars:18 }}{% else %}Set Study Focus{% endif %}
+                    </button>
+                    <div class="streak-status-pill streak-{{ streak_status.status }}">
+                        <span class="streak-icon">{{ streak_status.icon }}</span>
+                        <span class="streak-message">{{ streak_status.message }}</span>
+                    </div>
                 </div>
             </section>
 
             <!-- ZONE 2: PRIMARY ACTION STAGE -->
             <div class="dashboard-grid">
                 <div class="dashboard-primary">
+
+                    {% include 'courses/includes/focus_card.html' %}
 
                     <!-- Next in Your Course Card -->
                     <div class="next-action-card state-{{ next_action.state }}">
@@ -1180,7 +1187,10 @@
 
 {% else %}
     <!-- Zero Courses Onboarding State -->
-    <div class="prologue-stage">
+    <div class="prologue-stage" style="flex-direction: column; gap: 20px;">
+        <div style="width: 100%; max-width: 960px;">
+            {% include 'courses/includes/focus_card.html' %}
+        </div>
         <div class="prologue-card">
             <div class="prologue-visual">
                 <img src="{% static 'courses/images/mascot_welcome.png' %}" alt="StudyQuest Student Mascot" class="prologue-mascot-img">
@@ -1191,10 +1201,13 @@
                 <p class="prologue-subtext">
                     Transform your syllabus, module slides, and lecture notes into a structured study path.
                 </p>
-                <div class="prologue-cta-wrap">
-                    <a href="{% url 'courses:course_create' %}" class="btn btn-primary btn-chunky prologue-cta">
+                <div class="prologue-cta-wrap" style="display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap;">
+                    <a href="{% url 'courses:course_create' %}" class="btn btn-primary btn-chunky prologue-cta" style="width: auto; flex: 1; min-width: 200px;">
                         Create Your First Course &rarr;
                     </a>
+                    <button type="button" class="btn btn-ghost js-open-focus-modal" style="font-size: 0.85rem; padding: 12px 18px; border-radius: 999px; border: 1px dashed var(--border); width: auto;">
+                        🎯 Import Diagnostic Assessment
+                    </button>
                 </div>
             </div>
         </div>
@@ -1281,6 +1294,8 @@
     </div>
 {% endif %}
 
+{% include 'courses/includes/focus_checkin_modal.html' %}
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         // 1. Progress Bar Fills
@@ -1293,6 +1308,7 @@
 
         const sponsorModal = document.getElementById('demo-sponsor-modal');
         const planModal = document.getElementById('plus-preview-modal');
+        const focusModal = document.getElementById('focus-modal');
 
         function setModalState(modal, isOpen) {
             if (!modal) return;
@@ -1305,9 +1321,67 @@
                 modal.setAttribute('hidden', '');
             }
 
-            const anyOpen = document.querySelectorAll('.sponsor-modal-backdrop.is-open:not([hidden])').length > 0;
+            const anyOpen = document.querySelectorAll('.sponsor-modal-backdrop.is-open:not([hidden]), .focus-modal-backdrop.is-open:not([hidden])').length > 0;
             document.documentElement.classList.toggle('modal-open', anyOpen);
             document.body.classList.toggle('modal-open', anyOpen);
+        }
+
+        // Focus Check-In Modal logic
+        if (focusModal) {
+            document.querySelectorAll('.js-open-focus-modal').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    setModalState(focusModal, true);
+                });
+            });
+
+            document.querySelectorAll('.js-close-focus-modal').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    setModalState(focusModal, false);
+                });
+            });
+
+            focusModal.addEventListener('click', (e) => {
+                if (e.target === focusModal) setModalState(focusModal, false);
+            });
+
+            // Tab switching
+            const tabImport = document.getElementById('tab-btn-import');
+            const tabManual = document.getElementById('tab-btn-manual');
+            const panelImport = document.getElementById('panel-import');
+            const panelManual = document.getElementById('panel-manual');
+
+            if (tabImport && tabManual && panelImport && panelManual) {
+                tabImport.addEventListener('click', () => {
+                    tabImport.classList.add('is-active');
+                    tabImport.style.borderBottomColor = 'var(--primary)';
+                    tabImport.style.color = 'var(--primary)';
+                    tabManual.classList.remove('is-active');
+                    tabManual.style.borderBottomColor = 'transparent';
+                    tabManual.style.color = 'var(--muted)';
+                    panelImport.style.display = 'block';
+                    panelManual.style.display = 'none';
+                });
+
+                tabManual.addEventListener('click', () => {
+                    tabManual.classList.add('is-active');
+                    tabManual.style.borderBottomColor = 'var(--primary)';
+                    tabManual.style.color = 'var(--primary)';
+                    tabImport.classList.remove('is-active');
+                    tabImport.style.borderBottomColor = 'transparent';
+                    tabImport.style.color = 'var(--muted)';
+                    panelManual.style.display = 'block';
+                    panelImport.style.display = 'none';
+                });
+            }
+
+            {% if open_focus %}
+                // Auto-open if query param or pending focus
+                requestAnimationFrame(() => {
+                    setModalState(focusModal, true);
+                });
+            {% endif %}
         }
 
         // 3. Open Sponsor Modal (Triggered by desktop ad rail button or mobile strip)
@@ -1357,6 +1431,7 @@
             if (e.key === 'Escape') {
                 setModalState(sponsorModal, false);
                 setModalState(planModal, false);
+                if (focusModal) setModalState(focusModal, false);
             }
         });
     });
