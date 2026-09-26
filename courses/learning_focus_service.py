@@ -356,6 +356,7 @@ def calculate_focus_mastery(focus: LearningFocus) -> Dict[str, Any]:
         chapter_details.append({
             "id": chap.id,
             "title": chap.title,
+            "review_content": chap.review_content or "",
             "best_percentage": best_pct,
             "is_passed": is_passed,
         })
@@ -367,6 +368,25 @@ def calculate_focus_mastery(focus: LearningFocus) -> Dict[str, Any]:
     if focus.initial_score is not None and scores:
         gain = round(average_score - float(focus.initial_score), 1)
 
+    strengthened_topics = []
+    unresolved_topics = []
+    for topic in (focus.topic_names or []):
+        t_lower = topic.lower()
+        ch_for_topic = [
+            c for c in chapter_details
+            if t_lower in c["title"].lower() or t_lower in (c.get("review_content") or "").lower()
+        ]
+        if ch_for_topic and all(c["is_passed"] for c in ch_for_topic):
+            strengthened_topics.append(topic)
+        else:
+            unresolved_topics.append(topic)
+
+    if not focus.topic_names:
+        if is_mastered:
+            strengthened_topics.append(focus.subject_name)
+        else:
+            unresolved_topics.append(focus.subject_name)
+
     return {
         "has_course": True,
         "is_mastered": is_mastered,
@@ -376,6 +396,88 @@ def calculate_focus_mastery(focus: LearningFocus) -> Dict[str, Any]:
         "diagnostic_baseline": focus.initial_score,
         "gain": gain,
         "chapter_details": chapter_details,
+        "strengthened_topics": strengthened_topics,
+        "unresolved_topics": unresolved_topics,
+    }
+
+
+def get_focus_remediation_recommendations(user, focus: Optional[LearningFocus]) -> Dict[str, Any]:
+    """Computes server-authoritative remediation recommendations for an active focus (DF-5)."""
+    if not focus or not focus.linked_course:
+        return {
+            "has_recommendation": False,
+            "action_type": "connect_course",
+            "title": "Connect Course",
+            "reason": "Connect an existing course or upload materials to start practicing.",
+            "button_label": "Connect Materials →",
+            "url": f"/focus/{focus.id}/recommendation/" if focus else "/courses/new/",
+        }
+
+    course = focus.linked_course
+    chapters = list(course.chapters.select_related("quiz").all())
+    topics = [t.lower() for t in (focus.topic_names or []) if str(t).strip()]
+
+    target_chapters = []
+    for chap in chapters:
+        if topics:
+            c_text = f"{chap.title} {chap.review_content or ''}".lower()
+            if any(t in c_text for t in topics):
+                target_chapters.append(chap)
+        else:
+            target_chapters.append(chap)
+
+    if not target_chapters:
+        target_chapters = chapters
+
+    # 1. Check for unresolved review run questions on focus quizzes
+    unresolved_total = 0
+    quizzes = [chap.quiz for chap in target_chapters if getattr(chap, "quiz", None)]
+    try:
+        from dungeon.services import get_unresolved_counts_for_quizzes
+        counts = get_unresolved_counts_for_quizzes(user, quizzes)
+        unresolved_total = sum(counts.values())
+    except Exception:
+        pass
+
+    if unresolved_total > 0:
+        topic_preview = ", ".join(focus.topic_names[:2]) if focus.topic_names else focus.subject_name
+        return {
+            "has_recommendation": True,
+            "action_type": "review_run",
+            "title": "Review Run",
+            "reason": f"{unresolved_total} question{'s' if unresolved_total > 1 else ''} about {topic_preview} still need{'s' if unresolved_total == 1 else ''} attention.",
+            "button_label": "Start Review Run →",
+            "url": "/dungeon/",
+        }
+
+    # 2. Check for chapters that haven't been passed (>=80%)
+    for chap in target_chapters:
+        attempts = QuizAttempt.objects.filter(user=user, quiz__chapter=chap)
+        best_pct = 0.0
+        for att in attempts:
+            pct = (att.review_data or {}).get("percentage")
+            if pct is None:
+                pct = (att.score / att.total_questions * 100) if att.total_questions > 0 else 0
+            if pct > best_pct:
+                best_pct = float(pct)
+        if best_pct < 80.0:
+            return {
+                "has_recommendation": True,
+                "action_type": "chapter_review",
+                "title": "Chapter Review",
+                "reason": f"Review key concepts in {chap.title} before taking your knowledge check.",
+                "button_label": "Review Materials First →",
+                "url": f"/chapters/{chap.id}/review/",
+            }
+
+    # 3. All focus targets passed -> Dungeon Quest Expedition
+    return {
+        "has_recommendation": True,
+        "action_type": "dungeon_quest",
+        "title": "Dungeon Expedition",
+        "reason": "All focus chapters mastered! Test your long-term recall in Dungeon Quest.",
+        "button_label": "Enter Dungeon Quest →",
+        "url": "/dungeon/",
     }
 
 

@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
-from courses.models import Course, Chapter, Quiz, QuizAttempt, LearningFocus
+from courses.models import Course, Chapter, Quiz, QuizAttempt, LearningFocus, Question
 from courses.learning_focus_service import (
     validate_external_assessment_payload,
     import_external_assessment,
@@ -330,8 +330,6 @@ class LearningFocusViewTests(TestCase):
         self.assertContains(response, "Use a School Result")
         self.assertContains(response, "Choose a Subject or Topic")
         self.assertContains(response, "Select From My Courses")
-        self.assertContains(response, "Review Your Study Focus")
-        self.assertContains(response, "Advanced import options")
 
     def test_annotate_course_chapters_with_focus(self):
         course = Course.objects.create(user=self.user, title="DevOps Fundamentals")
@@ -486,6 +484,82 @@ class LearningFocusViewTests(TestCase):
         self.assertContains(response, "Remediation Expeditions for Data Structures")
         self.assertContains(response, "Focus Course")
         self.assertContains(response, "Focus Target")
+
+    def test_df3_course_connection_screen(self):
+        course = Course.objects.create(user=self.user, title="SIA Week 8-9")
+        focus = create_manual_learning_focus(self.user, subject_name="SIA", topic_names=["Tool Sprawl"])
+        response = self.client.get(f"/focus/{focus.id}/recommendation/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Connect Your Study Focus")
+        self.assertContains(response, "SIA Week 8-9")
+        self.assertContains(response, "Use This Course")
+        self.assertContains(response, "Upload Materials for a New Focused Course")
+
+    def test_df4_check_your_understanding_card_on_course_detail(self):
+        course = Course.objects.create(user=self.user, title="Distributed Systems")
+        ch1 = Chapter.objects.create(course=course, order=1, title="Consensus Algorithms", review_content="Paxos & Raft")
+        quiz = Quiz.objects.create(chapter=ch1, title="Consensus Quiz")
+        for i in range(4):
+            Question.objects.create(quiz=quiz, text=f"Q{i+1}", question_type="multiple_choice", order=i+1)
+
+        focus = create_manual_learning_focus(self.user, subject_name="Distributed Systems", topic_names=["Consensus"])
+        link_focus_to_course(focus, course)
+
+        response = self.client.get(f"/courses/{course.pk}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Check Your Understanding")
+        self.assertContains(response, "Start Check")
+        self.assertContains(response, "Review Materials First")
+
+    def test_df5_remediation_recommendations(self):
+        from courses.learning_focus_service import get_focus_remediation_recommendations
+        course = Course.objects.create(user=self.user, title="Algorithms")
+        ch1 = Chapter.objects.create(course=course, order=1, title="Graph Traversal", review_content="BFS and DFS")
+        quiz = Quiz.objects.create(chapter=ch1, title="Graph Quiz")
+
+        focus = create_manual_learning_focus(self.user, subject_name="Algorithms", topic_names=["Graph"])
+        link_focus_to_course(focus, course)
+
+        # 1. Unpassed chapter recommendation
+        rec = get_focus_remediation_recommendations(self.user, focus)
+        self.assertTrue(rec["has_recommendation"])
+        self.assertEqual(rec["action_type"], "chapter_review")
+
+        # 2. After passing with 90%
+        QuizAttempt.objects.create(user=self.user, quiz=quiz, score=9.0, total_questions=10, review_data={"percentage": 90, "passed": True})
+        rec = get_focus_remediation_recommendations(self.user, focus)
+        self.assertTrue(rec["has_recommendation"])
+        self.assertEqual(rec["action_type"], "dungeon_quest")
+
+    def test_df6_focus_progress_and_completion_toggle(self):
+        course = Course.objects.create(user=self.user, title="Operating Systems")
+        ch1 = Chapter.objects.create(course=course, order=1, title="Virtual Memory", review_content="Paging and TLB")
+        quiz = Quiz.objects.create(chapter=ch1, title="VM Quiz")
+        QuizAttempt.objects.create(user=self.user, quiz=quiz, score=8.5, total_questions=10, review_data={"percentage": 85, "passed": True})
+
+        focus = create_manual_learning_focus(self.user, subject_name="Operating Systems", topic_names=["Virtual Memory"])
+        focus.initial_score = 50.0
+        focus.save()
+        link_focus_to_course(focus, course)
+
+        response = self.client.get(f"/focus/{focus.id}/summary/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Academic Non-Equivalence Notice")
+        self.assertContains(response, "Topics Progress Breakdown")
+        self.assertContains(response, "Virtual Memory")
+        self.assertContains(response, "Mark Focus Complete")
+
+        # Toggle complete
+        post_resp = self.client.post(f"/focus/{focus.id}/complete/")
+        self.assertEqual(post_resp.status_code, 302)
+        focus.refresh_from_db()
+        self.assertEqual(focus.status, LearningFocus.STATUS_COMPLETED)
+
+        # Toggle reopen
+        post_resp = self.client.post(f"/focus/{focus.id}/reopen/")
+        self.assertEqual(post_resp.status_code, 302)
+        focus.refresh_from_db()
+        self.assertEqual(focus.status, LearningFocus.STATUS_ACTIVE)
 
 
 

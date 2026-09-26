@@ -46,6 +46,7 @@ from .learning_focus_service import (
     generate_course_creation_prefill,
     annotate_course_chapters_with_focus,
     calculate_focus_mastery,
+    get_focus_remediation_recommendations,
     DiagnosticPayloadError,
 )
 from .dashboard_service import (
@@ -569,6 +570,11 @@ def course_detail(request, pk):
 
     annotate_course_chapters_with_focus(chapters, current_focus)
     focus_mastery = calculate_focus_mastery(current_focus) if current_focus else None
+    recommendation = get_focus_remediation_recommendations(request.user, current_focus) if current_focus else None
+
+    first_focus_chapter = next((c for c in chapters if getattr(c, "is_focus_target", False)), chapters[0] if chapters else None)
+    focus_target_quizzes = [c.quiz for c in chapters if getattr(c, "is_focus_target", False) and getattr(c, "quiz", None)]
+    focus_question_count = sum(q.questions.count() for q in focus_target_quizzes) or (len(focus_target_quizzes) * 5) or 10
 
     return render(request, "courses/course_detail.html", {
         "course": course,
@@ -581,6 +587,9 @@ def course_detail(request, pk):
         "pass_threshold": GUIDED_PASS_THRESHOLD,
         "linked_focus": current_focus,
         "focus_mastery": focus_mastery,
+        "recommendation": recommendation,
+        "first_focus_chapter": first_focus_chapter,
+        "focus_question_count": focus_question_count,
     })
 
 
@@ -1209,7 +1218,29 @@ def focus_summary(request, pk):
     """Displays the diagnostic-to-mastery institutional summary report."""
     focus = get_object_or_404(LearningFocus, pk=pk, user=request.user)
     mastery = calculate_focus_mastery(focus)
+    recommendation = get_focus_remediation_recommendations(request.user, focus)
     return render(request, "courses/focus_summary.html", {
         "focus": focus,
         "mastery": mastery,
+        "recommendation": recommendation,
     })
+
+
+@login_required
+@require_POST
+def focus_complete(request, pk):
+    """Manually marks a focus as completed."""
+    focus = get_object_or_404(LearningFocus, pk=pk, user=request.user)
+    complete_learning_focus(focus)
+    messages.success(request, f"Marked study focus '{focus.subject_name}' as completed!")
+    return redirect("courses:focus_summary", pk=focus.pk)
+
+
+@login_required
+@require_POST
+def focus_reopen(request, pk):
+    """Reopens a completed focus."""
+    focus = get_object_or_404(LearningFocus, pk=pk, user=request.user)
+    activate_learning_focus(focus)
+    messages.success(request, f"Reopened study focus '{focus.subject_name}'!")
+    return redirect("courses:focus_summary", pk=focus.pk)

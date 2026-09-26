@@ -27,4 +27,6 @@ urlpatterns = [
     path("focus/<int:pk>/dismiss/", views.focus_dismiss, name="focus_dismiss"),
     path("focus/<int:pk>/link-course/<int:course_id>/", views.focus_link_course, name="focus_link_course"),
     path("focus/<int:pk>/summary/", views.focus_summary, name="focus_summary"),
+    path("focus/<int:pk>/complete/", views.focus_complete, name="focus_complete"),
+    path("focus/<int:pk>/reopen/", views.focus_reopen, name="focus_reopen"),
 ]
