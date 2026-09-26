@@ -1198,16 +1198,37 @@
             <div class="prologue-content">
                 <div class="prologue-badge">⚡ GETTING STARTED</div>
                 <h1 class="prologue-heading">Welcome to StudyQuest, <span class="hero-highlight">{{ request.user.username }}</span>!</h1>
-                <p class="prologue-subtext">
-                    Transform your syllabus, module slides, and lecture notes into a structured study path.
-                </p>
-                <div class="prologue-cta-wrap" style="display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap;">
-                    <a href="{% url 'courses:course_create' %}" class="btn btn-primary btn-chunky prologue-cta" style="width: auto; flex: 1; min-width: 200px;">
-                        Create Your First Course &rarr;
-                    </a>
-                    <button type="button" class="btn btn-ghost js-open-focus-modal" style="font-size: 0.85rem; padding: 12px 18px; border-radius: 999px; border: 1px dashed var(--border); width: auto;">
-                        🎯 Import Diagnostic Assessment
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <p class="prologue-subtext" style="font-size: 1.05rem; font-weight: 700; color: var(--ink); margin: 0;">
+                        What would you like to improve?
+                    </p>
+                    <p class="prologue-subtext" style="margin: 0; line-height: 1.5;">
+                        Choose a subject or topic, use a school result, or connect your learning materials. StudyQuest will turn your focus into a personalized study and practice plan.
+                    </p>
+                </div>
+
+                <div class="prologue-cta-wrap" style="display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin-top: 14px; width: 100%;">
+                    <!-- Dominant Primary Action: Find My Study Focus -->
+                    <button type="button" class="btn btn-primary btn-chunky js-open-focus-modal" style="width: 100%; min-height: 56px; height: 56px; font-size: 1.05rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; box-shadow: 0 4px 14px rgba(108, 92, 231, 0.35); text-decoration: none; cursor: pointer; white-space: nowrap;">
+                        Find My Study Focus &rarr;
                     </button>
+
+                    <!-- Subtle helper copy -->
+                    <div style="font-size: 0.85rem; color: var(--muted); text-align: center; margin: 4px 0 2px;">
+                        Already have your materials ready?
+                    </div>
+
+                    <!-- Secondary Outlined Action: Create a Course -->
+                    <a href="{% url 'courses:course_create' %}" class="btn btn-ghost" style="width: 100%; min-height: 42px; font-size: 0.92rem; font-weight: 600; border: 1px solid var(--border); border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--surface); color: var(--ink); text-decoration: none; transition: all 0.18s ease;">
+                        Create a Course
+                    </a>
+
+                    <!-- Optional third link: Explore StudyQuest -->
+                    <div style="text-align: center; margin-top: 4px;">
+                        <a href="{% url 'courses:course_list' %}" style="font-size: 0.82rem; color: var(--muted); text-decoration: underline; transition: color 0.15s ease;">
+                            Explore StudyQuest
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1346,40 +1367,12 @@
                 if (e.target === focusModal) setModalState(focusModal, false);
             });
 
-            // Tab switching
-            const tabImport = document.getElementById('tab-btn-import');
-            const tabManual = document.getElementById('tab-btn-manual');
-            const panelImport = document.getElementById('panel-import');
-            const panelManual = document.getElementById('panel-manual');
-
-            if (tabImport && tabManual && panelImport && panelManual) {
-                tabImport.addEventListener('click', () => {
-                    tabImport.classList.add('is-active');
-                    tabImport.style.borderBottomColor = 'var(--primary)';
-                    tabImport.style.color = 'var(--primary)';
-                    tabManual.classList.remove('is-active');
-                    tabManual.style.borderBottomColor = 'transparent';
-                    tabManual.style.color = 'var(--muted)';
-                    panelImport.style.display = 'block';
-                    panelManual.style.display = 'none';
-                });
-
-                tabManual.addEventListener('click', () => {
-                    tabManual.classList.add('is-active');
-                    tabManual.style.borderBottomColor = 'var(--primary)';
-                    tabManual.style.color = 'var(--primary)';
-                    tabImport.classList.remove('is-active');
-                    tabImport.style.borderBottomColor = 'transparent';
-                    tabImport.style.color = 'var(--muted)';
-                    panelManual.style.display = 'block';
-                    panelImport.style.display = 'none';
-                });
-            }
-
             {% if open_focus %}
                 // Auto-open if query param or pending focus
                 requestAnimationFrame(() => {
                     setModalState(focusModal, true);
+                    const schoolBtn = document.querySelector('.js-switch-focus-panel[data-target="panel-school-result"]');
+                    if (schoolBtn) schoolBtn.click();
                 });
             {% endif %}
         }

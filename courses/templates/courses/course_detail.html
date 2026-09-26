@@ -199,11 +199,11 @@
         <div>
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                 <span class="badge" style="background: rgba(117, 108, 243, 0.2); color: var(--primary); font-weight: 800; font-size: 0.70rem; text-transform: uppercase; padding: 2px 8px; border-radius: 999px;">
-                    🎯 Active Diagnostic Focus
+                    🎯 Active Study Focus
                 </span>
                 {% if linked_focus.initial_score is not None %}
                     <span style="font-size: 0.75rem; font-weight: 700; color: var(--danger); background: rgba(239, 107, 115, 0.12); padding: 2px 8px; border-radius: 6px;">
-                        Diagnostic: {{ linked_focus.initial_score|floatformat:0 }}%
+                        Starting Score: {{ linked_focus.initial_score|floatformat:0 }}%
                     </span>
                 {% endif %}
                 {% if focus_mastery and focus_mastery.is_mastered %}
@@ -213,7 +213,7 @@
                 {% endif %}
             </div>
             <div style="font-weight: 800; font-size: 1.05rem; color: var(--ink);">
-                Remediation Pathway for {{ linked_focus.subject_name }}
+                Study Plan for {{ linked_focus.subject_name }}
             </div>
             {% if linked_focus.topic_names %}
                 <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; align-items: center;">
@@ -228,7 +228,7 @@
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
             <a href="{% url 'courses:focus_summary' linked_focus.pk %}" class="btn btn-primary btn-sm" style="font-size: 0.8rem;">
-                Diagnostic Report &rarr;
+                Mastery Report &rarr;
             </a>
             <a href="{% url 'courses:focus_recommendation' linked_focus.pk %}" class="btn btn-ghost btn-sm" style="font-size: 0.8rem;">
                 Details

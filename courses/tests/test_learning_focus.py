@@ -316,6 +316,21 @@ class LearningFocusViewTests(TestCase):
         self.assertContains(response, "Systems Architecture Focus Review")
         self.assertContains(response, "Cloud Migration, Kubernetes")
 
+    def test_dashboard_zero_courses_onboarding_visual_hierarchy(self):
+        response = self.client.get("/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Find My Study Focus")
+        self.assertContains(response, "What would you like to improve?")
+        self.assertContains(response, "Create a Course")
+        self.assertContains(response, "Explore StudyQuest")
+        self.assertNotContains(response, "Import Diagnostic Assessment")
+        # Modal components
+        self.assertContains(response, "Let’s Find Your Study Focus")
+        self.assertContains(response, "Use a School Result")
+        self.assertContains(response, "Choose a Subject or Topic")
+        self.assertContains(response, "Select From My Courses")
+        self.assertContains(response, "Not Sure Yet")
+
     def test_annotate_course_chapters_with_focus(self):
         course = Course.objects.create(user=self.user, title="DevOps Fundamentals")
         ch1 = Chapter.objects.create(course=course, order=1, title="Intro to DevOps", review_content="Basics of CI/CD")
@@ -384,8 +399,8 @@ class LearningFocusViewTests(TestCase):
 
         response = self.client.get(f"/courses/{course.pk}/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Active Diagnostic Focus")
-        self.assertContains(response, "Remediation Pathway for Enterprise Systems")
+        self.assertContains(response, "Active Study Focus")
+        self.assertContains(response, "Study Plan for Enterprise Systems")
         self.assertContains(response, "Focus Target")
 
     def test_chapter_review_with_focus_topics(self):
@@ -400,7 +415,7 @@ class LearningFocusViewTests(TestCase):
 
         response = self.client.get(f"/chapters/{ch1.pk}/review/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Diagnostic Target:")
+        self.assertContains(response, "Focus Target:")
         self.assertContains(response, "Indexing")
 
     def test_focus_summary_view(self):

@@ -104,11 +104,11 @@
         <div>
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                 <span class="dungeon-status-tag" style="background: rgba(117, 108, 243, 0.2); color: var(--primary); font-weight: 800; font-size: 0.70rem; text-transform: uppercase;">
-                    🎯 Active Diagnostic Focus
+                    🎯 Active Study Focus
                 </span>
                 {% if active_focus.initial_score is not None %}
                     <span style="font-size: 0.75rem; font-weight: 700; color: var(--danger); background: rgba(239, 107, 115, 0.12); padding: 2px 8px; border-radius: 6px;">
-                        Diagnostic: {{ active_focus.initial_score|floatformat:0 }}%
+                        Starting Score: {{ active_focus.initial_score|floatformat:0 }}%
                     </span>
                 {% endif %}
             </div>
@@ -116,11 +116,11 @@
                 Remediation Expeditions for {{ active_focus.subject_name }}
             </h3>
             <p style="margin: 4px 0 0; font-size: 0.82rem; color: var(--muted);">
-                Defeat dungeon monsters to reinforce key concepts and run Review Runs on missed questions to master your learning gaps!
+                Defeat dungeon monsters to reinforce key concepts and run Review Runs on missed questions to strengthen your knowledge!
             </p>
         </div>
         <a href="{% url 'courses:focus_summary' active_focus.pk %}" class="btn btn-ghost btn-sm" style="font-size: 0.8rem;">
-            View Diagnostic Report &rarr;
+            View Mastery Report &rarr;
         </a>
     </div>
 {% endif %}

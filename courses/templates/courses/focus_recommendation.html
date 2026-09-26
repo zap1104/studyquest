@@ -33,9 +33,9 @@
 
             {% if focus.initial_score is not None %}
                 <div style="text-align: right; background: rgba(239, 107, 115, 0.1); border: 1px solid rgba(239, 107, 115, 0.3); border-radius: 12px; padding: 12px 18px;">
-                    <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--danger);">Diagnostic Result</div>
+                    <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--danger);">School Result</div>
                     <div style="font-size: 1.8rem; font-weight: 800; color: var(--danger); line-height: 1.1;">{{ focus.initial_score|floatformat:0 }}%</div>
-                    <div style="font-size: 0.72rem; color: var(--muted);">Learning gap priority</div>
+                    <div style="font-size: 0.72rem; color: var(--muted);">Starting baseline</div>
                 </div>
             {% endif %}
         </div>
