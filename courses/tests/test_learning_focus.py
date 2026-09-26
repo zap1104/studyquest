@@ -15,6 +15,7 @@ from courses.learning_focus_service import (
     generate_course_creation_prefill,
     annotate_course_chapters_with_focus,
     calculate_focus_mastery,
+    get_academic_catalogue,
     DiagnosticPayloadError,
 )
 
@@ -569,6 +570,87 @@ class LearningFocusViewTests(TestCase):
         self.assertEqual(post_resp.status_code, 302)
         focus.refresh_from_db()
         self.assertEqual(focus.status, LearningFocus.STATUS_ACTIVE)
+
+
+class AcademicCatalogueTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="student_catalog", password="password123")
+
+    def test_academic_catalogue_service_structure(self):
+        catalogue = get_academic_catalogue()
+        self.assertIsInstance(catalogue, dict)
+        self.assertEqual(catalogue.get("catalog_version"), "2026.1")
+        areas = catalogue.get("areas", [])
+        self.assertEqual(len(areas), 10)
+
+        area_keys = {a["key"] for a in areas}
+        expected_keys = {
+            "mathematics",
+            "natural_sciences",
+            "computing",
+            "business",
+            "social_sciences",
+            "humanities",
+            "education",
+            "engineering",
+            "health_sciences",
+            "academic_skills",
+        }
+        self.assertEqual(area_keys, expected_keys)
+
+        # Verify key Philippine college subjects exist
+        all_subjects = []
+        for area in areas:
+            all_subjects.extend(area.get("subjects", []))
+
+        subject_labels = {s["label"] for s in all_subjects}
+        self.assertIn("Calculus", subject_labels)
+        self.assertIn("Technopreneurship", subject_labels)
+        self.assertIn("Systems Integration and Architecture", subject_labels)
+        self.assertIn("Readings in Philippine History", subject_labels)
+        self.assertIn("Science, Technology and Society", subject_labels)
+
+        # Verify Technopreneurship topics
+        techno = next(s for s in all_subjects if s["label"] == "Technopreneurship")
+        self.assertEqual(techno["code"], "TECHNO")
+        self.assertIn("Tech Entrepreneurship", techno.get("aliases", []))
+        topic_labels = [t["label"] for t in techno.get("topics", [])]
+        self.assertIn("Business Model Canvas", topic_labels)
+        self.assertIn("Intellectual Property", topic_labels)
+
+        bmc_topic = next(t for t in techno.get("topics", []) if t["label"] == "Business Model Canvas")
+        self.assertIn("BMC", bmc_topic.get("aliases", []))
+
+    def test_academic_catalogue_api_endpoint(self):
+        # 1. Unauthenticated -> 302 to login
+        resp = self.client.get("/focus/catalogue/")
+        self.assertEqual(resp.status_code, 302)
+
+        # 2. Authenticated -> 200 JSON
+        self.client.login(username="student_catalog", password="password123")
+        resp = self.client.get("/focus/catalogue/")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp["Content-Type"], "application/json")
+
+        data = resp.json()
+        self.assertEqual(data.get("catalog_version"), "2026.1")
+        self.assertEqual(len(data.get("areas", [])), 10)
+
+    def test_dashboard_renders_academic_catalogue_context_and_markup(self):
+        self.client.login(username="student_catalog", password="password123")
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+
+        # Catalogue embedded JSON and step elements
+        self.assertContains(resp, 'id="academic-catalogue-data"')
+        self.assertContains(resp, "Browse Subjects and Topics")
+        self.assertContains(resp, 'id="view-step-catalogue"')
+        self.assertContains(resp, "catalogue-explorer-grid")
+        self.assertContains(resp, 'id="catalogue-areas-list"')
+        self.assertContains(resp, 'id="catalogue-subjects-container"')
+        self.assertContains(resp, 'id="catalogue-selection-tray"')
+        self.assertContains(resp, "2026.1")
+
 
 
 

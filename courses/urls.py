@@ -29,4 +29,5 @@ urlpatterns = [
     path("focus/<int:pk>/summary/", views.focus_summary, name="focus_summary"),
     path("focus/<int:pk>/complete/", views.focus_complete, name="focus_complete"),
     path("focus/<int:pk>/reopen/", views.focus_reopen, name="focus_reopen"),
+    path("focus/catalogue/", views.focus_catalogue_api, name="focus_catalogue_api"),
 ]

@@ -48,6 +48,7 @@ from .learning_focus_service import (
     annotate_course_chapters_with_focus,
     calculate_focus_mastery,
     get_focus_remediation_recommendations,
+    get_academic_catalogue,
     DiagnosticPayloadError,
 )
 from .dashboard_service import (
@@ -294,6 +295,8 @@ def dashboard(request):
         "pending_focus": pending_focus,
         "completed_focus": completed_focus,
         "open_focus": request.GET.get("open_focus") == "1",
+        "academic_catalogue": get_academic_catalogue(),
+        "academic_catalogue_json": json.dumps(get_academic_catalogue()),
     })
 
 
@@ -1251,3 +1254,9 @@ def focus_reopen(request, pk):
     activate_learning_focus(focus)
     messages.success(request, f"Reopened study focus '{focus.subject_name}'!")
     return redirect("courses:focus_summary", pk=focus.pk)
+
+
+@login_required
+def focus_catalogue_api(request):
+    """Returns the curated Philippine higher education academic terminology catalogue."""
+    return JsonResponse(get_academic_catalogue())

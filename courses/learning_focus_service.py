@@ -1,9 +1,24 @@
 import datetime
+import json
+from pathlib import Path
 from typing import Optional, Tuple, Dict, Any, List
 from django.utils import dateparse, timezone
 from django.db import transaction
 from django.contrib.auth.models import User
 from .models import Course, Chapter, LearningFocus, QuizAttempt
+
+CATALOGUE_PATH = Path(__file__).resolve().parent / "data" / "academic_catalogue.json"
+
+
+def get_academic_catalogue() -> Dict[str, Any]:
+    """Returns the curated Philippine higher education academic terminology catalogue."""
+    if CATALOGUE_PATH.exists():
+        try:
+            with open(CATALOGUE_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"catalog_version": "2026.1", "areas": []}
 
 
 class DiagnosticPayloadError(ValueError):

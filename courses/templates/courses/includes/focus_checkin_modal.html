@@ -160,8 +160,15 @@
                                 + Add topic
                             </button>
                         </div>
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+                            <button type="button" id="btn-open-catalogue" class="focus-catalog-link">
+                                <span style="font-size: 0.95rem;">📖</span>
+                                <span id="btn-catalogue-label">Browse Subjects and Topics</span>
+                            </button>
+                            <span id="topic-count-hint" style="font-size: 0.74rem; color: var(--muted); font-weight: 600;">Max 6 topics</span>
+                        </div>
                         <!-- Removable Topic Chips Display -->
-                        <div id="topic-chips-container" style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 28px; margin-top: 6px; align-items: center;"></div>
+                        <div id="topic-chips-container" style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 28px; margin-top: 4px; align-items: center;"></div>
                         <input type="hidden" name="topic_names" id="hidden-topic-names" value="">
                     </div>
 
@@ -179,6 +186,51 @@
                         </select>
                     </div>
                 </form>
+            </div>
+
+            <!-- STEP 2D: BROWSE SUBJECTS AND TOPICS CATALOGUE -->
+            <div id="view-step-catalogue" class="study-focus-step" style="display: none;">
+                <!-- Search Box -->
+                <div style="position: relative; margin-bottom: 8px;">
+                    <input type="text" id="catalogue-search-input" placeholder="Search subjects, topics, or acronyms (e.g. SIA, BMC, Calculus, Rizal)..." style="width: 100%; min-height: 44px; padding: 10px 14px 10px 38px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font: inherit; box-sizing: border-box;">
+                    <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 1rem; color: var(--muted); pointer-events: none;">🔍</span>
+                    <button type="button" id="btn-clear-search" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); cursor: pointer; display: none; font-size: 1.1rem; line-height: 1;" title="Clear search">✕</button>
+                </div>
+
+                <!-- Popular Quick Jump Chips -->
+                <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <span style="font-size: 0.72rem; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;">Popular:</span>
+                    <button type="button" class="btn btn-ghost btn-sm js-popular-chip" data-query="Mathematics" style="font-size: 0.76rem; padding: 2px 9px; border-radius: 999px;">Mathematics</button>
+                    <button type="button" class="btn btn-ghost btn-sm js-popular-chip" data-query="Chemistry" style="font-size: 0.76rem; padding: 2px 9px; border-radius: 999px;">Chemistry</button>
+                    <button type="button" class="btn btn-ghost btn-sm js-popular-chip" data-query="Philippine History" style="font-size: 0.76rem; padding: 2px 9px; border-radius: 999px;">Philippine History</button>
+                    <button type="button" class="btn btn-ghost btn-sm js-popular-chip" data-query="Entrepreneurship" style="font-size: 0.76rem; padding: 2px 9px; border-radius: 999px;">Entrepreneurship</button>
+                    <button type="button" class="btn btn-ghost btn-sm js-popular-chip" data-query="Programming" style="font-size: 0.76rem; padding: 2px 9px; border-radius: 999px;">Programming</button>
+                    <button type="button" class="btn btn-ghost btn-sm js-popular-chip" data-query="Communication" style="font-size: 0.76rem; padding: 2px 9px; border-radius: 999px;">Communication</button>
+                </div>
+
+                <!-- 2-Column Catalogue Explorer -->
+                <div class="catalogue-explorer-grid">
+                    <!-- Academic Areas Sidebar -->
+                    <aside class="catalogue-areas-sidebar" id="catalogue-areas-list" role="tablist" aria-label="Academic Areas">
+                        <!-- Populated dynamically by JS -->
+                    </aside>
+
+                    <!-- Subjects & Topics Container -->
+                    <section class="catalogue-subjects-panel" id="catalogue-subjects-container">
+                        <!-- Populated dynamically by JS -->
+                    </section>
+                </div>
+
+                <!-- Selection Tray -->
+                <div id="catalogue-selection-tray" style="margin-top: 12px; padding: 10px 14px; border-radius: 12px; background: rgba(117, 108, 243, 0.08); border: 1px solid rgba(117, 108, 243, 0.25); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0;">
+                        <strong id="tray-count-label" style="font-size: 0.82rem; color: var(--primary); white-space: nowrap;">0 topics selected</strong>
+                        <div id="tray-chips-container" style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;"></div>
+                    </div>
+                    <button type="button" id="btn-tray-clear" class="btn btn-ghost btn-sm" style="font-size: 0.74rem; color: var(--muted); padding: 2px 8px;">
+                        Clear
+                    </button>
+                </div>
             </div>
 
             <!-- STEP 2B: USE A SCHOOL RESULT -->
@@ -315,6 +367,10 @@
 
     </div>
 </div>
+
+<script id="academic-catalogue-data" type="application/json">
+{{ academic_catalogue_json|default:"{}"|safe }}
+</script>
 
 <style>
     /* ================= STUDY FOCUS MODAL CSS ================= */
@@ -510,6 +566,284 @@
         transform: translateY(-2px);
     }
 
+    /* Browse button in manual focus form */
+    .focus-catalog-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 2px;
+        color: var(--primary);
+        background: transparent;
+        border: 0;
+        font: inherit;
+        font-weight: 750;
+        cursor: pointer;
+        font-size: 0.86rem;
+        transition: color 0.15s ease, opacity 0.15s ease;
+    }
+
+    .focus-catalog-link:hover {
+        color: #8c82ff;
+        text-decoration: underline;
+    }
+
+    /* 2-column Catalogue Grid */
+    .catalogue-explorer-grid {
+        display: grid;
+        grid-template-columns: 210px 1fr;
+        gap: 14px;
+        align-items: stretch;
+        min-height: 330px;
+        max-height: 420px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 12px;
+        background: var(--bg);
+        box-sizing: border-box;
+    }
+
+    @media (max-width: 680px) {
+        .catalogue-explorer-grid {
+            grid-template-columns: 1fr;
+            max-height: none;
+            gap: 12px;
+            padding: 10px;
+        }
+    }
+
+    .catalogue-areas-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        overflow-y: auto;
+        max-height: 396px;
+        padding-right: 4px;
+        scrollbar-gutter: stable;
+        border-right: 1px solid var(--border);
+    }
+
+    @media (max-width: 680px) {
+        .catalogue-areas-sidebar {
+            flex-direction: row;
+            overflow-x: auto;
+            max-height: none;
+            border-right: none;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+        }
+    }
+
+    .catalogue-area-tab {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 8px;
+        background: transparent;
+        border: 1px solid transparent;
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.80rem;
+        font-weight: 700;
+        text-align: left;
+        cursor: pointer;
+        transition: all 0.14s ease;
+        width: 100%;
+        box-sizing: border-box;
+        white-space: normal;
+        line-height: 1.3;
+    }
+
+    @media (max-width: 680px) {
+        .catalogue-area-tab {
+            width: auto;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+    }
+
+    .catalogue-area-tab:hover {
+        background: var(--surface);
+        color: var(--ink);
+    }
+
+    .catalogue-area-tab.is-active {
+        background: rgba(117, 108, 243, 0.12);
+        color: var(--primary);
+        border-color: rgba(117, 108, 243, 0.3);
+        font-weight: 800;
+    }
+
+    .catalogue-subjects-panel {
+        overflow-y: auto;
+        max-height: 396px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding-right: 4px;
+        scrollbar-gutter: stable;
+    }
+
+    .catalogue-subject-card {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+        overflow: hidden;
+        transition: border-color 0.15s ease;
+    }
+
+    .catalogue-subject-card.is-expanded {
+        border-color: rgba(117, 108, 243, 0.35);
+    }
+
+    .catalogue-subject-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 10px 12px;
+        cursor: pointer;
+        user-select: none;
+        background: var(--surface);
+        transition: background 0.12s ease;
+    }
+
+    .catalogue-subject-header:hover {
+        background: rgba(117, 108, 243, 0.04);
+    }
+
+    .catalogue-subject-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .catalogue-subject-title {
+        font-size: 0.90rem;
+        font-weight: 800;
+        color: var(--ink);
+        margin: 0;
+        line-height: 1.25;
+    }
+
+    .catalogue-subject-code-tag {
+        font-size: 0.70rem;
+        font-weight: 700;
+        color: var(--muted);
+        background: var(--bg);
+        border: 1px solid var(--border);
+        padding: 1px 6px;
+        border-radius: 4px;
+    }
+
+    .catalogue-subject-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .catalogue-set-subject-btn {
+        background: transparent;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 3px 8px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--primary);
+        cursor: pointer;
+        transition: all 0.14s ease;
+    }
+
+    .catalogue-set-subject-btn:hover {
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+    }
+
+    .catalogue-expand-arrow {
+        font-size: 0.72rem;
+        color: var(--muted);
+        display: inline-block;
+        transition: transform 0.18s ease;
+    }
+
+    .catalogue-subject-card.is-expanded .catalogue-expand-arrow {
+        transform: rotate(90deg);
+    }
+
+    .catalogue-topics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        gap: 6px;
+        padding: 10px 12px;
+        border-top: 1px solid var(--border);
+        background: var(--bg);
+    }
+
+    .catalogue-topic-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        cursor: pointer;
+        font-size: 0.80rem;
+        font-weight: 600;
+        color: var(--ink);
+        transition: all 0.14s ease;
+        user-select: none;
+    }
+
+    .catalogue-topic-item:hover {
+        border-color: var(--primary);
+        background: rgba(117, 108, 243, 0.05);
+    }
+
+    .catalogue-topic-item.is-selected {
+        background: rgba(117, 108, 243, 0.12);
+        border-color: var(--primary);
+        color: var(--primary);
+        font-weight: 700;
+    }
+
+    .catalogue-topic-cb {
+        accent-color: var(--primary);
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        cursor: pointer;
+    }
+
+    .tray-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: rgba(117, 108, 243, 0.15);
+        color: var(--primary);
+        font-size: 0.74rem;
+        font-weight: 700;
+    }
+
+    .tray-chip button {
+        background: none;
+        border: none;
+        color: var(--muted);
+        font-size: 0.90rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0;
+    }
+
+    .tray-chip button:hover {
+        color: var(--danger);
+    }
+
     @keyframes focusModalFadeIn {
         from { opacity: 0; transform: scale(0.97) translateY(8px); }
         to { opacity: 1; transform: scale(1) translateY(0); }
@@ -567,6 +901,7 @@
         const views = {
             'choice': document.getElementById('view-step-choice'),
             'manual': document.getElementById('view-step-manual'),
+            'catalogue': document.getElementById('view-step-catalogue'),
             'school': document.getElementById('view-step-school'),
             'courses': document.getElementById('view-step-courses'),
             'review': document.getElementById('view-step-review'),
@@ -595,12 +930,28 @@
         const fileChosenLabel = document.getElementById('file-chosen-label');
         const pasteJsonTextarea = document.getElementById('paste-json-textarea');
 
+        // Catalogue references
+        const btnOpenCatalogue = document.getElementById('btn-open-catalogue');
+        const catalogueSearchInput = document.getElementById('catalogue-search-input');
+        const btnClearSearch = document.getElementById('btn-clear-search');
+        const catalogueAreasList = document.getElementById('catalogue-areas-list');
+        const catalogueSubjectsContainer = document.getElementById('catalogue-subjects-container');
+        const trayCountLabel = document.getElementById('tray-count-label');
+        const trayChipsContainer = document.getElementById('tray-chips-container');
+        const btnTrayClear = document.getElementById('btn-tray-clear');
+
         // Internal State
         let currentStep = 'choice';
         let previousStep = 'choice';
         let activeTopics = [];
         let parsedSchoolData = null;
         let lastFocusedElement = null;
+
+        // Catalogue State
+        let catalogueData = null;
+        let selectedAreaKey = '';
+        let catalogueSelectedTopics = [];
+        let expandedSubjectKeys = new Set();
 
         const stepHeaders = {
             'choice': {
@@ -612,6 +963,11 @@
                 badge: 'CHOOSE A FOCUS',
                 title: 'What subject would you like to improve?',
                 subtitle: 'Specify your target subject and the priority topics you want to master.'
+            },
+            'catalogue': {
+                badge: 'STUDY FOCUS',
+                title: 'Browse Subjects and Topics',
+                subtitle: 'Search common college subjects or browse by academic area.'
             },
             'school': {
                 badge: 'USE A SCHOOL RESULT',
@@ -642,6 +998,11 @@
                 topicChipsContainer.appendChild(chip);
             });
             hiddenTopicNames.value = activeTopics.join(', ');
+
+            const catLabel = document.getElementById('btn-catalogue-label');
+            if (catLabel) {
+                catLabel.textContent = activeTopics.length > 0 ? 'Browse more topics' : 'Browse Subjects and Topics';
+            }
 
             // Bind remove buttons
             topicChipsContainer.querySelectorAll('.chip-remove').forEach(btn => {
@@ -761,6 +1122,27 @@
 
                 footerEl.appendChild(backBtn);
                 footerEl.appendChild(reviewBtn);
+            } else if (step === 'catalogue') {
+                const backBtn = document.createElement('button');
+                backBtn.type = 'button';
+                backBtn.className = 'btn btn-ghost';
+                backBtn.textContent = 'Back';
+                backBtn.addEventListener('click', () => {
+                    activeTopics = [...catalogueSelectedTopics];
+                    renderChips();
+                    setStep('manual');
+                });
+
+                const applyBtn = document.createElement('button');
+                applyBtn.type = 'button';
+                applyBtn.className = 'btn btn-primary';
+                applyBtn.id = 'btn-catalogue-apply';
+                const count = catalogueSelectedTopics.length;
+                applyBtn.textContent = count > 0 ? `Add ${count} Topic${count > 1 ? 's' : ''} →` : 'Done →';
+                applyBtn.addEventListener('click', () => applyCatalogueSelection());
+
+                footerEl.appendChild(backBtn);
+                footerEl.appendChild(applyBtn);
             } else if (step === 'school') {
                 const backBtn = document.createElement('button');
                 backBtn.type = 'button';
@@ -949,6 +1331,427 @@
                 handleManualReview();
             });
         });
+
+        // ================= CATALOGUE CONTROLLER =================
+        function loadEmbeddedCatalogue() {
+            if (catalogueData) return catalogueData;
+            const scriptEl = document.getElementById('academic-catalogue-data');
+            if (scriptEl && scriptEl.textContent.trim()) {
+                try {
+                    catalogueData = JSON.parse(scriptEl.textContent);
+                } catch (e) {
+                    console.error('Failed to parse embedded academic catalogue:', e);
+                }
+            }
+            return catalogueData;
+        }
+
+        async function fetchCatalogueFallback() {
+            try {
+                const resp = await fetch('{% url "courses:focus_catalogue_api" %}');
+                if (resp.ok) {
+                    catalogueData = await resp.json();
+                }
+            } catch (err) {
+                console.error('Error fetching academic catalogue fallback:', err);
+            }
+            return catalogueData;
+        }
+
+        async function openCatalogue() {
+            let data = loadEmbeddedCatalogue();
+            if (!data || !data.areas || data.areas.length === 0) {
+                data = await fetchCatalogueFallback();
+            }
+            if (!data || !data.areas || data.areas.length === 0) {
+                alert('Academic catalogue is temporarily unavailable.');
+                return;
+            }
+
+            catalogueSelectedTopics = [...activeTopics];
+            const currentSubj = (manualSubjectInput.value || '').trim().toLowerCase();
+
+            let matchedSubject = null;
+            let matchedArea = null;
+
+            if (currentSubj) {
+                for (const area of data.areas) {
+                    for (const subj of area.subjects) {
+                        const sLabel = (subj.label || '').toLowerCase();
+                        const sCode = (subj.code || '').toLowerCase();
+                        const aliases = (subj.aliases || []).map(a => a.toLowerCase());
+
+                        if (sLabel === currentSubj || sCode === currentSubj || aliases.includes(currentSubj) ||
+                            sLabel.includes(currentSubj) || currentSubj.includes(sLabel)) {
+                            matchedSubject = subj;
+                            matchedArea = area;
+                            break;
+                        }
+                    }
+                    if (matchedSubject) break;
+                }
+            }
+
+            if (matchedSubject && matchedArea) {
+                selectedAreaKey = matchedArea.key;
+                expandedSubjectKeys.add(matchedSubject.key);
+            } else if (!selectedAreaKey || !data.areas.some(a => a.key === selectedAreaKey)) {
+                selectedAreaKey = data.areas[0].key;
+            }
+
+            if (catalogueSearchInput) {
+                catalogueSearchInput.value = '';
+            }
+            if (btnClearSearch) {
+                btnClearSearch.style.display = 'none';
+            }
+
+            setStep('catalogue');
+            renderCatalogue();
+            updateTray();
+        }
+
+        function renderCatalogue() {
+            if (!catalogueData || !catalogueData.areas) return;
+
+            const isSearching = catalogueSearchInput && catalogueSearchInput.value.trim().length > 0;
+            renderAreasSidebar(isSearching);
+            renderSubjectsPanel();
+        }
+
+        function renderAreasSidebar(isSearching) {
+            if (!catalogueAreasList) return;
+            catalogueAreasList.innerHTML = '';
+
+            catalogueData.areas.forEach(area => {
+                const tab = document.createElement('button');
+                tab.type = 'button';
+                tab.className = 'catalogue-area-tab' + (!isSearching && area.key === selectedAreaKey ? ' is-active' : '');
+                tab.setAttribute('role', 'tab');
+                tab.setAttribute('aria-selected', !isSearching && area.key === selectedAreaKey ? 'true' : 'false');
+                tab.innerHTML = `
+                    <span style="font-size: 1.1rem; line-height: 1;">${escapeHtml(area.icon || '📚')}</span>
+                    <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(area.label)}</span>
+                    <span style="font-size: 0.70rem; color: var(--muted); background: var(--surface); padding: 1px 5px; border-radius: 999px;">${area.subjects.length}</span>
+                `;
+
+                tab.addEventListener('click', () => {
+                    if (catalogueSearchInput) {
+                        catalogueSearchInput.value = '';
+                    }
+                    if (btnClearSearch) {
+                        btnClearSearch.style.display = 'none';
+                    }
+                    selectedAreaKey = area.key;
+                    renderCatalogue();
+                });
+
+                catalogueAreasList.appendChild(tab);
+            });
+        }
+
+        function renderSubjectsPanel() {
+            if (!catalogueSubjectsContainer) return;
+            catalogueSubjectsContainer.innerHTML = '';
+
+            const query = catalogueSearchInput ? catalogueSearchInput.value.trim().toLowerCase() : '';
+            const isSearch = query.length > 0;
+
+            let subjectsToRender = [];
+
+            if (isSearch) {
+                catalogueData.areas.forEach(area => {
+                    area.subjects.forEach(subj => {
+                        const sLabel = (subj.label || '').toLowerCase();
+                        const sCode = (subj.code || '').toLowerCase();
+                        const sAliases = (subj.aliases || []).map(a => a.toLowerCase());
+                        const areaLabel = (area.label || '').toLowerCase();
+
+                        const subjMatches = sLabel.includes(query) || sCode.includes(query) || sAliases.some(a => a.includes(query)) || areaLabel.includes(query);
+
+                        const matchingTopics = (subj.topics || []).filter(topic => {
+                            const tLabel = (topic.label || '').toLowerCase();
+                            const tAliases = (topic.aliases || []).map(a => a.toLowerCase());
+                            return tLabel.includes(query) || tAliases.some(a => a.includes(query));
+                        });
+
+                        if (subjMatches || matchingTopics.length > 0) {
+                            subjectsToRender.push({
+                                ...subj,
+                                areaLabel: area.label,
+                                isMatched: true
+                            });
+                            // Auto expand when searching so user sees matching topics immediately
+                            expandedSubjectKeys.add(subj.key);
+                        }
+                    });
+                });
+
+                if (subjectsToRender.length === 0) {
+                    catalogueSubjectsContainer.innerHTML = `
+                        <div style="padding: 32px 16px; text-align: center; color: var(--muted);">
+                            <div style="font-size: 2rem; margin-bottom: 8px;">🔍</div>
+                            <strong style="color: var(--ink); display: block; font-size: 0.95rem; margin-bottom: 4px;">No matching subjects or topics found</strong>
+                            <p style="font-size: 0.82rem; margin: 0; line-height: 1.45;">
+                                Couldn't find anything matching "<strong>${escapeHtml(catalogueSearchInput.value)}</strong>". You can type your topic manually on the previous screen.
+                            </p>
+                        </div>
+                    `;
+                    return;
+                }
+            } else {
+                const currentArea = catalogueData.areas.find(a => a.key === selectedAreaKey) || catalogueData.areas[0];
+                subjectsToRender = (currentArea ? currentArea.subjects : []).map(s => ({
+                    ...s,
+                    areaLabel: currentArea ? currentArea.label : ''
+                }));
+            }
+
+            subjectsToRender.forEach(subj => {
+                const card = createSubjectCard(subj, isSearch);
+                catalogueSubjectsContainer.appendChild(card);
+            });
+        }
+
+        function createSubjectCard(subj, isSearch) {
+            const card = document.createElement('div');
+            const isExpanded = expandedSubjectKeys.has(subj.key);
+            card.className = 'catalogue-subject-card' + (isExpanded ? ' is-expanded' : '');
+            card.setAttribute('data-subject-key', subj.key);
+
+            // Header
+            const header = document.createElement('div');
+            header.className = 'catalogue-subject-header';
+            header.setAttribute('role', 'button');
+            header.setAttribute('tabindex', '0');
+            header.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+
+            const info = document.createElement('div');
+            info.className = 'catalogue-subject-info';
+            info.innerHTML = `
+                <h4 class="catalogue-subject-title">${escapeHtml(subj.label)}</h4>
+                ${subj.code ? `<span class="catalogue-subject-code-tag">${escapeHtml(subj.code)}</span>` : ''}
+                ${isSearch && subj.areaLabel ? `<span style="font-size: 0.70rem; color: var(--muted); margin-left: 4px;">• ${escapeHtml(subj.areaLabel)}</span>` : ''}
+            `;
+
+            const actions = document.createElement('div');
+            actions.className = 'catalogue-subject-actions';
+
+            const setSubjectBtn = document.createElement('button');
+            setSubjectBtn.type = 'button';
+            setSubjectBtn.className = 'catalogue-set-subject-btn';
+            const isCurrentSubject = (manualSubjectInput.value || '').trim().toLowerCase() === subj.label.toLowerCase();
+            setSubjectBtn.textContent = isCurrentSubject ? '✓ Current Subject' : 'Set as Subject';
+            if (isCurrentSubject) {
+                setSubjectBtn.style.color = 'var(--success, #22c55e)';
+                setSubjectBtn.style.borderColor = 'rgba(34, 197, 94, 0.4)';
+            }
+
+            setSubjectBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                manualSubjectInput.value = subj.label;
+                manualCodeInput.value = subj.code || '';
+                setSubjectBtn.textContent = '✓ Subject Set';
+                setSubjectBtn.style.color = 'var(--success, #22c55e)';
+                setSubjectBtn.style.borderColor = 'rgba(34, 197, 94, 0.4)';
+
+                if (!expandedSubjectKeys.has(subj.key)) {
+                    expandedSubjectKeys.add(subj.key);
+                    renderSubjectsPanel();
+                }
+            });
+
+            const arrow = document.createElement('span');
+            arrow.className = 'catalogue-expand-arrow';
+            arrow.textContent = '▶';
+
+            actions.appendChild(setSubjectBtn);
+            actions.appendChild(arrow);
+
+            header.appendChild(info);
+            header.appendChild(actions);
+
+            const toggleExpand = () => {
+                if (expandedSubjectKeys.has(subj.key)) {
+                    expandedSubjectKeys.delete(subj.key);
+                } else {
+                    expandedSubjectKeys.add(subj.key);
+                }
+                renderSubjectsPanel();
+            };
+
+            header.addEventListener('click', toggleExpand);
+            header.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleExpand();
+                }
+            });
+
+            card.appendChild(header);
+
+            // Topics Grid (if expanded)
+            if (isExpanded) {
+                const grid = document.createElement('div');
+                grid.className = 'catalogue-topics-grid';
+
+                (subj.topics || []).forEach(topic => {
+                    const isSelected = catalogueSelectedTopics.includes(topic.label);
+
+                    const item = document.createElement('label');
+                    item.className = 'catalogue-topic-item' + (isSelected ? ' is-selected' : '');
+
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.className = 'catalogue-topic-cb';
+                    cb.checked = isSelected;
+
+                    const labelSpan = document.createElement('span');
+                    labelSpan.textContent = topic.label;
+
+                    cb.addEventListener('change', () => {
+                        handleTopicToggle(topic.label, subj, cb, item);
+                    });
+
+                    item.appendChild(cb);
+                    item.appendChild(labelSpan);
+                    grid.appendChild(item);
+                });
+
+                card.appendChild(grid);
+            }
+
+            return card;
+        }
+
+        function handleTopicToggle(topicLabel, parentSubject, checkbox, itemEl) {
+            if (checkbox.checked) {
+                if (catalogueSelectedTopics.length >= 6) {
+                    checkbox.checked = false;
+                    alert('You can select a maximum of 6 priority topics.');
+                    return;
+                }
+                if (!catalogueSelectedTopics.includes(topicLabel)) {
+                    catalogueSelectedTopics.push(topicLabel);
+                }
+                itemEl.classList.add('is-selected');
+
+                // If manual subject is not set, auto-fill it with this subject
+                if (!manualSubjectInput.value.trim() && parentSubject) {
+                    manualSubjectInput.value = parentSubject.label;
+                    manualCodeInput.value = parentSubject.code || '';
+                }
+            } else {
+                catalogueSelectedTopics = catalogueSelectedTopics.filter(t => t !== topicLabel);
+                itemEl.classList.remove('is-selected');
+            }
+
+            updateTray();
+            updateCatalogueFooterBtn();
+        }
+
+        function updateTray() {
+            if (!trayCountLabel || !trayChipsContainer) return;
+
+            const count = catalogueSelectedTopics.length;
+            trayCountLabel.textContent = `${count} of 6 topics selected`;
+
+            trayChipsContainer.innerHTML = '';
+            catalogueSelectedTopics.forEach(topic => {
+                const chip = document.createElement('span');
+                chip.className = 'tray-chip';
+                chip.innerHTML = `<span>${escapeHtml(topic)}</span><button type="button" aria-label="Remove topic ${escapeHtml(topic)}">&times;</button>`;
+
+                chip.querySelector('button').addEventListener('click', () => {
+                    catalogueSelectedTopics = catalogueSelectedTopics.filter(t => t !== topic);
+                    updateTray();
+                    renderSubjectsPanel();
+                    updateCatalogueFooterBtn();
+                });
+
+                trayChipsContainer.appendChild(chip);
+            });
+        }
+
+        function updateCatalogueFooterBtn() {
+            const applyBtn = document.getElementById('btn-catalogue-apply');
+            if (applyBtn) {
+                const count = catalogueSelectedTopics.length;
+                applyBtn.textContent = count > 0 ? `Add ${count} Topic${count > 1 ? 's' : ''} →` : 'Done →';
+            }
+        }
+
+        function applyCatalogueSelection() {
+            activeTopics = [...catalogueSelectedTopics];
+            renderChips();
+
+            // If manual subject is still empty and activeTopics has elements, try to find matching subject from catalogue
+            if (!manualSubjectInput.value.trim() && activeTopics.length > 0 && catalogueData) {
+                const firstTopic = activeTopics[0];
+                for (const area of catalogueData.areas) {
+                    for (const subj of area.subjects) {
+                        if ((subj.topics || []).some(t => t.label === firstTopic)) {
+                            manualSubjectInput.value = subj.label;
+                            manualCodeInput.value = subj.code || '';
+                            break;
+                        }
+                    }
+                    if (manualSubjectInput.value.trim()) break;
+                }
+            }
+
+            setStep('manual');
+        }
+
+        // Catalogue Event Listeners
+        if (btnOpenCatalogue) {
+            btnOpenCatalogue.addEventListener('click', (e) => {
+                e.preventDefault();
+                openCatalogue();
+            });
+        }
+
+        if (catalogueSearchInput) {
+            catalogueSearchInput.addEventListener('input', () => {
+                const val = catalogueSearchInput.value.trim();
+                if (btnClearSearch) {
+                    btnClearSearch.style.display = val.length > 0 ? 'inline-block' : 'none';
+                }
+                renderCatalogue();
+            });
+        }
+
+        if (btnClearSearch) {
+            btnClearSearch.addEventListener('click', () => {
+                if (catalogueSearchInput) {
+                    catalogueSearchInput.value = '';
+                }
+                btnClearSearch.style.display = 'none';
+                renderCatalogue();
+            });
+        }
+
+        document.querySelectorAll('.js-popular-chip').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const query = btn.getAttribute('data-query');
+                if (catalogueSearchInput && query) {
+                    catalogueSearchInput.value = query;
+                    if (btnClearSearch) {
+                        btnClearSearch.style.display = 'inline-block';
+                    }
+                    renderCatalogue();
+                }
+            });
+        });
+
+        if (btnTrayClear) {
+            btnTrayClear.addEventListener('click', () => {
+                catalogueSelectedTopics = [];
+                updateTray();
+                renderSubjectsPanel();
+                updateCatalogueFooterBtn();
+            });
+        }
 
         // Dismiss Modal & Session Storage
         function dismissModal() {
