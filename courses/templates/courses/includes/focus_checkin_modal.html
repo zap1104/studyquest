@@ -29,21 +29,22 @@
 
             <!-- STEP 1: STARTING CHOICE -->
             <div id="view-step-choice" class="study-focus-step" style="display: flex; flex-direction: column; gap: 12px;">
-                <!-- Choice 1: Choose a Subject or Topic (Default Primary) -->
+                <!-- Choice 1: Choose a Subject or Topic (Default Recommended Primary) -->
                 <button type="button" class="study-focus-choice-card js-select-focus-route" data-route="manual" style="
                     display: flex;
                     align-items: center;
                     gap: 16px;
-                    padding: 18px 20px;
+                    padding: 16px 20px;
                     background: var(--bg);
-                    border: 2px solid rgba(117, 108, 243, 0.35);
+                    border: 2px solid rgba(117, 108, 243, 0.45);
                     border-radius: 16px;
                     text-align: left;
                     cursor: pointer;
                     width: 100%;
+                    box-sizing: border-box;
                     transition: all 0.16s ease;
                 ">
-                    <span style="font-size: 1.6rem; line-height: 1; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(117, 108, 243, 0.12); border-radius: 12px; flex-shrink: 0;">✍️</span>
+                    <span style="font-size: 1.5rem; line-height: 1; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(117, 108, 243, 0.12); border-radius: 12px; flex-shrink: 0;">✍️</span>
                     <div style="flex: 1; min-width: 0;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
                             <strong style="font-size: 1rem; color: var(--ink);">Choose a Subject or Topic</strong>
@@ -54,49 +55,83 @@
                     <span style="font-size: 1.2rem; color: var(--muted); font-weight: 700;">&rarr;</span>
                 </button>
 
-                <!-- Choice 2: Use a School Result -->
+                <!-- Choice 2: Use a School Result (Neutral Border) -->
                 <button type="button" class="study-focus-choice-card js-select-focus-route" data-route="school" style="
                     display: flex;
                     align-items: center;
                     gap: 16px;
-                    padding: 18px 20px;
+                    padding: 16px 20px;
                     background: var(--bg);
                     border: 1px solid var(--border);
                     border-radius: 16px;
                     text-align: left;
                     cursor: pointer;
                     width: 100%;
+                    box-sizing: border-box;
                     transition: all 0.16s ease;
                 ">
-                    <span style="font-size: 1.6rem; line-height: 1; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(232, 163, 61, 0.12); border-radius: 12px; flex-shrink: 0;">📄</span>
+                    <span style="font-size: 1.5rem; line-height: 1; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(232, 163, 61, 0.12); border-radius: 12px; flex-shrink: 0;">📄</span>
                     <div style="flex: 1; min-width: 0;">
                         <strong style="display: block; font-size: 1rem; color: var(--ink); margin-bottom: 2px;">Use a School Result</strong>
-                        <span style="display: block; font-size: 0.84rem; color: var(--muted); line-height: 1.4;">I have scores or recommendations from a school assessment.</span>
+                        <span style="display: block; font-size: 0.84rem; color: var(--muted); line-height: 1.4;">I have scores or recommendations from my school.</span>
                     </div>
                     <span style="font-size: 1.2rem; color: var(--muted); font-weight: 700;">&rarr;</span>
                 </button>
 
-                <!-- Choice 3: Select From My Courses -->
-                <button type="button" class="study-focus-choice-card js-select-focus-route" data-route="courses" style="
-                    display: flex;
-                    align-items: center;
-                    gap: 16px;
-                    padding: 18px 20px;
-                    background: var(--bg);
-                    border: 1px solid var(--border);
-                    border-radius: 16px;
-                    text-align: left;
-                    cursor: pointer;
-                    width: 100%;
-                    transition: all 0.16s ease;
-                ">
-                    <span style="font-size: 1.6rem; line-height: 1; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(46, 204, 113, 0.12); border-radius: 12px; flex-shrink: 0;">📚</span>
-                    <div style="flex: 1; min-width: 0;">
-                        <strong style="display: block; font-size: 1rem; color: var(--ink); margin-bottom: 2px;">Select From My Courses</strong>
-                        <span style="display: block; font-size: 0.84rem; color: var(--muted); line-height: 1.4;">I want to focus on something I already study in StudyQuest.</span>
-                    </div>
-                    <span style="font-size: 1.2rem; color: var(--muted); font-weight: 700;">&rarr;</span>
-                </button>
+                {# Choice 3: Conditional route #}
+                {% if owned_course_count > 0 or courses|length > 0 %}
+                    <button type="button" class="study-focus-choice-card js-select-focus-route" data-route="courses" style="
+                        display: flex;
+                        align-items: center;
+                        gap: 16px;
+                        padding: 16px 20px;
+                        background: var(--bg);
+                        border: 1px solid var(--border);
+                        border-radius: 16px;
+                        text-align: left;
+                        cursor: pointer;
+                        width: 100%;
+                        box-sizing: border-box;
+                        transition: all 0.16s ease;
+                    ">
+                        <span style="font-size: 1.5rem; line-height: 1; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(46, 204, 113, 0.12); border-radius: 12px; flex-shrink: 0;">📚</span>
+                        <div style="flex: 1; min-width: 0;">
+                            <strong style="display: block; font-size: 1rem; color: var(--ink); margin-bottom: 2px;">Select From My Courses</strong>
+                            <span style="display: block; font-size: 0.84rem; color: var(--muted); line-height: 1.4;">I want to focus on something I already study in StudyQuest.</span>
+                        </div>
+                        <span style="font-size: 1.2rem; color: var(--muted); font-weight: 700;">&rarr;</span>
+                    </button>
+                {% else %}
+                    <a href="{% url 'courses:course_create' %}" class="study-focus-choice-card" style="
+                        display: flex;
+                        align-items: center;
+                        gap: 16px;
+                        padding: 16px 20px;
+                        background: var(--bg);
+                        border: 1px solid var(--border);
+                        border-radius: 16px;
+                        text-align: left;
+                        text-decoration: none;
+                        cursor: pointer;
+                        width: 100%;
+                        box-sizing: border-box;
+                        transition: all 0.16s ease;
+                    ">
+                        <span style="font-size: 1.5rem; line-height: 1; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(0, 194, 168, 0.12); border-radius: 12px; flex-shrink: 0;">📤</span>
+                        <div style="flex: 1; min-width: 0;">
+                            <strong style="display: block; font-size: 1rem; color: var(--ink); margin-bottom: 2px;">Start With My Materials</strong>
+                            <span style="display: block; font-size: 0.84rem; color: var(--muted); line-height: 1.4;">I want to upload notes, slides, or modules first.</span>
+                        </div>
+                        <span style="font-size: 1.2rem; color: var(--muted); font-weight: 700;">&rarr;</span>
+                    </a>
+                {% endif %}
+
+                <!-- Quiet "Not now" Action -->
+                <div style="text-align: center; margin-top: 4px;">
+                    <button type="button" class="btn btn-ghost btn-sm js-close-focus-modal" style="color: var(--muted); font-size: 0.84rem; padding: 4px 14px;">
+                        Not now
+                    </button>
+                </div>
             </div>
 
             <!-- STEP 2A: CHOOSE A FOCUS MANUALLY -->
@@ -104,40 +139,43 @@
                 <form id="form-manual-focus" method="post" action="{% url 'courses:focus_checkin' %}">
                     {% csrf_token %}
                     
-                    <div class="study-focus-field">
-                        <label for="manual-subject-name">Subject <span style="color: var(--danger);">*</span></label>
-                        <input type="text" id="manual-subject-name" name="subject_name" required placeholder="e.g. Systems Integration and Architecture">
+                    <!-- Subject & Subject Code 2-Column Row on Desktop -->
+                    <div class="study-focus-row-2col">
+                        <div class="study-focus-field" style="margin-top: 0;">
+                            <label for="manual-subject-name">Subject <span style="color: var(--danger);">*</span></label>
+                            <input type="text" id="manual-subject-name" name="subject_name" required placeholder="e.g. Systems Integration and Architecture">
+                        </div>
+                        <div class="study-focus-field" style="margin-top: 0;">
+                            <label for="manual-subject-code">Subject code, optional</label>
+                            <input type="text" id="manual-subject-code" name="subject_code" placeholder="e.g. SIA">
+                        </div>
                     </div>
 
-                    <div class="study-focus-field">
-                        <label for="manual-subject-code">Subject code, if available</label>
-                        <input type="text" id="manual-subject-code" name="subject_code" placeholder="e.g. SIA">
-                    </div>
-
-                    <div class="study-focus-field">
-                        <label>Which topics need more attention?</label>
-                        <!-- Topic Chips Display -->
-                        <div id="topic-chips-container" style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 32px; align-items: center;"></div>
-                        <!-- Add Topic Input Row -->
-                        <div style="display: flex; gap: 8px; width: 100%; margin-top: 6px;">
-                            <input type="text" id="new-topic-input" placeholder="Type a topic and click Add...">
-                            <button type="button" id="btn-add-topic" class="btn btn-ghost" style="min-height: 50px; padding: 0 18px; border: 1px dashed var(--border); font-size: 0.88rem; font-weight: 700; white-space: nowrap; color: var(--primary);">
+                    <!-- Priority Topics -->
+                    <div class="study-focus-field" style="margin-top: 14px;">
+                        <label for="new-topic-input">Priority topics <span style="font-weight: 500; font-size: 0.80rem; color: var(--muted);">(press Enter or click + Add topic)</span></label>
+                        <div style="display: flex; gap: 8px; width: 100%;">
+                            <input type="text" id="new-topic-input" placeholder="Type a topic and click Add..." style="flex: 1;">
+                            <button type="button" id="btn-add-topic" class="btn btn-ghost" style="min-height: 46px; padding: 0 16px; border: 1px dashed var(--border); font-size: 0.86rem; font-weight: 700; white-space: nowrap; color: var(--primary);">
                                 + Add topic
                             </button>
                         </div>
+                        <!-- Removable Topic Chips Display -->
+                        <div id="topic-chips-container" style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 28px; margin-top: 6px; align-items: center;"></div>
                         <input type="hidden" name="topic_names" id="hidden-topic-names" value="">
-                        <span style="font-size: 0.78rem; color: var(--muted);">Click "+ Add topic" or press Enter to add priority topics.</span>
                     </div>
 
-                    <div class="study-focus-field">
-                        <label for="manual-reason">Why are you focusing on this?</label>
+                    <!-- Reason (Optional) -->
+                    <div class="study-focus-field" style="margin-top: 14px;">
+                        <label for="manual-reason">Why are you focusing on this? <span style="font-weight: 500; font-size: 0.80rem; color: var(--muted);">(Optional)</span></label>
                         <select id="manual-reason" name="reason">
-                            <option value="">Choose a reason</option>
-                            <option value="Upcoming examination">Upcoming examination</option>
-                            <option value="Difficult lesson">Difficult lesson</option>
-                            <option value="School assessment result">School assessment result</option>
-                            <option value="Instructor recommendation">Instructor recommendation</option>
-                            <option value="Personal review">Personal review</option>
+                            <option value="">Choose a reason (optional)</option>
+                            <option value="I received a low result">I received a low result</option>
+                            <option value="I have an upcoming exam">I have an upcoming exam</option>
+                            <option value="This topic is difficult for me">This topic is difficult for me</option>
+                            <option value="An instructor recommended it">An instructor recommended it</option>
+                            <option value="I want additional practice">I want additional practice</option>
+                            <option value="Other">Other</option>
                         </select>
                     </div>
                 </form>
@@ -148,14 +186,14 @@
                 <form id="form-school-result" method="post" action="{% url 'courses:focus_checkin' %}" enctype="multipart/form-data">
                     {% csrf_token %}
                     
-                    <p style="font-size: 0.88rem; color: var(--muted); margin: 0 0 18px; line-height: 1.45;">
-                        Upload a result or recommendation from your school’s assessment system.
+                    <p style="font-size: 0.88rem; color: var(--muted); margin: 0 0 16px; line-height: 1.45;">
+                        Upload the file provided by your school or assessment platform. StudyQuest will show the detected subject and topics before saving anything.
                     </p>
 
-                    <div class="study-focus-field">
-                        <label>Assessment result</label>
+                    <div class="study-focus-field" style="margin-top: 0;">
+                        <label>School result file</label>
                         <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
-                            <label for="school-file-input" class="btn btn-ghost" style="min-height: 50px; border: 1px solid var(--border); display: inline-flex; align-items: center; justify-content: center; padding: 0 20px; font-weight: 700; cursor: pointer; white-space: nowrap;">
+                            <label for="school-file-input" class="btn btn-ghost" style="min-height: 46px; border: 1px solid var(--border); display: inline-flex; align-items: center; justify-content: center; padding: 0 20px; font-weight: 700; cursor: pointer; white-space: nowrap;">
                                 Choose File
                             </label>
                             <input type="file" id="school-file-input" name="assessment_file" accept=".json,application/json" style="position: absolute; opacity: 0; width: 1px; height: 1px;">
@@ -165,11 +203,11 @@
                     </div>
 
                     <!-- Collapsible Advanced Options -->
-                    <details style="margin-top: 20px; width: 100%; border-top: 1px dashed var(--border); padding-top: 14px;">
-                        <summary style="cursor: pointer; color: var(--primary); font-size: 0.88rem; font-weight: 700; user-select: none; outline: none; margin-bottom: 8px;">
+                    <details style="margin-top: 18px; width: 100%; border-top: 1px dashed var(--border); padding-top: 12px;">
+                        <summary style="cursor: pointer; color: var(--primary); font-size: 0.88rem; font-weight: 700; user-select: none; outline: none; margin-bottom: 6px;">
                             Advanced import options ▾
                         </summary>
-                        <div class="study-focus-field" style="margin-top: 10px;">
+                        <div class="study-focus-field" style="margin-top: 8px;">
                             <label for="paste-json-textarea">Paste assessment data</label>
                             <textarea id="paste-json-textarea" name="assessment_json" placeholder='{"schema_version": "1.0", "subject_results": [{"subject_name": "...", "score": 58, "topics": [...]}]}' spellcheck="false"></textarea>
                         </div>
@@ -177,7 +215,8 @@
                 </form>
             </div>
 
-            <!-- STEP 2C: SELECT FROM MY COURSES -->
+            {% if owned_course_count > 0 or courses|length > 0 %}
+            {# STEP 2C: EXISTING COURSES #}
             <div id="view-step-courses" class="study-focus-step" style="display: none;">
                 <p style="font-size: 0.88rem; color: var(--muted); margin: 0 0 16px; line-height: 1.45;">
                     Pick an existing course in your library to set as your primary focus for reviews and Dungeon Quest practice.
@@ -210,6 +249,7 @@
                     </div>
                 {% endif %}
             </div>
+            {% endif %}
 
             <!-- STEP 3: REVIEW BEFORE SAVING (APPROVAL STEP) -->
             <div id="view-step-review" class="study-focus-step" style="display: none;">
@@ -217,28 +257,28 @@
                     background: var(--bg);
                     border: 1px solid rgba(117, 108, 243, 0.35);
                     border-radius: 16px;
-                    padding: 22px;
-                    margin-bottom: 16px;
+                    padding: 20px;
+                    margin-bottom: 14px;
                 ">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
                         <div>
                             <span class="badge" style="background: rgba(117, 108, 243, 0.15); color: var(--primary); font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 6px;">
                                 Target Subject
                             </span>
-                            <h3 id="review-subject-title" style="font-size: 1.35rem; font-weight: 800; margin: 6px 0 2px; color: var(--ink);">
+                            <h3 id="review-subject-title" style="font-size: 1.30rem; font-weight: 800; margin: 6px 0 2px; color: var(--ink);">
                                 Systems Integration and Architecture
                             </h3>
                             <span id="review-subject-code" style="font-size: 0.85rem; color: var(--muted); font-weight: 600;">SIA</span>
                         </div>
-                        <div id="review-score-wrap" style="text-align: right; background: rgba(239, 107, 115, 0.1); border: 1px solid rgba(239, 107, 115, 0.3); border-radius: 10px; padding: 8px 14px;">
-                            <div style="font-size: 0.70rem; text-transform: uppercase; font-weight: 700; color: var(--danger);">Initial Result</div>
-                            <div id="review-score-val" style="font-size: 1.4rem; font-weight: 800; color: var(--danger); line-height: 1.1;">58%</div>
+                        <div id="review-score-wrap" style="text-align: right; background: rgba(239, 107, 115, 0.1); border: 1px solid rgba(239, 107, 115, 0.3); border-radius: 10px; padding: 6px 12px;">
+                            <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 700; color: var(--danger);">Initial Result</div>
+                            <div id="review-score-val" style="font-size: 1.35rem; font-weight: 800; color: var(--danger); line-height: 1.1;">58%</div>
                         </div>
                     </div>
 
                     <!-- Priority Topics List -->
-                    <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border);">
-                        <div style="font-size: 0.82rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
+                    <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border);">
+                        <div style="font-size: 0.80rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">
                             Priority Topics
                         </div>
                         <ul id="review-topics-list" style="margin: 0; padding-left: 20px; font-size: 0.88rem; color: var(--ink); line-height: 1.5;">
@@ -247,14 +287,22 @@
                         </ul>
                     </div>
 
+                    <!-- Reason Section -->
+                    <div id="review-reason-wrap" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); display: none;">
+                        <div style="font-size: 0.80rem; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+                            Reason
+                        </div>
+                        <div id="review-reason-text" style="font-size: 0.88rem; color: var(--ink);"></div>
+                    </div>
+
                     <!-- Source & Timestamp -->
-                    <div style="margin-top: 14px; font-size: 0.80rem; color: var(--muted);">
-                        Source: <strong id="review-source-label" style="color: var(--ink);">School Result · September 27, 2026</strong>
+                    <div style="margin-top: 12px; font-size: 0.80rem; color: var(--muted);">
+                        Source: <strong id="review-source-label" style="color: var(--ink);">Personal Selection · Today</strong>
                     </div>
                 </div>
 
                 <p style="font-size: 0.86rem; color: var(--muted); margin: 0; line-height: 1.45;">
-                    StudyQuest can connect this focus to an existing course or help you create a focused study path.
+                    StudyQuest will use this focus to recommend relevant materials, assessment questions, and review activities.
                 </p>
             </div>
 
@@ -327,25 +375,41 @@
     .study-focus-modal__body {
         min-height: 0;
         overflow-y: auto;
-        padding: 26px 30px;
+        padding: 20px 28px;
         overscroll-behavior: contain;
         scrollbar-gutter: stable;
     }
 
-    /* Consistent fields */
+    /* 2-column layout on desktop for subject and code */
+    .study-focus-row-2col {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 14px;
+        align-items: start;
+        width: 100%;
+    }
+
+    @media (max-width: 600px) {
+        .study-focus-row-2col {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+    }
+
+    /* Consistent compact fields */
     .study-focus-field {
         display: grid;
-        gap: 8px;
+        gap: 6px;
         width: 100%;
     }
 
     .study-focus-field + .study-focus-field {
-        margin-top: 20px;
+        margin-top: 14px;
     }
 
     .study-focus-field label {
         color: var(--ink);
-        font-size: 0.9rem;
+        font-size: 0.88rem;
         font-weight: 800;
     }
 
@@ -354,8 +418,8 @@
     .study-focus-field textarea {
         width: 100%;
         min-width: 0;
-        min-height: 50px;
-        padding: 12px 14px;
+        min-height: 46px;
+        padding: 10px 14px;
 
         color: var(--ink);
         background: var(--bg);
@@ -545,13 +609,15 @@
             'school': {
                 badge: 'USE A SCHOOL RESULT',
                 title: 'Use a School Result',
-                subtitle: 'Upload a result or recommendation from your school’s assessment system.'
+                subtitle: 'Upload a result or recommendation from your school.'
             },
+            {% if owned_course_count > 0 or courses|length > 0 %}
             'courses': {
                 badge: 'SELECT FROM MY COURSES',
                 title: 'Select From My Courses',
                 subtitle: 'Choose a course from your library to set as your primary study focus.'
             },
+            {% endif %}
             'review': {
                 badge: 'REVIEW YOUR STUDY FOCUS',
                 title: 'Review Your Study Focus',
@@ -565,7 +631,7 @@
             activeTopics.forEach((topic, idx) => {
                 const chip = document.createElement('span');
                 chip.className = 'study-focus-chip';
-                chip.innerHTML = `<span>${escapeHtml(topic)}</span><button type="button" class="chip-remove" data-index="${idx}" aria-label="Remove topic">&times;</button>`;
+                chip.innerHTML = `<span>${escapeHtml(topic)}</span><button type="button" class="chip-remove" data-index="${idx}" aria-label="Remove topic ${escapeHtml(topic)}">&times;</button>`;
                 topicChipsContainer.appendChild(chip);
             });
             hiddenTopicNames.value = activeTopics.join(', ');
@@ -587,6 +653,9 @@
             const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
             parts.forEach(p => {
                 if (!activeTopics.includes(p)) {
+                    if (activeTopics.length >= 6) {
+                        return; // Max 6 topics
+                    }
                     activeTopics.push(p);
                 }
             });
@@ -772,9 +841,20 @@
                 reviewTopicsList.appendChild(li);
             }
 
-            const reason = manualReasonSelect.value || 'Personal study focus';
+            const reason = (manualReasonSelect.value || '').trim();
+            const reviewReasonWrap = document.getElementById('review-reason-wrap');
+            const reviewReasonText = document.getElementById('review-reason-text');
+            if (reviewReasonWrap && reviewReasonText) {
+                if (reason) {
+                    reviewReasonWrap.style.display = 'block';
+                    reviewReasonText.textContent = reason;
+                } else {
+                    reviewReasonWrap.style.display = 'none';
+                }
+            }
+
             const todayStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-            reviewSourceLabel.textContent = `Personal Selection · ${todayStr} (${reason})`;
+            reviewSourceLabel.textContent = `Personal Selection · ${todayStr}`;
 
             setStep('review');
         }

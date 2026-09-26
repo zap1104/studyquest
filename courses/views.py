@@ -42,6 +42,7 @@ from .learning_focus_service import (
     link_focus_to_course,
     get_active_learning_focus,
     get_pending_learning_focus,
+    get_completed_learning_focus,
     find_matching_courses,
     generate_course_creation_prefill,
     annotate_course_chapters_with_focus,
@@ -271,8 +272,11 @@ def dashboard(request):
     achievement_preview = get_achievement_preview(request.user)
     eligibility = get_generation_eligibility(profile)
 
+    owned_course_count = Course.objects.filter(user=request.user).count()
+    has_courses = owned_course_count > 0
     active_focus = get_active_learning_focus(request.user)
     pending_focus = get_pending_learning_focus(request.user)
+    completed_focus = get_completed_learning_focus(request.user) if not active_focus and not pending_focus else None
 
     return render(request, "courses/dashboard.html", {
         "profile": profile,
@@ -281,12 +285,15 @@ def dashboard(request):
         "next_action": next_action,
         "recent_courses": recent_courses,
         "courses": recent_courses,
+        "owned_course_count": owned_course_count,
+        "has_courses": has_courses,
         "weekly_momentum": weekly_momentum,
         "achievement_preview": achievement_preview,
         "eligibility": eligibility,
         "active_focus": active_focus,
         "pending_focus": pending_focus,
-        "open_focus": request.GET.get("open_focus") == "1" or bool(pending_focus),
+        "completed_focus": completed_focus,
+        "open_focus": request.GET.get("open_focus") == "1",
     })
 
 

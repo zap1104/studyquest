@@ -228,6 +228,13 @@ def get_pending_learning_focus(user: User) -> Optional[LearningFocus]:
     return LearningFocus.objects.filter(user=user, status=LearningFocus.STATUS_PENDING).first()
 
 
+def get_completed_learning_focus(user: User) -> Optional[LearningFocus]:
+    """Returns the user's most recently completed LearningFocus, if any."""
+    if not user or not user.is_authenticated:
+        return None
+    return LearningFocus.objects.filter(user=user, status=LearningFocus.STATUS_COMPLETED).order_by("-updated_at").first()
+
+
 def find_matching_courses(user: User, focus: LearningFocus) -> List[Course]:
     """Finds existing active courses belonging to the user that match the focus subject."""
     if not user or not user.is_authenticated:

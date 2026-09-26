@@ -108,6 +108,10 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 10px;">
+            <a href="{% url 'courses:dashboard' %}" class="btn btn-ghost btn-sm" style="color: var(--muted); text-decoration: none;">
+                Do This Later
+            </a>
+
             {% if focus.status == 'pending' %}
                 <form method="post" action="{% url 'courses:focus_activate' focus.pk %}" style="margin: 0;">
                     {% csrf_token %}
