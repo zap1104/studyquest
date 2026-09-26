@@ -3,7 +3,7 @@ from typing import Optional, Tuple, Dict, Any, List
 from django.utils import dateparse, timezone
 from django.db import transaction
 from django.contrib.auth.models import User
-from .models import Course, LearningFocus
+from .models import Course, Chapter, LearningFocus, QuizAttempt
 
 
 class DiagnosticPayloadError(ValueError):
@@ -267,4 +267,115 @@ def generate_course_creation_prefill(focus: LearningFocus) -> Dict[str, Any]:
         "subject_name": focus.subject_name,
         "topic_names": focus.topic_names,
     }
+
+
+def annotate_course_chapters_with_focus(chapters: List[Chapter], focus: Optional[LearningFocus]) -> None:
+    """Annotates each chapter with is_focus_target and matched_focus_topics."""
+    if not focus or not focus.topic_names:
+        for ch in chapters:
+            ch.is_focus_target = False
+            ch.matched_focus_topics = []
+        return
+
+    topics = [t.strip() for t in focus.topic_names if str(t).strip()]
+    for ch in chapters:
+        c_text = f"{ch.title} {ch.review_content or ''}".lower()
+        matched = [t for t in topics if t.lower() in c_text]
+        ch.is_focus_target = len(matched) > 0
+        ch.matched_focus_topics = matched
+
+
+def calculate_focus_mastery(focus: LearningFocus) -> Dict[str, Any]:
+    """Evaluates learner's progress and mastery on the concepts targeted by this LearningFocus.
+    
+    Compares the external diagnostic baseline (e.g. 42%) against StudyQuest
+    quiz performance and Review Run resolution.
+    """
+    if not focus or not focus.linked_course:
+        return {
+            "has_course": False,
+            "is_mastered": False,
+            "mastered_chapters": 0,
+            "total_targets": 0,
+            "average_score": 0.0,
+            "diagnostic_baseline": focus.initial_score if focus else None,
+            "gain": None,
+            "chapter_details": [],
+        }
+
+    course = focus.linked_course
+    chapters = list(course.chapters.select_related("quiz").all())
+    topics = [t.lower() for t in (focus.topic_names or []) if str(t).strip()]
+
+    targeted_chapters = []
+    for chap in chapters:
+        if topics:
+            c_text = f"{chap.title} {chap.review_content or ''}".lower()
+            if any(t in c_text for t in topics):
+                targeted_chapters.append(chap)
+        else:
+            targeted_chapters.append(chap)
+
+    if not targeted_chapters:
+        targeted_chapters = chapters
+
+    total_targets = len(targeted_chapters)
+    if total_targets == 0:
+        return {
+            "has_course": True,
+            "is_mastered": False,
+            "mastered_chapters": 0,
+            "total_targets": 0,
+            "average_score": 0.0,
+            "diagnostic_baseline": focus.initial_score,
+            "gain": None,
+            "chapter_details": [],
+        }
+
+    mastered_count = 0
+    scores = []
+    chapter_details = []
+
+    for chap in targeted_chapters:
+        best_pct = 0.0
+        attempts = QuizAttempt.objects.filter(user=focus.user, quiz__chapter=chap)
+        if attempts.exists():
+            for att in attempts:
+                pct = (att.review_data or {}).get("percentage")
+                if pct is None:
+                    pct = (att.score / att.total_questions * 100) if att.total_questions > 0 else 0
+                if pct > best_pct:
+                    best_pct = float(pct)
+            scores.append(best_pct)
+
+        # Passing threshold is 80% (guided standard)
+        is_passed = best_pct >= 80.0
+        if is_passed:
+            mastered_count += 1
+
+        chapter_details.append({
+            "id": chap.id,
+            "title": chap.title,
+            "best_percentage": best_pct,
+            "is_passed": is_passed,
+        })
+
+    average_score = round(sum(scores) / len(scores), 1) if scores else 0.0
+    is_mastered = (mastered_count == total_targets) and total_targets > 0
+
+    gain = None
+    if focus.initial_score is not None and scores:
+        gain = round(average_score - float(focus.initial_score), 1)
+
+    return {
+        "has_course": True,
+        "is_mastered": is_mastered,
+        "mastered_chapters": mastered_count,
+        "total_targets": total_targets,
+        "average_score": average_score,
+        "diagnostic_baseline": focus.initial_score,
+        "gain": gain,
+        "chapter_details": chapter_details,
+    }
+
 

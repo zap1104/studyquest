@@ -61,8 +61,15 @@ def _launch_context(request, launch_error=None):
         ).select_related("quiz__chapter__course", "active_enemy").prefetch_related("enemies")
     )
     recent_groups = services.get_recent_chapter_groups(request.user)
+    active_focus = None
+    try:
+        from courses.learning_focus_service import get_active_learning_focus
+        active_focus = get_active_learning_focus(request.user)
+    except Exception:
+        pass
+
     return {
-        "catalog": services.build_launch_catalog(request.user),
+        "catalog": services.build_launch_catalog(request.user, active_focus=active_focus),
         "rules": services.rules_for_user(request.user),
         "active_runs": active_runs,
         "recent_groups": recent_groups[:3],
@@ -75,6 +82,7 @@ def _launch_context(request, launch_error=None):
             .select_related("quiz__chapter__course")[:RECENT_RUN_COUNT]
         ),
         "launch_error": launch_error,
+        "active_focus": active_focus,
     }
 
 

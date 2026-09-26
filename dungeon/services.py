@@ -316,7 +316,7 @@ def get_recent_chapter_groups(user, limit=None):
     return result
 
 
-def build_launch_catalog(user):
+def build_launch_catalog(user, active_focus=None):
     """Every quiz this user owns, annotated with whether it can start a run or review run."""
     courses = (
         Course.objects.filter(user=user)
@@ -337,7 +337,15 @@ def build_launch_catalog(user):
 
     unresolved_counts = get_unresolved_counts_for_quizzes(user, all_quizzes)
 
+    focus_topics = [t.lower() for t in (active_focus.topic_names or []) if str(t).strip()] if active_focus else []
+
     for course in courses:
+        is_focus_course = bool(
+            active_focus and (
+                active_focus.linked_course_id == course.id
+                or active_focus.subject_name.lower() in course.title.lower()
+            )
+        )
         entries = []
         for chapter in course.chapters.all():
             quiz = getattr(chapter, "quiz", None)
@@ -352,6 +360,11 @@ def build_launch_catalog(user):
             enemy_count = enemy_count_for_questions(question_count, rules=rules)
             unresolved_count = unresolved_counts.get(quiz.id, 0)
 
+            c_text = f"{chapter.title} {chapter.review_content or ''}".lower()
+            is_focus_target = is_focus_course and (
+                any(t in c_text for t in focus_topics) if focus_topics else True
+            )
+
             entries.append({
                 "quiz": quiz,
                 "chapter": chapter,
@@ -363,10 +376,15 @@ def build_launch_catalog(user):
                 "is_playable": question_count >= minimum and enemy_count > 0,
                 "unresolved_count": unresolved_count,
                 "review_run_available": unresolved_count > 0,
+                "is_focus_target": is_focus_target,
             })
 
         if entries:
-            catalog.append({"course": course, "entries": entries})
+            catalog.append({
+                "course": course,
+                "entries": entries,
+                "is_focus_course": is_focus_course,
+            })
 
     return catalog
 

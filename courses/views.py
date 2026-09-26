@@ -44,6 +44,8 @@ from .learning_focus_service import (
     get_pending_learning_focus,
     find_matching_courses,
     generate_course_creation_prefill,
+    annotate_course_chapters_with_focus,
+    calculate_focus_mastery,
     DiagnosticPayloadError,
 )
 from .dashboard_service import (
@@ -559,6 +561,14 @@ def course_detail(request, pk):
         chapter.previous_chapter = get_previous_chapter(chapter)
 
     progress = calculate_course_progress(request.user, course)
+    linked_focus = course.learning_focuses.filter(
+        status__in=[LearningFocus.STATUS_ACTIVE, LearningFocus.STATUS_PENDING, LearningFocus.STATUS_COMPLETED]
+    ).first()
+    active_focus = get_active_learning_focus(request.user)
+    current_focus = linked_focus or (active_focus if active_focus and active_focus.linked_course_id == course.id else None)
+
+    annotate_course_chapters_with_focus(chapters, current_focus)
+    focus_mastery = calculate_focus_mastery(current_focus) if current_focus else None
 
     return render(request, "courses/course_detail.html", {
         "course": course,
@@ -569,6 +579,8 @@ def course_detail(request, pk):
         "guided_pass_threshold": GUIDED_PASS_THRESHOLD,
         "prior_knowledge_threshold": PRIOR_KNOWLEDGE_THRESHOLD,
         "pass_threshold": GUIDED_PASS_THRESHOLD,
+        "linked_focus": current_focus,
+        "focus_mastery": focus_mastery,
     })
 
 
@@ -621,6 +633,12 @@ def chapter_review(request, pk):
         .first()
     ) if quiz else None
 
+    active_focus = get_active_learning_focus(request.user)
+    focus_topics = []
+    if active_focus and (active_focus.linked_course_id == course.id or active_focus.subject_name.lower() in course.title.lower()):
+        c_text = f"{chapter.title} {chapter.review_content or ''}".lower()
+        focus_topics = [t for t in (active_focus.topic_names or []) if t.lower() in c_text]
+
     return render(request, "courses/chapter_review.html", {
         "chapter": chapter,
         "chapter_data": chapter_data,
@@ -642,6 +660,8 @@ def chapter_review(request, pk):
         "guided_threshold": GUIDED_PASS_THRESHOLD,
         "prior_knowledge_threshold": PRIOR_KNOWLEDGE_THRESHOLD,
         "pass_threshold": GUIDED_PASS_THRESHOLD,
+        "active_focus": active_focus,
+        "focus_topics": focus_topics,
     })
 
 
@@ -1002,6 +1022,24 @@ def submit_quiz(request, pk=None, chapter_id=None):
 
     post_completion_state = get_chapter_completion_state(request.user, chapter)
 
+    # Check focus mastery if linked
+    active_focus = get_active_learning_focus(request.user)
+    focus_update = None
+    if active_focus and (active_focus.linked_course_id == chapter.course_id or active_focus.subject_name.lower() in chapter.course.title.lower()):
+        mastery = calculate_focus_mastery(active_focus)
+        focus_update = {
+            "focus_id": active_focus.id,
+            "subject_name": active_focus.subject_name,
+            "is_mastered": mastery["is_mastered"],
+            "mastered_chapters": mastery["mastered_chapters"],
+            "total_targets": mastery["total_targets"],
+            "average_score": mastery["average_score"],
+            "diagnostic_baseline": active_focus.initial_score,
+            "gain": mastery["gain"],
+        }
+        if mastery["is_mastered"]:
+            complete_learning_focus(active_focus)
+
     return JsonResponse({
         "score": float(total_earned),
         "maximum_score": float(total_max),
@@ -1017,6 +1055,7 @@ def submit_quiz(request, pk=None, chapter_id=None):
         "new_streak": getattr(profile, "streak_days", 0) if profile else 0,
         "review_items": review_items,
         "results": review_items,
+        "focus_update": focus_update,
     })
 
 
@@ -1163,3 +1202,14 @@ def focus_link_course(request, pk, course_id):
     activate_learning_focus(focus)
     messages.success(request, f"Connected focus '{focus.subject_name}' to course '{course.title}'!")
     return redirect("courses:course_detail", pk=course.pk)
+
+
+@login_required
+def focus_summary(request, pk):
+    """Displays the diagnostic-to-mastery institutional summary report."""
+    focus = get_object_or_404(LearningFocus, pk=pk, user=request.user)
+    mastery = calculate_focus_mastery(focus)
+    return render(request, "courses/focus_summary.html", {
+        "focus": focus,
+        "mastery": mastery,
+    })

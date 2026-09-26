@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
-from courses.models import Course, LearningFocus
+from courses.models import Course, Chapter, Quiz, QuizAttempt, LearningFocus
 from courses.learning_focus_service import (
     validate_external_assessment_payload,
     import_external_assessment,
@@ -13,6 +13,8 @@ from courses.learning_focus_service import (
     get_pending_learning_focus,
     find_matching_courses,
     generate_course_creation_prefill,
+    annotate_course_chapters_with_focus,
+    calculate_focus_mastery,
     DiagnosticPayloadError,
 )
 
@@ -313,5 +315,160 @@ class LearningFocusViewTests(TestCase):
         self.assertContains(response, "Focus Mode Active")
         self.assertContains(response, "Systems Architecture Focus Review")
         self.assertContains(response, "Cloud Migration, Kubernetes")
+
+    def test_annotate_course_chapters_with_focus(self):
+        course = Course.objects.create(user=self.user, title="DevOps Fundamentals")
+        ch1 = Chapter.objects.create(course=course, order=1, title="Intro to DevOps", review_content="Basics of CI/CD")
+        ch2 = Chapter.objects.create(course=course, order=2, title="Containers & Orchestration", review_content="Deep dive into Kubernetes")
+        ch3 = Chapter.objects.create(course=course, order=3, title="Monitoring", review_content="Metrics and observability")
+
+        focus = create_manual_learning_focus(
+            self.user,
+            subject_name="DevOps",
+            topic_names=["Kubernetes", "CI/CD"],
+        )
+        chapters = [ch1, ch2, ch3]
+        annotate_course_chapters_with_focus(chapters, focus)
+
+        self.assertTrue(ch1.is_focus_target)
+        self.assertIn("CI/CD", ch1.matched_focus_topics)
+        self.assertTrue(ch2.is_focus_target)
+        self.assertIn("Kubernetes", ch2.matched_focus_topics)
+        self.assertFalse(ch3.is_focus_target)
+
+    def test_calculate_focus_mastery(self):
+        course = Course.objects.create(user=self.user, title="Cloud Systems")
+        ch1 = Chapter.objects.create(course=course, order=1, title="Serverless Architecture", review_content="Lambda & FaaS")
+        quiz1 = Quiz.objects.create(chapter=ch1, title="Serverless Quiz")
+
+        focus = create_manual_learning_focus(
+            self.user,
+            subject_name="Cloud Systems",
+            topic_names=["Serverless"],
+        )
+        focus.initial_score = 40.0
+        focus.save()
+        link_focus_to_course(focus, course)
+
+        # Before any quiz attempt
+        mastery = calculate_focus_mastery(focus)
+        self.assertFalse(mastery["is_mastered"])
+        self.assertEqual(mastery["mastered_chapters"], 0)
+        self.assertEqual(mastery["total_targets"], 1)
+
+        # Record a passing quiz attempt (90%)
+        QuizAttempt.objects.create(
+            user=self.user,
+            quiz=quiz1,
+            score=9.0,
+            total_questions=10,
+            xp_earned=25,
+            review_data={"percentage": 90, "passed": True},
+        )
+
+        mastery_after = calculate_focus_mastery(focus)
+        self.assertTrue(mastery_after["is_mastered"])
+        self.assertEqual(mastery_after["mastered_chapters"], 1)
+        self.assertEqual(mastery_after["average_score"], 90.0)
+        self.assertEqual(mastery_after["gain"], 50.0)
+
+    def test_course_detail_with_focus(self):
+        course = Course.objects.create(user=self.user, title="Enterprise Systems")
+        ch1 = Chapter.objects.create(course=course, order=1, title="Service Oriented Architecture", review_content="SOA overview")
+        focus = create_manual_learning_focus(
+            self.user,
+            subject_name="Enterprise Systems",
+            topic_names=["Service Oriented Architecture"],
+        )
+        link_focus_to_course(focus, course)
+
+        response = self.client.get(f"/courses/{course.pk}/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Active Diagnostic Focus")
+        self.assertContains(response, "Remediation Pathway for Enterprise Systems")
+        self.assertContains(response, "Focus Target")
+
+    def test_chapter_review_with_focus_topics(self):
+        course = Course.objects.create(user=self.user, title="Database Engineering")
+        ch1 = Chapter.objects.create(course=course, order=1, title="Indexing and B-Trees", review_content="Optimizing B-Tree lookups")
+        focus = create_manual_learning_focus(
+            self.user,
+            subject_name="Database Engineering",
+            topic_names=["Indexing"],
+        )
+        link_focus_to_course(focus, course)
+
+        response = self.client.get(f"/chapters/{ch1.pk}/review/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Diagnostic Target:")
+        self.assertContains(response, "Indexing")
+
+    def test_focus_summary_view(self):
+        course = Course.objects.create(user=self.user, title="Cybersecurity Operations")
+        ch1 = Chapter.objects.create(course=course, order=1, title="Incident Response", review_content="SIEM alerts")
+        quiz = Quiz.objects.create(chapter=ch1, title="IR Quiz")
+        QuizAttempt.objects.create(
+            user=self.user,
+            quiz=quiz,
+            score=8.5,
+            total_questions=10,
+            xp_earned=25,
+            review_data={"percentage": 85, "passed": True},
+        )
+
+        focus = create_manual_learning_focus(
+            self.user,
+            subject_name="Cybersecurity Operations",
+            topic_names=["Incident Response"],
+        )
+        focus.initial_score = 45.0
+        focus.save()
+        link_focus_to_course(focus, course)
+
+        response = self.client.get(f"/focus/{focus.id}/summary/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Institutional Diagnostic Report")
+        self.assertContains(response, "Cybersecurity Operations")
+        self.assertContains(response, "Diagnostic Gap Remediated")
+        self.assertContains(response, "45%")
+        self.assertContains(response, "85%")
+        self.assertContains(response, "+40%")
+
+    def test_dungeon_launch_catalog_focus_annotation(self):
+        from dungeon import services as dungeon_services
+        from courses.models import Question
+
+        course = Course.objects.create(user=self.user, title="Data Structures")
+        ch1 = Chapter.objects.create(course=course, order=1, title="Binary Search Trees", review_content="BST traversals")
+        quiz = Quiz.objects.create(chapter=ch1, title="BST Quiz")
+        for i in range(5):
+            Question.objects.create(
+                quiz=quiz,
+                text=f"Question {i+1} on BST",
+                question_type="multiple_choice",
+                order=i+1,
+            )
+
+        focus = create_manual_learning_focus(
+            self.user,
+            subject_name="Data Structures",
+            topic_names=["Binary Search Trees"],
+        )
+        link_focus_to_course(focus, course)
+
+        catalog = dungeon_services.build_launch_catalog(self.user, active_focus=focus)
+        self.assertTrue(len(catalog) > 0)
+        target_group = next((g for g in catalog if g["course"].id == course.id), None)
+        self.assertIsNotNone(target_group)
+        self.assertTrue(target_group["is_focus_course"])
+        self.assertTrue(target_group["entries"][0]["is_focus_target"])
+
+        # Launch page renders focus tags
+        response = self.client.get("/dungeon/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Remediation Expeditions for Data Structures")
+        self.assertContains(response, "Focus Course")
+        self.assertContains(response, "Focus Target")
+
 
 
