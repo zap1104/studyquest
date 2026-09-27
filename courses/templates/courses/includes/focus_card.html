@@ -1,8 +1,8 @@
 {% if pending_focus %}
 <!-- 1. PENDING SCHOOL RESULT CARD -->
 <div class="card focus-dashboard-card" id="focus-pending-card" style="
-    background: linear-gradient(135deg, rgba(232, 163, 61, 0.12) 0%, rgba(117, 108, 243, 0.08) 100%), var(--surface);
-    border: 1px solid rgba(232, 163, 61, 0.45);
+    background: linear-gradient(135deg, rgba(255, 176, 32, 0.12) 0%, rgba(108, 92, 231, 0.08) 100%), var(--surface);
+    border: 1px solid rgba(255, 176, 32, 0.45);
     border-radius: 16px;
     padding: 20px 24px;
     margin-bottom: 16px;
@@ -12,7 +12,7 @@
 ">
     <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; flex-wrap: wrap;">
         <div>
-            <span class="badge" style="background: rgba(232, 163, 61, 0.2); color: var(--gold); font-weight: 800; text-transform: uppercase; font-size: 0.70rem; letter-spacing: 0.06em; padding: 3px 9px; border-radius: 999px;">
+            <span class="badge" style="background: rgba(255, 176, 32, 0.2); color: var(--gold); font-weight: 800; text-transform: uppercase; font-size: 0.70rem; letter-spacing: 0.06em; padding: 3px 9px; border-radius: 999px;">
                 📄 School Result Ready to Review
             </span>
             <h2 style="font-size: 1.25rem; font-weight: 800; margin: 6px 0 2px; color: var(--ink);">
@@ -24,7 +24,7 @@
             </p>
         </div>
         {% if pending_focus.initial_score is not None %}
-            <div style="text-align: right; background: rgba(239, 107, 115, 0.1); border: 1px solid rgba(239, 107, 115, 0.3); border-radius: 10px; padding: 6px 12px;">
+            <div style="text-align: right; background: rgba(255, 84, 112, 0.1); border: 1px solid rgba(255, 84, 112, 0.3); border-radius: 10px; padding: 6px 12px;">
                 <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 700; color: var(--danger);">Score</div>
                 <div style="font-size: 1.25rem; font-weight: 800; color: var(--danger); line-height: 1.1;">{{ pending_focus.initial_score|floatformat:0 }}%</div>
             </div>
@@ -35,7 +35,7 @@
         <div style="display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 16px;">
             <span style="font-size: 0.76rem; color: var(--muted); align-self: center; font-weight: 600;">Priority:</span>
             {% for topic in pending_focus.topic_names %}
-                <span style="font-size: 0.76rem; font-weight: 600; background: rgba(232, 163, 61, 0.12); color: var(--gold); border: 1px solid rgba(232, 163, 61, 0.25); padding: 2px 8px; border-radius: 6px;">
+                <span style="font-size: 0.76rem; font-weight: 600; background: rgba(255, 176, 32, 0.12); color: var(--gold); border: 1px solid rgba(255, 176, 32, 0.25); padding: 2px 8px; border-radius: 6px;">
                     {{ topic }}
                 </span>
             {% endfor %}
@@ -58,8 +58,8 @@
 {% elif active_focus %}
 <!-- 2. CURRENT ACTIVE STUDY FOCUS CARD -->
 <div class="card focus-dashboard-card" id="focus-card" style="
-    background: linear-gradient(135deg, rgba(117, 108, 243, 0.08) 0%, rgba(232, 163, 61, 0.06) 100%), var(--surface);
-    border: 1px solid rgba(117, 108, 243, 0.35);
+    background: linear-gradient(135deg, rgba(108, 92, 231, 0.08) 0%, rgba(255, 176, 32, 0.06) 100%), var(--surface);
+    border: 1px solid rgba(108, 92, 231, 0.35);
     border-radius: 16px;
     padding: 20px 24px;
     position: relative;
@@ -72,11 +72,11 @@
     <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
         <div>
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                <span class="badge" style="background: rgba(117, 108, 243, 0.18); color: var(--primary); font-weight: 800; text-transform: uppercase; font-size: 0.70rem; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 999px;">
+                <span class="badge" style="background: rgba(108, 92, 231, 0.18); color: var(--primary); font-weight: 800; text-transform: uppercase; font-size: 0.70rem; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 999px;">
                     🎯 Today's Study Focus
                 </span>
                 {% if active_focus.initial_score is not None %}
-                    <span style="font-size: 0.75rem; font-weight: 700; color: var(--danger); background: rgba(239, 107, 115, 0.12); padding: 2px 8px; border-radius: 6px;">
+                    <span style="font-size: 0.75rem; font-weight: 700; color: var(--danger); background: rgba(255, 84, 112, 0.12); padding: 2px 8px; border-radius: 6px;">
                         Initial Result: {{ active_focus.initial_score|floatformat:0 }}%
                     </span>
                 {% endif %}
@@ -91,7 +91,7 @@
                 </div>
             {% endif %}
         </div>
-        
+
         <div style="display: flex; align-items: center; gap: 6px;">
             <button type="button" class="btn btn-ghost btn-sm js-open-focus-modal" style="font-size: 0.78rem;">
                 Update
@@ -116,7 +116,7 @@
         <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px;">
             <span style="font-size: 0.76rem; color: var(--muted); align-self: center; font-weight: 600;">Priority:</span>
             {% for topic in active_focus.topic_names %}
-                <span style="font-size: 0.76rem; font-weight: 600; background: rgba(232, 163, 61, 0.12); color: var(--gold); border: 1px solid rgba(232, 163, 61, 0.25); padding: 2px 8px; border-radius: 6px;">
+                <span style="font-size: 0.76rem; font-weight: 600; background: rgba(255, 176, 32, 0.12); color: var(--gold); border: 1px solid rgba(255, 176, 32, 0.25); padding: 2px 8px; border-radius: 6px;">
                     {{ topic }}
                 </span>
             {% endfor %}
@@ -150,7 +150,7 @@
 <!-- 3. COMPLETED FOCUS CARD -->
 <div class="card focus-dashboard-card" id="focus-completed-card" style="
     background: var(--surface);
-    border: 1px solid rgba(0, 194, 168, 0.35);
+    border: 1px solid rgba(22, 160, 133, 0.35);
     border-radius: 16px;
     padding: 18px 24px;
     margin-bottom: 16px;
@@ -160,7 +160,7 @@
 ">
     <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
         <div>
-            <span class="badge" style="background: rgba(0, 194, 168, 0.15); color: var(--accent); font-weight: 800; text-transform: uppercase; font-size: 0.70rem; letter-spacing: 0.06em; padding: 3px 9px; border-radius: 999px;">
+            <span class="badge" style="background: rgba(22, 160, 133, 0.15); color: var(--success); font-weight: 800; text-transform: uppercase; font-size: 0.70rem; letter-spacing: 0.06em; padding: 3px 9px; border-radius: 999px;">
                 🏆 Focus Completed
             </span>
             <h2 style="font-size: 1.15rem; font-weight: 800; margin: 4px 0 2px; color: var(--ink);">

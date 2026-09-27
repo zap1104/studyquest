@@ -641,15 +641,132 @@ class AcademicCatalogueTests(TestCase):
         resp = self.client.get("/")
         self.assertEqual(resp.status_code, 200)
 
-        # Catalogue embedded JSON and step elements
+        # Catalogue embedded JSON and the drill-down root hooks
         self.assertContains(resp, 'id="academic-catalogue-data"')
         self.assertContains(resp, "Browse Subjects and Topics")
         self.assertContains(resp, 'id="view-step-catalogue"')
-        self.assertContains(resp, "catalogue-explorer-grid")
-        self.assertContains(resp, 'id="catalogue-areas-list"')
-        self.assertContains(resp, 'id="catalogue-subjects-container"')
-        self.assertContains(resp, 'id="catalogue-selection-tray"')
+        self.assertContains(resp, 'data-catalogue-body')
+        self.assertContains(resp, 'data-catalogue-list')
+        self.assertContains(resp, 'data-catalogue-search')
+        self.assertContains(resp, 'data-catalogue-tray-status')
+        self.assertContains(resp, 'data-catalogue-cap-message')
         self.assertContains(resp, "2026.1")
+
+    def test_dashboard_omits_old_nested_catalogue_layout(self):
+        """The two-column explorer and its independent scroll panes are gone.
+
+        These hooks are asserted absent so the nested-scroll regression cannot
+        silently return.
+        """
+        self.client.login(username="student_catalog", password="password123")
+        resp = self.client.get("/")
+        self.assertEqual(resp.status_code, 200)
+
+        for obsolete in (
+            "catalogue-explorer-grid",
+            "catalogue-areas-sidebar",
+            "catalogue-subjects-panel",
+            "catalogue-selection-tray",
+            'id="catalogue-areas-list"',
+            'id="catalogue-subjects-container"',
+        ):
+            self.assertNotContains(resp, obsolete)
+
+    def test_catalogue_script_is_served_from_a_static_module(self):
+        """The controller must live outside the template, not inline."""
+        self.client.login(username="student_catalog", password="password123")
+        resp = self.client.get("/")
+
+        self.assertContains(resp, "courses/js/focus_catalogue.js")
+        # The old inline controller's private state must not exist anywhere.
+        for removed in (
+            "catalogueSelectedTopics",
+            "expandedSubjectKeys",
+            "renderSubjectsPanel",
+            "handleTopicToggle",
+        ):
+            self.assertNotContains(resp, removed)
+
+    def test_catalogue_styles_moved_to_shared_stylesheet(self):
+        """Catalogue and focus modal CSS must live in static stylesheet, not inline."""
+        self.client.login(username="student_catalog", password="password123")
+        resp = self.client.get("/")
+
+        # Modal shell and catalogue hooks are present in markup
+        self.assertContains(resp, "focus-catalogue-dialog")
+        self.assertContains(resp, 'data-current-step="choice"')
+        self.assertContains(resp, "data-catalogue-body")
+
+        # No inline <style> block remains in the modal markup
+        html = resp.content.decode()
+        modal_start = html.find('id="focus-modal"')
+        self.assertNotEqual(modal_start, -1)
+        catalogue_data_pos = html.find('id="academic-catalogue-data"')
+        modal_content = html[modal_start:catalogue_data_pos]
+        self.assertNotIn("<style", modal_content)
+
+
+class CatalogueSelectionSubmissionTests(TestCase):
+    """The POST contract is unchanged: labels only, comma-joined."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="student_submit", password="password123")
+        self.client.login(username="student_submit", password="password123")
+
+    def test_six_catalogue_labels_persist_as_six_strings(self):
+        labels = [
+            "Business Model Canvas",
+            "Market Validation",
+            "Startup Financing",
+            "Intellectual Property",
+            "Digital Marketing",
+            "Risk Management",
+        ]
+        resp = self.client.post("/focus/checkin/", {
+            "subject_name": "Technopreneurship",
+            "subject_code": "TECHNO",
+            "topic_names": ", ".join(labels),
+            "reason": "school_result",
+        })
+        self.assertEqual(resp.status_code, 302)
+
+        focus = LearningFocus.objects.get(user=self.user)
+        self.assertEqual(focus.topic_names, labels)
+        self.assertTrue(all(isinstance(t, str) for t in focus.topic_names))
+        self.assertEqual(focus.status, LearningFocus.STATUS_ACTIVE)
+        self.assertEqual(focus.source_payload.get("reason"), "school_result")
+
+    def test_subject_only_submission_with_no_topics(self):
+        resp = self.client.post("/focus/checkin/", {
+            "subject_name": "Calculus",
+            "topic_names": "",
+        })
+        self.assertEqual(resp.status_code, 302)
+
+        focus = LearningFocus.objects.get(user=self.user)
+        self.assertEqual(focus.topic_names, [])
+        self.assertEqual(focus.subject_name, "Calculus")
+
+    def test_empty_submission_creates_no_focus(self):
+        resp = self.client.post("/focus/checkin/", {"subject_name": "", "topic_names": ""})
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(LearningFocus.objects.filter(user=self.user).exists())
+
+    def test_manual_reason_values_are_stable_machine_values(self):
+        """The select's option values are the ones the server stores."""
+        resp = self.client.get("/")
+        body = resp.content.decode()
+        for value in (
+            "low_result",
+            "upcoming_exam",
+            "difficult_topic",
+            "instructor_recommendation",
+            "extra_practice",
+            "school_result",
+        ):
+            self.assertIn(f'value="{value}"', body)
+        # The dead display-string value must be gone.
+        self.assertNotIn("School assessment result", body)
 
 
 

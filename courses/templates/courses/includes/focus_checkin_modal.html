@@ -1,19 +1,8 @@
+{% load static %}
 <!-- ================= STUDY FOCUS GUIDED MODAL (DF-2) ================= -->
-<div class="focus-modal-backdrop" id="focus-modal" hidden aria-hidden="true" style="
-    position: fixed;
-    inset: 0;
-    z-index: 1050;
-    background: rgba(10, 8, 6, 0.78);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-    box-sizing: border-box;
-">
-    <div class="study-focus-modal" role="dialog" aria-modal="true" aria-labelledby="study-focus-title">
-        
+<div class="focus-modal-backdrop" id="focus-modal" hidden aria-hidden="true">
+    <div class="study-focus-modal focus-catalogue-dialog" role="dialog" aria-modal="true" aria-labelledby="study-focus-title" data-current-step="choice">
+
         <!-- ================= FIXED HEADER ================= -->
         <header class="study-focus-modal__header">
             <div>
@@ -52,7 +41,7 @@
                         </div>
                         <span style="display: block; font-size: 0.84rem; color: var(--muted); line-height: 1.4;">I already know what I want to improve.</span>
                     </div>
-                    <span style="font-size: 1.2rem; color: var(--muted); font-weight: 700;">&rarr;</span>
+                        <span class="study-focus-choice-arrow" style="font-size: 1.2rem; color: var(--muted); font-weight: 700;">&rarr;</span>
                 </button>
 
                 <!-- Choice 2: Use a School Result (Neutral Border) -->
@@ -75,7 +64,7 @@
                         <strong style="display: block; font-size: 1rem; color: var(--ink); margin-bottom: 2px;">Use a School Result</strong>
                         <span style="display: block; font-size: 0.84rem; color: var(--muted); line-height: 1.4;">I have scores or recommendations from my school.</span>
                     </div>
-                    <span style="font-size: 1.2rem; color: var(--muted); font-weight: 700;">&rarr;</span>
+                    <span class="study-focus-choice-arrow" style="font-size: 1.2rem; color: var(--muted); font-weight: 700;">&rarr;</span>
                 </button>
 
                 {# Choice 3: Conditional route #}
@@ -99,10 +88,10 @@
                             <strong style="display: block; font-size: 1rem; color: var(--ink); margin-bottom: 2px;">Select From My Courses</strong>
                             <span style="display: block; font-size: 0.84rem; color: var(--muted); line-height: 1.4;">I want to focus on something I already study in StudyQuest.</span>
                         </div>
-                        <span style="font-size: 1.2rem; color: var(--muted); font-weight: 700;">&rarr;</span>
+                        <span class="study-focus-choice-arrow" style="font-size: 1.2rem; color: var(--muted); font-weight: 700;">&rarr;</span>
                     </button>
                 {% else %}
-                    <a href="{% url 'courses:course_create' %}" class="study-focus-choice-card" style="
+                    <a href="{% url 'courses:course_create' %}" class="study-focus-choice-card study-focus-choice-card-create" style="
                         display: flex;
                         align-items: center;
                         gap: 16px;
@@ -122,13 +111,13 @@
                             <strong style="display: block; font-size: 1rem; color: var(--ink); margin-bottom: 2px;">Start With My Materials</strong>
                             <span style="display: block; font-size: 0.84rem; color: var(--muted); line-height: 1.4;">I want to upload notes, slides, or modules first.</span>
                         </div>
-                        <span style="font-size: 1.2rem; color: var(--muted); font-weight: 700;">&rarr;</span>
+                        <span class="study-focus-choice-arrow" style="font-size: 1.2rem; color: var(--muted); font-weight: 700;">&rarr;</span>
                     </a>
                 {% endif %}
 
                 <!-- Quiet "Not now" Action -->
                 <div style="text-align: center; margin-top: 8px;">
-                    <button type="button" class="btn btn-ghost btn-sm js-close-focus-modal" style="color: var(--muted); font-size: 0.86rem; padding: 6px 18px; border-radius: 8px;">
+                    <button type="button" class="study-focus-skip-btn js-close-focus-modal">
                         Not now
                     </button>
                 </div>
@@ -138,7 +127,7 @@
             <div id="view-step-manual" class="study-focus-step" style="display: none;">
                 <form id="form-manual-focus" method="post" action="{% url 'courses:focus_checkin' %}">
                     {% csrf_token %}
-                    
+
                     <!-- Subject & Subject Code 2-Column Row on Desktop -->
                     <div class="study-focus-row-2col">
                         <div class="study-focus-field" style="margin-top: 0;">
@@ -153,83 +142,127 @@
 
                     <!-- Priority Topics -->
                     <div class="study-focus-field" style="margin-top: 14px;">
-                        <label for="new-topic-input">Priority topics <span style="font-weight: 500; font-size: 0.80rem; color: var(--muted);">(press Enter or click + Add topic)</span></label>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                            <label for="new-topic-input">Priority topics <span style="font-weight: 500; font-size: 0.80rem; color: var(--muted);">(press Enter or click + Add topic)</span></label>
+                            <span id="topic-count-hint" style="font-size: 0.74rem; color: var(--muted); font-weight: 600;">Max 6 topics</span>
+                        </div>
                         <div style="display: flex; gap: 8px; width: 100%;">
                             <input type="text" id="new-topic-input" placeholder="Type a topic and click Add..." style="flex: 1;">
                             <button type="button" id="btn-add-topic" class="btn btn-ghost" style="min-height: 46px; padding: 0 16px; border: 1px dashed var(--border); font-size: 0.86rem; font-weight: 700; white-space: nowrap; color: var(--primary);">
                                 + Add topic
                             </button>
                         </div>
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
-                            <button type="button" id="btn-open-catalogue" class="focus-catalog-link">
-                                <span style="font-size: 0.95rem;">📖</span>
-                                <span id="btn-catalogue-label">Browse Subjects and Topics</span>
-                            </button>
-                            <span id="topic-count-hint" style="font-size: 0.74rem; color: var(--muted); font-weight: 600;">Max 6 topics</span>
-                        </div>
-                        <!-- Removable Topic Chips Display -->
-                        <div id="topic-chips-container" style="display: flex; flex-wrap: wrap; gap: 8px; min-height: 28px; margin-top: 4px; align-items: center;"></div>
+
+                        <!-- Success indicator banner when returning from catalogue -->
+                        <div id="topic-import-banner" class="focus-topic-import-banner" hidden style="display: none;"></div>
+
+                        <!-- Removable Topic Chips Display (zero empty height when no topics) -->
+                        <div id="topic-chips-container" class="study-focus-chips-wrap"></div>
                         <input type="hidden" name="topic_names" id="hidden-topic-names" value="">
+
+                        <!-- Browse Subjects and Topics card -->
+                        <div class="focus-catalogue-card-container">
+                            <button type="button" id="btn-open-catalogue" class="focus-catalogue-card" aria-label="Browse academic catalogue">
+                                <div class="focus-catalogue-card__icon-box" aria-hidden="true">
+                                    <span class="focus-catalogue-card__icon">📖</span>
+                                </div>
+                                <div class="focus-catalogue-card__content">
+                                    <div class="focus-catalogue-card__headline">
+                                        <strong id="btn-catalogue-label" class="focus-catalogue-card__title">Browse Subjects and Topics</strong>
+                                        <span id="btn-catalogue-pill" class="focus-catalogue-card__pill">Catalogue</span>
+                                    </div>
+                                    <p id="btn-catalogue-desc" class="focus-catalogue-card__desc">Explore college academic areas, common subjects, and curated priority topics</p>
+                                </div>
+                                <div class="focus-catalogue-card__action" aria-hidden="true">
+                                    <span class="focus-catalogue-card__chevron">&rsaquo;</span>
+                                </div>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Reason (Optional) -->
                     <div class="study-focus-field" style="margin-top: 14px;">
-                        <label for="manual-reason">Why are you focusing on this? <span style="font-weight: 500; font-size: 0.80rem; color: var(--muted);">(Optional)</span></label>
+                        <label for="manual-reason">What is your reason for focusing on this? <span style="font-weight: 500; font-size: 0.80rem; color: var(--muted);">(Optional)</span></label>
                         <select id="manual-reason" name="reason">
                             <option value="">Choose a reason (optional)</option>
-                            <option value="I received a low result">I received a low result</option>
-                            <option value="I have an upcoming exam">I have an upcoming exam</option>
-                            <option value="This topic is difficult for me">This topic is difficult for me</option>
-                            <option value="An instructor recommended it">An instructor recommended it</option>
-                            <option value="I want additional practice">I want additional practice</option>
-                            <option value="Other">Other</option>
+                            <option value="low_result">I received a low result</option>
+                            <option value="upcoming_exam">I have an upcoming exam</option>
+                            <option value="difficult_topic">This topic is difficult for me</option>
+                            <option value="instructor_recommendation">An instructor recommended it</option>
+                            <option value="extra_practice">I want additional practice</option>
+                            <option value="school_result">I used a school result</option>
+                            <option value="other">Other</option>
                         </select>
                     </div>
                 </form>
             </div>
 
-            <!-- STEP 2D: BROWSE SUBJECTS AND TOPICS CATALOGUE -->
+            <!-- STEP 2D: BROWSE SUBJECTS AND TOPICS — ONE LEVEL AT A TIME -->
             <div id="view-step-catalogue" class="study-focus-step" style="display: none;">
-                <!-- Search Box -->
-                <div style="position: relative; margin-bottom: 8px;">
-                    <input type="text" id="catalogue-search-input" placeholder="Search subjects, topics, or acronyms (e.g. SIA, BMC, Calculus, Rizal)..." style="width: 100%; min-height: 44px; padding: 10px 14px 10px 38px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font: inherit; box-sizing: border-box;">
-                    <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 1rem; color: var(--muted); pointer-events: none;">🔍</span>
-                    <button type="button" id="btn-clear-search" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); cursor: pointer; display: none; font-size: 1.1rem; line-height: 1;" title="Clear search">✕</button>
-                </div>
-
-                <!-- Popular Quick Jump Chips -->
-                <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                    <span style="font-size: 0.72rem; color: var(--muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;">Popular:</span>
-                    <button type="button" class="btn btn-ghost btn-sm js-popular-chip" data-query="Mathematics" style="font-size: 0.76rem; padding: 2px 9px; border-radius: 999px;">Mathematics</button>
-                    <button type="button" class="btn btn-ghost btn-sm js-popular-chip" data-query="Chemistry" style="font-size: 0.76rem; padding: 2px 9px; border-radius: 999px;">Chemistry</button>
-                    <button type="button" class="btn btn-ghost btn-sm js-popular-chip" data-query="Philippine History" style="font-size: 0.76rem; padding: 2px 9px; border-radius: 999px;">Philippine History</button>
-                    <button type="button" class="btn btn-ghost btn-sm js-popular-chip" data-query="Entrepreneurship" style="font-size: 0.76rem; padding: 2px 9px; border-radius: 999px;">Entrepreneurship</button>
-                    <button type="button" class="btn btn-ghost btn-sm js-popular-chip" data-query="Programming" style="font-size: 0.76rem; padding: 2px 9px; border-radius: 999px;">Programming</button>
-                    <button type="button" class="btn btn-ghost btn-sm js-popular-chip" data-query="Communication" style="font-size: 0.76rem; padding: 2px 9px; border-radius: 999px;">Communication</button>
-                </div>
-
-                <!-- 2-Column Catalogue Explorer -->
-                <div class="catalogue-explorer-grid">
-                    <!-- Academic Areas Sidebar -->
-                    <aside class="catalogue-areas-sidebar" id="catalogue-areas-list" role="tablist" aria-label="Academic Areas">
-                        <!-- Populated dynamically by JS -->
-                    </aside>
-
-                    <!-- Subjects & Topics Container -->
-                    <section class="catalogue-subjects-panel" id="catalogue-subjects-container">
-                        <!-- Populated dynamically by JS -->
-                    </section>
-                </div>
-
-                <!-- Selection Tray -->
-                <div id="catalogue-selection-tray" style="margin-top: 12px; padding: 10px 14px; border-radius: 12px; background: rgba(117, 108, 243, 0.08); border: 1px solid rgba(117, 108, 243, 0.25); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0;">
-                        <strong id="tray-count-label" style="font-size: 0.82rem; color: var(--primary); white-space: nowrap;">0 topics selected</strong>
-                        <div id="tray-chips-container" style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;"></div>
+                <!-- FIXED TOOLS: search + popular shortcuts -->
+                <div class="focus-catalogue-tools">
+                    <div class="focus-catalogue-search-wrap">
+                        <span class="focus-catalogue-search-icon" aria-hidden="true">🔍</span>
+                        <input type="search"
+                               id="catalogue-search-input"
+                               class="focus-catalogue-search"
+                               data-catalogue-search
+                               autocomplete="off"
+                               aria-label="Search subjects, topics, or acronyms"
+                               placeholder="Search subjects, topics, codes, or acronyms...">
+                        <button type="button"
+                                id="btn-clear-search"
+                                class="focus-catalogue-search-clear"
+                                data-catalogue-clear-search
+                                hidden
+                                aria-label="Clear search">✕</button>
                     </div>
-                    <button type="button" id="btn-tray-clear" class="btn btn-ghost btn-sm" style="font-size: 0.74rem; color: var(--muted); padding: 2px 8px;">
-                        Clear
-                    </button>
+
+                    <div class="focus-catalogue-popular" data-catalogue-popular role="group" aria-label="Popular subjects">
+                        <span class="focus-catalogue-popular-label">Popular</span>
+                        <button type="button" class="focus-popular-chip" data-query="Mathematics">Mathematics</button>
+                        <button type="button" class="focus-popular-chip" data-query="Chemistry">Chemistry</button>
+                        <button type="button" class="focus-popular-chip" data-query="Philippine History">Philippine History</button>
+                        <button type="button" class="focus-popular-chip" data-query="Entrepreneurship">Entrepreneurship</button>
+                        <button type="button" class="focus-popular-chip" data-query="Programming">Programming</button>
+                    </div>
+                </div>
+
+                <!-- THE ONE SCROLL OWNER -->
+                <div class="focus-catalogue-body" data-catalogue-body>
+                    <button type="button" class="focus-catalogue-breadcrumb" data-catalogue-breadcrumb hidden></button>
+                    <h3 class="focus-catalogue-heading" data-catalogue-heading tabindex="-1">Browse Subjects and Topics</h3>
+                    <p class="focus-catalogue-subheading" data-catalogue-subheading>Search common college subjects or browse by academic area.</p>
+
+                    <!-- Secondary subject action (topic level only) -->
+                    <div class="focus-catalogue-subject-action" data-catalogue-subject-action hidden>
+                        <button type="button" class="focus-catalogue-subject-btn" data-catalogue-subject-action-btn></button>
+                    </div>
+
+                    <!-- Current level only: areas | subjects | topics | search -->
+                    <div class="focus-catalogue-list" data-catalogue-list></div>
+
+                    <!-- Inline cap validation (replaces alert()) -->
+                    <p class="focus-catalogue-cap-message"
+                       data-catalogue-cap-message
+                       role="status"
+                       aria-live="polite"
+                       hidden></p>
+                </div>
+
+                <!-- FIXED SELECTION SUMMARY -->
+                <div class="focus-catalogue-tray" data-catalogue-tray>
+                    <div class="focus-catalogue-tray-main">
+                        <strong class="focus-catalogue-tray-status"
+                                data-catalogue-tray-status
+                                role="status"
+                                aria-live="polite">No topics selected yet</strong>
+                        <div class="focus-catalogue-tray-chips" data-catalogue-tray-chips></div>
+                    </div>
+                    <button type="button"
+                            class="btn btn-ghost btn-sm focus-catalogue-tray-clear"
+                            data-catalogue-tray-clear
+                            hidden>Clear</button>
                 </div>
             </div>
 
@@ -237,7 +270,7 @@
             <div id="view-step-school" class="study-focus-step" style="display: none;">
                 <form id="form-school-result" method="post" action="{% url 'courses:focus_checkin' %}" enctype="multipart/form-data">
                     {% csrf_token %}
-                    
+
                     <p style="font-size: 0.88rem; color: var(--muted); margin: 0 0 16px; line-height: 1.45;">
                         Upload the file provided by your school or assessment platform. StudyQuest will show the detected subject and topics before saving anything.
                     </p>
@@ -372,520 +405,8 @@
 {{ academic_catalogue_json|default:"{}"|safe }}
 </script>
 
-<style>
-    /* ================= STUDY FOCUS MODAL CSS ================= */
-    .study-focus-modal {
-        width: min(720px, calc(100vw - 32px));
-        max-height: min(86dvh, 760px);
+<script src="{% static 'courses/js/focus_catalogue.js' %}?v=2026.1.2"></script>
 
-        display: flex;
-        flex-direction: column;
-
-        overflow: hidden;
-
-        border: 1px solid var(--border);
-        border-radius: 22px;
-        background: var(--surface);
-        box-shadow: 0 28px 80px rgba(12, 16, 38, 0.34);
-        animation: focusModalFadeIn 0.22s ease-out;
-    }
-
-    .study-focus-modal__header {
-        flex-shrink: 0;
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        padding: 24px 30px 18px;
-        border-bottom: 1px solid var(--border);
-        background: var(--surface);
-    }
-
-    .study-focus-badge {
-        display: inline-block;
-        background: rgba(117, 108, 243, 0.15);
-        color: var(--primary);
-        font-weight: 800;
-        text-transform: uppercase;
-        font-size: 0.72rem;
-        letter-spacing: 0.08em;
-        padding: 3px 10px;
-        border-radius: 999px;
-        margin-bottom: 8px;
-    }
-
-    #study-focus-title {
-        font-size: 1.35rem;
-        font-weight: 900;
-        margin: 0 0 4px;
-        color: var(--ink);
-        letter-spacing: -0.01em;
-    }
-
-    #study-focus-subtitle {
-        margin: 0;
-        font-size: 0.88rem;
-        color: var(--muted);
-        line-height: 1.45;
-    }
-
-    /* Scroll only the body when necessary */
-    .study-focus-modal__body {
-        flex: 1 1 auto;
-        min-height: 0;
-        overflow-y: auto;
-        padding: 20px 28px 24px;
-        overscroll-behavior: contain;
-        scrollbar-gutter: stable;
-    }
-
-    /* 2-column layout on desktop for subject and code */
-    .study-focus-row-2col {
-        display: grid;
-        grid-template-columns: 2fr 1fr;
-        gap: 14px;
-        align-items: start;
-        width: 100%;
-    }
-
-    @media (max-width: 600px) {
-        .study-focus-row-2col {
-            grid-template-columns: 1fr;
-            gap: 12px;
-        }
-    }
-
-    /* Consistent compact fields */
-    .study-focus-field {
-        display: grid;
-        gap: 6px;
-        width: 100%;
-    }
-
-    .study-focus-field + .study-focus-field {
-        margin-top: 14px;
-    }
-
-    .study-focus-field label {
-        color: var(--ink);
-        font-size: 0.88rem;
-        font-weight: 800;
-    }
-
-    .study-focus-field input,
-    .study-focus-field select,
-    .study-focus-field textarea {
-        width: 100%;
-        min-width: 0;
-        min-height: 46px;
-        padding: 10px 14px;
-
-        color: var(--ink);
-        background: var(--bg);
-
-        border: 1px solid var(--border);
-        border-radius: 12px;
-
-        font: inherit;
-        box-sizing: border-box;
-    }
-
-    .study-focus-field textarea {
-        min-height: 180px;
-        resize: vertical;
-        font-family: ui-monospace, monospace;
-        line-height: 1.5;
-    }
-
-    /* Focus styles */
-    .study-focus-field input:focus,
-    .study-focus-field select:focus,
-    .study-focus-field textarea:focus {
-        outline: 3px solid rgba(108, 92, 231, 0.16);
-        border-color: var(--primary);
-    }
-
-    /* Topic Chips */
-    .study-focus-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
-        background: rgba(117, 108, 243, 0.12);
-        border: 1px solid rgba(117, 108, 243, 0.28);
-        border-radius: 999px;
-        color: var(--primary);
-        font-size: 0.86rem;
-        font-weight: 700;
-        animation: chipPop 0.15s ease-out;
-    }
-
-    .study-focus-chip .chip-remove {
-        background: none;
-        border: none;
-        color: var(--muted);
-        font-size: 1.15rem;
-        line-height: 1;
-        cursor: pointer;
-        padding: 0 2px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .study-focus-chip .chip-remove:hover {
-        color: var(--danger);
-    }
-
-    /* Footer */
-    .study-focus-modal__footer {
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-
-        padding: 18px 30px 24px;
-
-        border-top: 1px solid var(--border);
-        background: var(--surface);
-    }
-
-    .study-focus-modal__footer[hidden] {
-        display: none !important;
-    }
-
-    .study-focus-modal__footer .btn-primary {
-        min-height: 50px;
-        padding-inline: 24px;
-        white-space: nowrap;
-    }
-
-    .study-focus-choice-card:hover {
-        background: rgba(117, 108, 243, 0.08) !important;
-        border-color: var(--primary) !important;
-        transform: translateY(-2px);
-    }
-
-    /* Browse button in manual focus form */
-    .focus-catalog-link {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 2px;
-        color: var(--primary);
-        background: transparent;
-        border: 0;
-        font: inherit;
-        font-weight: 750;
-        cursor: pointer;
-        font-size: 0.86rem;
-        transition: color 0.15s ease, opacity 0.15s ease;
-    }
-
-    .focus-catalog-link:hover {
-        color: #8c82ff;
-        text-decoration: underline;
-    }
-
-    /* 2-column Catalogue Grid */
-    .catalogue-explorer-grid {
-        display: grid;
-        grid-template-columns: 210px 1fr;
-        gap: 14px;
-        align-items: stretch;
-        min-height: 330px;
-        max-height: 420px;
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        padding: 12px;
-        background: var(--bg);
-        box-sizing: border-box;
-    }
-
-    @media (max-width: 680px) {
-        .catalogue-explorer-grid {
-            grid-template-columns: 1fr;
-            max-height: none;
-            gap: 12px;
-            padding: 10px;
-        }
-    }
-
-    .catalogue-areas-sidebar {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        overflow-y: auto;
-        max-height: 396px;
-        padding-right: 4px;
-        scrollbar-gutter: stable;
-        border-right: 1px solid var(--border);
-    }
-
-    @media (max-width: 680px) {
-        .catalogue-areas-sidebar {
-            flex-direction: row;
-            overflow-x: auto;
-            max-height: none;
-            border-right: none;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 8px;
-        }
-    }
-
-    .catalogue-area-tab {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 10px;
-        border-radius: 8px;
-        background: transparent;
-        border: 1px solid transparent;
-        color: var(--muted);
-        font: inherit;
-        font-size: 0.80rem;
-        font-weight: 700;
-        text-align: left;
-        cursor: pointer;
-        transition: all 0.14s ease;
-        width: 100%;
-        box-sizing: border-box;
-        white-space: normal;
-        line-height: 1.3;
-    }
-
-    @media (max-width: 680px) {
-        .catalogue-area-tab {
-            width: auto;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-    }
-
-    .catalogue-area-tab:hover {
-        background: var(--surface);
-        color: var(--ink);
-    }
-
-    .catalogue-area-tab.is-active {
-        background: rgba(117, 108, 243, 0.12);
-        color: var(--primary);
-        border-color: rgba(117, 108, 243, 0.3);
-        font-weight: 800;
-    }
-
-    .catalogue-subjects-panel {
-        overflow-y: auto;
-        max-height: 396px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        padding-right: 4px;
-        scrollbar-gutter: stable;
-    }
-
-    .catalogue-subject-card {
-        border: 1px solid var(--border);
-        border-radius: 12px;
-        background: var(--surface);
-        overflow: hidden;
-        transition: border-color 0.15s ease;
-    }
-
-    .catalogue-subject-card.is-expanded {
-        border-color: rgba(117, 108, 243, 0.35);
-    }
-
-    .catalogue-subject-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 8px;
-        padding: 10px 12px;
-        cursor: pointer;
-        user-select: none;
-        background: var(--surface);
-        transition: background 0.12s ease;
-    }
-
-    .catalogue-subject-header:hover {
-        background: rgba(117, 108, 243, 0.04);
-    }
-
-    .catalogue-subject-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex: 1;
-        min-width: 0;
-    }
-
-    .catalogue-subject-title {
-        font-size: 0.90rem;
-        font-weight: 800;
-        color: var(--ink);
-        margin: 0;
-        line-height: 1.25;
-    }
-
-    .catalogue-subject-code-tag {
-        font-size: 0.70rem;
-        font-weight: 700;
-        color: var(--muted);
-        background: var(--bg);
-        border: 1px solid var(--border);
-        padding: 1px 6px;
-        border-radius: 4px;
-    }
-
-    .catalogue-subject-actions {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .catalogue-set-subject-btn {
-        background: transparent;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        padding: 3px 8px;
-        font-size: 0.72rem;
-        font-weight: 700;
-        color: var(--primary);
-        cursor: pointer;
-        transition: all 0.14s ease;
-    }
-
-    .catalogue-set-subject-btn:hover {
-        background: var(--primary);
-        color: #fff;
-        border-color: var(--primary);
-    }
-
-    .catalogue-expand-arrow {
-        font-size: 0.72rem;
-        color: var(--muted);
-        display: inline-block;
-        transition: transform 0.18s ease;
-    }
-
-    .catalogue-subject-card.is-expanded .catalogue-expand-arrow {
-        transform: rotate(90deg);
-    }
-
-    .catalogue-topics-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-        gap: 6px;
-        padding: 10px 12px;
-        border-top: 1px solid var(--border);
-        background: var(--bg);
-    }
-
-    .catalogue-topic-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 7px 10px;
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        background: var(--surface);
-        cursor: pointer;
-        font-size: 0.80rem;
-        font-weight: 600;
-        color: var(--ink);
-        transition: all 0.14s ease;
-        user-select: none;
-    }
-
-    .catalogue-topic-item:hover {
-        border-color: var(--primary);
-        background: rgba(117, 108, 243, 0.05);
-    }
-
-    .catalogue-topic-item.is-selected {
-        background: rgba(117, 108, 243, 0.12);
-        border-color: var(--primary);
-        color: var(--primary);
-        font-weight: 700;
-    }
-
-    .catalogue-topic-cb {
-        accent-color: var(--primary);
-        width: 14px;
-        height: 14px;
-        flex-shrink: 0;
-        cursor: pointer;
-    }
-
-    .tray-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        padding: 3px 8px;
-        border-radius: 999px;
-        background: rgba(117, 108, 243, 0.15);
-        color: var(--primary);
-        font-size: 0.74rem;
-        font-weight: 700;
-    }
-
-    .tray-chip button {
-        background: none;
-        border: none;
-        color: var(--muted);
-        font-size: 0.90rem;
-        line-height: 1;
-        cursor: pointer;
-        padding: 0;
-    }
-
-    .tray-chip button:hover {
-        color: var(--danger);
-    }
-
-    @keyframes focusModalFadeIn {
-        from { opacity: 0; transform: scale(0.97) translateY(8px); }
-        to { opacity: 1; transform: scale(1) translateY(0); }
-    }
-
-    @keyframes chipPop {
-        from { opacity: 0; transform: scale(0.85); }
-        to { opacity: 1; transform: scale(1); }
-    }
-
-    .focus-modal-backdrop.is-open {
-        display: flex !important;
-    }
-
-    /* Responsive layout */
-    @media (max-width: 640px) {
-        .study-focus-modal {
-            width: min(100% - 20px, 720px);
-            max-height: calc(100dvh - 20px);
-            border-radius: 18px;
-        }
-
-        .study-focus-modal__header {
-            padding: 20px;
-        }
-
-        .study-focus-modal__body {
-            padding: 20px;
-        }
-
-        .study-focus-modal__footer {
-            padding: 16px 20px 20px;
-            flex-direction: column-reverse;
-            align-items: stretch;
-        }
-
-        .study-focus-modal__footer button,
-        .study-focus-modal__footer a {
-            width: 100%;
-        }
-    }
-</style>
 
 <script>
     (function() {
@@ -930,28 +451,20 @@
         const fileChosenLabel = document.getElementById('file-chosen-label');
         const pasteJsonTextarea = document.getElementById('paste-json-textarea');
 
-        // Catalogue references
+        // Catalogue references (the controller is in focus_catalogue.js)
         const btnOpenCatalogue = document.getElementById('btn-open-catalogue');
-        const catalogueSearchInput = document.getElementById('catalogue-search-input');
-        const btnClearSearch = document.getElementById('btn-clear-search');
-        const catalogueAreasList = document.getElementById('catalogue-areas-list');
-        const catalogueSubjectsContainer = document.getElementById('catalogue-subjects-container');
-        const trayCountLabel = document.getElementById('tray-count-label');
-        const trayChipsContainer = document.getElementById('tray-chips-container');
-        const btnTrayClear = document.getElementById('btn-tray-clear');
 
         // Internal State
         let currentStep = 'choice';
         let previousStep = 'choice';
+        // `activeTopics` is the ONE authoritative topic selection for this flow.
+        // The catalogue controller commits into it; nothing else duplicates it.
         let activeTopics = [];
         let parsedSchoolData = null;
         let lastFocusedElement = null;
 
-        // Catalogue State
+        // Catalogue data + controller instance
         let catalogueData = null;
-        let selectedAreaKey = '';
-        let catalogueSelectedTopics = [];
-        let expandedSubjectKeys = new Set();
 
         const stepHeaders = {
             'choice': {
@@ -962,7 +475,7 @@
             'manual': {
                 badge: 'CHOOSE A FOCUS',
                 title: 'What subject would you like to improve?',
-                subtitle: 'Specify your target subject and the priority topics you want to master.'
+                subtitle: 'Choose a subject and add the topics you want to understand better.'
             },
             'catalogue': {
                 badge: 'STUDY FOCUS',
@@ -988,7 +501,37 @@
             }
         };
 
-        // Topic chips management
+        function showTopicAddedIndicator(count) {
+            const banner = document.getElementById('topic-import-banner');
+            if (!banner) return;
+            if (count > 0) {
+                banner.innerHTML = `<span style="font-size: 1.1rem; line-height: 1;">✓</span> <span>Added <strong>${count} priority topic${count > 1 ? 's' : ''}</strong> from Catalogue to your study focus!</span>`;
+                banner.style.display = 'flex';
+                banner.hidden = false;
+                banner.style.opacity = '1';
+
+                if (topicChipsContainer) {
+                    topicChipsContainer.classList.add('is-recently-updated');
+                    setTimeout(() => {
+                        topicChipsContainer.classList.remove('is-recently-updated');
+                    }, 1200);
+                }
+
+                setTimeout(() => {
+                    if (banner) {
+                        banner.style.transition = 'opacity 0.4s ease';
+                        banner.style.opacity = '0';
+                        setTimeout(() => {
+                            banner.style.display = 'none';
+                            banner.hidden = true;
+                            banner.style.opacity = '1';
+                        }, 400);
+                    }
+                }, 3800);
+            }
+        }
+
+        // Topic chips management (manual entry + catalogue commits)
         function renderChips() {
             topicChipsContainer.innerHTML = '';
             activeTopics.forEach((topic, idx) => {
@@ -999,9 +542,26 @@
             });
             hiddenTopicNames.value = activeTopics.join(', ');
 
+            const count = activeTopics.length;
             const catLabel = document.getElementById('btn-catalogue-label');
+            const catPill = document.getElementById('btn-catalogue-pill');
+            const catDesc = document.getElementById('btn-catalogue-desc');
+            const topicCountHint = document.getElementById('topic-count-hint');
+
+            if (topicCountHint) {
+                topicCountHint.textContent = count > 0 ? `${count} of 6 topics` : 'Max 6 topics';
+            }
+
             if (catLabel) {
-                catLabel.textContent = activeTopics.length > 0 ? 'Browse more topics' : 'Browse Subjects and Topics';
+                catLabel.textContent = count > 0 ? 'Browse more topics' : 'Browse Subjects and Topics';
+            }
+            if (catPill) {
+                catPill.textContent = count > 0 ? `${count} / 6 added` : 'Catalogue';
+            }
+            if (catDesc) {
+                catDesc.textContent = count > 0
+                    ? 'Open catalogue to add more topics or adjust your subject selection'
+                    : 'Explore college academic areas, common subjects, and curated priority topics';
             }
 
             // Bind remove buttons
@@ -1083,9 +643,13 @@
             // Toggle view panels
             Object.keys(views).forEach(k => {
                 if (views[k]) {
-                    views[k].style.display = (k === step) ? (k === 'choice' ? 'flex' : 'block') : 'none';
+                    views[k].style.display = (k === step) ? (k === 'choice' || k === 'catalogue' ? 'flex' : 'block') : 'none';
                 }
             });
+
+            // The catalogue owns scrolling only while it is the active step.
+            const dialogEl = modal.querySelector('.study-focus-modal');
+            if (dialogEl) dialogEl.setAttribute('data-current-step', step);
 
             // Render matching footer
             renderFooter(step);
@@ -1123,23 +687,27 @@
                 footerEl.appendChild(backBtn);
                 footerEl.appendChild(reviewBtn);
             } else if (step === 'catalogue') {
+                // Selections commit into `activeTopics` as they are made, so
+                // Back never has to decide whether to discard anything.
                 const backBtn = document.createElement('button');
                 backBtn.type = 'button';
                 backBtn.className = 'btn btn-ghost';
-                backBtn.textContent = 'Back';
-                backBtn.addEventListener('click', () => {
-                    activeTopics = [...catalogueSelectedTopics];
-                    renderChips();
-                    setStep('manual');
-                });
+                backBtn.id = 'btn-catalogue-back';
+                backBtn.textContent = 'Back to Focus Form';
+                backBtn.addEventListener('click', () => setStep('manual'));
 
                 const applyBtn = document.createElement('button');
                 applyBtn.type = 'button';
                 applyBtn.className = 'btn btn-primary';
                 applyBtn.id = 'btn-catalogue-apply';
-                const count = catalogueSelectedTopics.length;
-                applyBtn.textContent = count > 0 ? `Add ${count} Topic${count > 1 ? 's' : ''} →` : 'Done →';
-                applyBtn.addEventListener('click', () => applyCatalogueSelection());
+                const count = activeTopics.length;
+                applyBtn.textContent = count === 0 ? 'Add Selected Topics' : `Add ${count} Topic${count > 1 ? 's' : ''}`;
+                applyBtn.disabled = count === 0;
+                applyBtn.addEventListener('click', () => {
+                    const countAdded = activeTopics.length;
+                    setStep('manual');
+                    showTopicAddedIndicator(countAdded);
+                });
 
                 footerEl.appendChild(backBtn);
                 footerEl.appendChild(applyBtn);
@@ -1327,383 +895,99 @@
                 e.preventDefault();
                 const title = btn.getAttribute('data-title');
                 manualSubjectInput.value = title;
-                manualReasonSelect.value = 'School assessment result';
+                manualReasonSelect.value = 'school_result';
                 handleManualReview();
             });
         });
 
-        // ================= CATALOGUE CONTROLLER =================
-        function loadEmbeddedCatalogue() {
-            if (catalogueData) return catalogueData;
-            const scriptEl = document.getElementById('academic-catalogue-data');
-            if (scriptEl && scriptEl.textContent.trim()) {
-                try {
-                    catalogueData = JSON.parse(scriptEl.textContent);
-                } catch (e) {
-                    console.error('Failed to parse embedded academic catalogue:', e);
-                }
-            }
-            return catalogueData;
-        }
+        // ================= CATALOGUE (DF-2 DRILL-DOWN) =================
+        // The controller itself lives in static/courses/js/focus_catalogue.js.
+        // This block only adapts it to the Study Focus modal: it supplies the
+        // catalogue data, the subject getters/setters, and the commit callback
+        // into `activeTopics` (the single authoritative selection).
+        let catalogueController = null;
 
-        async function fetchCatalogueFallback() {
-            try {
-                const resp = await fetch('{% url "courses:focus_catalogue_api" %}');
-                if (resp.ok) {
-                    catalogueData = await resp.json();
+        function buildCatalogueController(data) {
+            const root = document.getElementById('view-step-catalogue');
+            const catalogueApi = window.FocusCatalogueController || window.StudyQuestCatalogue;
+            if (!root || !catalogueApi) return null;
+
+            return catalogueApi.create({
+                root: root,
+                data: data,
+                dialog: modal.querySelector('.study-focus-modal'),
+                footerPrimary: document.getElementById('btn-catalogue-apply'),
+                footerSecondary: document.getElementById('btn-catalogue-back'),
+                getSubjectName: () => manualSubjectInput.value || '',
+                setSubject: (name, code) => {
+                    manualSubjectInput.value = name;
+                    manualCodeInput.value = code || '';
+                },
+                // Commit into the modal's one authoritative selection list.
+                onSelectionChange: (labels) => {
+                    activeTopics = labels.slice();
+                    renderChips();
                 }
-            } catch (err) {
-                console.error('Error fetching academic catalogue fallback:', err);
-            }
-            return catalogueData;
+            });
         }
 
         async function openCatalogue() {
-            let data = loadEmbeddedCatalogue();
-            if (!data || !data.areas || data.areas.length === 0) {
-                data = await fetchCatalogueFallback();
+            const catalogueApi = window.FocusCatalogueController || window.StudyQuestCatalogue;
+            
+            // 1. Check in-memory state
+            if (!catalogueData || !catalogueData.areas || catalogueData.areas.length === 0) {
+                // 2. Read from embedded <script id="academic-catalogue-data">
+                const scriptEl = document.getElementById('academic-catalogue-data');
+                if (scriptEl && scriptEl.textContent.trim()) {
+                    try {
+                        const parsed = JSON.parse(scriptEl.textContent);
+                        if (parsed && Array.isArray(parsed.areas) && parsed.areas.length > 0) {
+                            catalogueData = parsed;
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse embedded academic catalogue:', e);
+                    }
+                }
             }
-            if (!data || !data.areas || data.areas.length === 0) {
+
+            // 3. Fallback to API if embedded JSON is absent
+            if (!catalogueData || !catalogueData.areas || catalogueData.areas.length === 0) {
+                if (catalogueApi && typeof catalogueApi.loadData === 'function') {
+                    catalogueData = await catalogueApi.loadData('{% url "courses:focus_catalogue_api" %}');
+                } else {
+                    try {
+                        const resp = await fetch('{% url "courses:focus_catalogue_api" %}');
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if (data && Array.isArray(data.areas) && data.areas.length > 0) {
+                                catalogueData = data;
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error fetching academic catalogue fallback:', err);
+                    }
+                }
+            }
+
+            // 4. Alert if still unavailable
+            if (!catalogueData || !catalogueData.areas || catalogueData.areas.length === 0) {
                 alert('Academic catalogue is temporarily unavailable.');
                 return;
             }
 
-            catalogueSelectedTopics = [...activeTopics];
-            const currentSubj = (manualSubjectInput.value || '').trim().toLowerCase();
-
-            let matchedSubject = null;
-            let matchedArea = null;
-
-            if (currentSubj) {
-                for (const area of data.areas) {
-                    for (const subj of area.subjects) {
-                        const sLabel = (subj.label || '').toLowerCase();
-                        const sCode = (subj.code || '').toLowerCase();
-                        const aliases = (subj.aliases || []).map(a => a.toLowerCase());
-
-                        if (sLabel === currentSubj || sCode === currentSubj || aliases.includes(currentSubj) ||
-                            sLabel.includes(currentSubj) || currentSubj.includes(sLabel)) {
-                            matchedSubject = subj;
-                            matchedArea = area;
-                            break;
-                        }
-                    }
-                    if (matchedSubject) break;
-                }
-            }
-
-            if (matchedSubject && matchedArea) {
-                selectedAreaKey = matchedArea.key;
-                expandedSubjectKeys.add(matchedSubject.key);
-            } else if (!selectedAreaKey || !data.areas.some(a => a.key === selectedAreaKey)) {
-                selectedAreaKey = data.areas[0].key;
-            }
-
-            if (catalogueSearchInput) {
-                catalogueSearchInput.value = '';
-            }
-            if (btnClearSearch) {
-                btnClearSearch.style.display = 'none';
-            }
-
             setStep('catalogue');
-            renderCatalogue();
-            updateTray();
-        }
 
-        function renderCatalogue() {
-            if (!catalogueData || !catalogueData.areas) return;
-
-            const isSearching = catalogueSearchInput && catalogueSearchInput.value.trim().length > 0;
-            renderAreasSidebar(isSearching);
-            renderSubjectsPanel();
-        }
-
-        function renderAreasSidebar(isSearching) {
-            if (!catalogueAreasList) return;
-            catalogueAreasList.innerHTML = '';
-
-            catalogueData.areas.forEach(area => {
-                const tab = document.createElement('button');
-                tab.type = 'button';
-                tab.className = 'catalogue-area-tab' + (!isSearching && area.key === selectedAreaKey ? ' is-active' : '');
-                tab.setAttribute('role', 'tab');
-                tab.setAttribute('aria-selected', !isSearching && area.key === selectedAreaKey ? 'true' : 'false');
-                tab.innerHTML = `
-                    <span style="font-size: 1.1rem; line-height: 1;">${escapeHtml(area.icon || '📚')}</span>
-                    <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(area.label)}</span>
-                    <span style="font-size: 0.70rem; color: var(--muted); background: var(--surface); padding: 1px 5px; border-radius: 999px;">${area.subjects.length}</span>
-                `;
-
-                tab.addEventListener('click', () => {
-                    if (catalogueSearchInput) {
-                        catalogueSearchInput.value = '';
-                    }
-                    if (btnClearSearch) {
-                        btnClearSearch.style.display = 'none';
-                    }
-                    selectedAreaKey = area.key;
-                    renderCatalogue();
-                });
-
-                catalogueAreasList.appendChild(tab);
-            });
-        }
-
-        function renderSubjectsPanel() {
-            if (!catalogueSubjectsContainer) return;
-            catalogueSubjectsContainer.innerHTML = '';
-
-            const query = catalogueSearchInput ? catalogueSearchInput.value.trim().toLowerCase() : '';
-            const isSearch = query.length > 0;
-
-            let subjectsToRender = [];
-
-            if (isSearch) {
-                catalogueData.areas.forEach(area => {
-                    area.subjects.forEach(subj => {
-                        const sLabel = (subj.label || '').toLowerCase();
-                        const sCode = (subj.code || '').toLowerCase();
-                        const sAliases = (subj.aliases || []).map(a => a.toLowerCase());
-                        const areaLabel = (area.label || '').toLowerCase();
-
-                        const subjMatches = sLabel.includes(query) || sCode.includes(query) || sAliases.some(a => a.includes(query)) || areaLabel.includes(query);
-
-                        const matchingTopics = (subj.topics || []).filter(topic => {
-                            const tLabel = (topic.label || '').toLowerCase();
-                            const tAliases = (topic.aliases || []).map(a => a.toLowerCase());
-                            return tLabel.includes(query) || tAliases.some(a => a.includes(query));
-                        });
-
-                        if (subjMatches || matchingTopics.length > 0) {
-                            subjectsToRender.push({
-                                ...subj,
-                                areaLabel: area.label,
-                                isMatched: true
-                            });
-                            // Auto expand when searching so user sees matching topics immediately
-                            expandedSubjectKeys.add(subj.key);
-                        }
-                    });
-                });
-
-                if (subjectsToRender.length === 0) {
-                    catalogueSubjectsContainer.innerHTML = `
-                        <div style="padding: 32px 16px; text-align: center; color: var(--muted);">
-                            <div style="font-size: 2rem; margin-bottom: 8px;">🔍</div>
-                            <strong style="color: var(--ink); display: block; font-size: 0.95rem; margin-bottom: 4px;">No matching subjects or topics found</strong>
-                            <p style="font-size: 0.82rem; margin: 0; line-height: 1.45;">
-                                Couldn't find anything matching "<strong>${escapeHtml(catalogueSearchInput.value)}</strong>". You can type your topic manually on the previous screen.
-                            </p>
-                        </div>
-                    `;
-                    return;
-                }
-            } else {
-                const currentArea = catalogueData.areas.find(a => a.key === selectedAreaKey) || catalogueData.areas[0];
-                subjectsToRender = (currentArea ? currentArea.subjects : []).map(s => ({
-                    ...s,
-                    areaLabel: currentArea ? currentArea.label : ''
-                }));
+            if (!catalogueController) {
+                catalogueController = buildCatalogueController(catalogueData);
             }
+            if (!catalogueController) return;
 
-            subjectsToRender.forEach(subj => {
-                const card = createSubjectCard(subj, isSearch);
-                catalogueSubjectsContainer.appendChild(card);
-            });
+            const suggestedKey = (catalogueApi && typeof catalogueApi.findSuggestedSubjectKey === 'function')
+                ? catalogueApi.findSuggestedSubjectKey(catalogueData, manualSubjectInput.value)
+                : null;
+            catalogueController.open(activeTopics, suggestedKey);
         }
 
-        function createSubjectCard(subj, isSearch) {
-            const card = document.createElement('div');
-            const isExpanded = expandedSubjectKeys.has(subj.key);
-            card.className = 'catalogue-subject-card' + (isExpanded ? ' is-expanded' : '');
-            card.setAttribute('data-subject-key', subj.key);
-
-            // Header
-            const header = document.createElement('div');
-            header.className = 'catalogue-subject-header';
-            header.setAttribute('role', 'button');
-            header.setAttribute('tabindex', '0');
-            header.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
-
-            const info = document.createElement('div');
-            info.className = 'catalogue-subject-info';
-            info.innerHTML = `
-                <h4 class="catalogue-subject-title">${escapeHtml(subj.label)}</h4>
-                ${subj.code ? `<span class="catalogue-subject-code-tag">${escapeHtml(subj.code)}</span>` : ''}
-                ${isSearch && subj.areaLabel ? `<span style="font-size: 0.70rem; color: var(--muted); margin-left: 4px;">• ${escapeHtml(subj.areaLabel)}</span>` : ''}
-            `;
-
-            const actions = document.createElement('div');
-            actions.className = 'catalogue-subject-actions';
-
-            const setSubjectBtn = document.createElement('button');
-            setSubjectBtn.type = 'button';
-            setSubjectBtn.className = 'catalogue-set-subject-btn';
-            const isCurrentSubject = (manualSubjectInput.value || '').trim().toLowerCase() === subj.label.toLowerCase();
-            setSubjectBtn.textContent = isCurrentSubject ? '✓ Current Subject' : 'Set as Subject';
-            if (isCurrentSubject) {
-                setSubjectBtn.style.color = 'var(--success, #22c55e)';
-                setSubjectBtn.style.borderColor = 'rgba(34, 197, 94, 0.4)';
-            }
-
-            setSubjectBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                manualSubjectInput.value = subj.label;
-                manualCodeInput.value = subj.code || '';
-                setSubjectBtn.textContent = '✓ Subject Set';
-                setSubjectBtn.style.color = 'var(--success, #22c55e)';
-                setSubjectBtn.style.borderColor = 'rgba(34, 197, 94, 0.4)';
-
-                if (!expandedSubjectKeys.has(subj.key)) {
-                    expandedSubjectKeys.add(subj.key);
-                    renderSubjectsPanel();
-                }
-            });
-
-            const arrow = document.createElement('span');
-            arrow.className = 'catalogue-expand-arrow';
-            arrow.textContent = '▶';
-
-            actions.appendChild(setSubjectBtn);
-            actions.appendChild(arrow);
-
-            header.appendChild(info);
-            header.appendChild(actions);
-
-            const toggleExpand = () => {
-                if (expandedSubjectKeys.has(subj.key)) {
-                    expandedSubjectKeys.delete(subj.key);
-                } else {
-                    expandedSubjectKeys.add(subj.key);
-                }
-                renderSubjectsPanel();
-            };
-
-            header.addEventListener('click', toggleExpand);
-            header.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    toggleExpand();
-                }
-            });
-
-            card.appendChild(header);
-
-            // Topics Grid (if expanded)
-            if (isExpanded) {
-                const grid = document.createElement('div');
-                grid.className = 'catalogue-topics-grid';
-
-                (subj.topics || []).forEach(topic => {
-                    const isSelected = catalogueSelectedTopics.includes(topic.label);
-
-                    const item = document.createElement('label');
-                    item.className = 'catalogue-topic-item' + (isSelected ? ' is-selected' : '');
-
-                    const cb = document.createElement('input');
-                    cb.type = 'checkbox';
-                    cb.className = 'catalogue-topic-cb';
-                    cb.checked = isSelected;
-
-                    const labelSpan = document.createElement('span');
-                    labelSpan.textContent = topic.label;
-
-                    cb.addEventListener('change', () => {
-                        handleTopicToggle(topic.label, subj, cb, item);
-                    });
-
-                    item.appendChild(cb);
-                    item.appendChild(labelSpan);
-                    grid.appendChild(item);
-                });
-
-                card.appendChild(grid);
-            }
-
-            return card;
-        }
-
-        function handleTopicToggle(topicLabel, parentSubject, checkbox, itemEl) {
-            if (checkbox.checked) {
-                if (catalogueSelectedTopics.length >= 6) {
-                    checkbox.checked = false;
-                    alert('You can select a maximum of 6 priority topics.');
-                    return;
-                }
-                if (!catalogueSelectedTopics.includes(topicLabel)) {
-                    catalogueSelectedTopics.push(topicLabel);
-                }
-                itemEl.classList.add('is-selected');
-
-                // If manual subject is not set, auto-fill it with this subject
-                if (!manualSubjectInput.value.trim() && parentSubject) {
-                    manualSubjectInput.value = parentSubject.label;
-                    manualCodeInput.value = parentSubject.code || '';
-                }
-            } else {
-                catalogueSelectedTopics = catalogueSelectedTopics.filter(t => t !== topicLabel);
-                itemEl.classList.remove('is-selected');
-            }
-
-            updateTray();
-            updateCatalogueFooterBtn();
-        }
-
-        function updateTray() {
-            if (!trayCountLabel || !trayChipsContainer) return;
-
-            const count = catalogueSelectedTopics.length;
-            trayCountLabel.textContent = `${count} of 6 topics selected`;
-
-            trayChipsContainer.innerHTML = '';
-            catalogueSelectedTopics.forEach(topic => {
-                const chip = document.createElement('span');
-                chip.className = 'tray-chip';
-                chip.innerHTML = `<span>${escapeHtml(topic)}</span><button type="button" aria-label="Remove topic ${escapeHtml(topic)}">&times;</button>`;
-
-                chip.querySelector('button').addEventListener('click', () => {
-                    catalogueSelectedTopics = catalogueSelectedTopics.filter(t => t !== topic);
-                    updateTray();
-                    renderSubjectsPanel();
-                    updateCatalogueFooterBtn();
-                });
-
-                trayChipsContainer.appendChild(chip);
-            });
-        }
-
-        function updateCatalogueFooterBtn() {
-            const applyBtn = document.getElementById('btn-catalogue-apply');
-            if (applyBtn) {
-                const count = catalogueSelectedTopics.length;
-                applyBtn.textContent = count > 0 ? `Add ${count} Topic${count > 1 ? 's' : ''} →` : 'Done →';
-            }
-        }
-
-        function applyCatalogueSelection() {
-            activeTopics = [...catalogueSelectedTopics];
-            renderChips();
-
-            // If manual subject is still empty and activeTopics has elements, try to find matching subject from catalogue
-            if (!manualSubjectInput.value.trim() && activeTopics.length > 0 && catalogueData) {
-                const firstTopic = activeTopics[0];
-                for (const area of catalogueData.areas) {
-                    for (const subj of area.subjects) {
-                        if ((subj.topics || []).some(t => t.label === firstTopic)) {
-                            manualSubjectInput.value = subj.label;
-                            manualCodeInput.value = subj.code || '';
-                            break;
-                        }
-                    }
-                    if (manualSubjectInput.value.trim()) break;
-                }
-            }
-
-            setStep('manual');
-        }
-
-        // Catalogue Event Listeners
         if (btnOpenCatalogue) {
             btnOpenCatalogue.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -1711,47 +995,6 @@
             });
         }
 
-        if (catalogueSearchInput) {
-            catalogueSearchInput.addEventListener('input', () => {
-                const val = catalogueSearchInput.value.trim();
-                if (btnClearSearch) {
-                    btnClearSearch.style.display = val.length > 0 ? 'inline-block' : 'none';
-                }
-                renderCatalogue();
-            });
-        }
-
-        if (btnClearSearch) {
-            btnClearSearch.addEventListener('click', () => {
-                if (catalogueSearchInput) {
-                    catalogueSearchInput.value = '';
-                }
-                btnClearSearch.style.display = 'none';
-                renderCatalogue();
-            });
-        }
-
-        document.querySelectorAll('.js-popular-chip').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const query = btn.getAttribute('data-query');
-                if (catalogueSearchInput && query) {
-                    catalogueSearchInput.value = query;
-                    if (btnClearSearch) {
-                        btnClearSearch.style.display = 'inline-block';
-                    }
-                    renderCatalogue();
-                }
-            });
-        });
-
-        if (btnTrayClear) {
-            btnTrayClear.addEventListener('click', () => {
-                catalogueSelectedTopics = [];
-                updateTray();
-                renderSubjectsPanel();
-                updateCatalogueFooterBtn();
-            });
-        }
 
         // Dismiss Modal & Session Storage
         function dismissModal() {
@@ -1824,7 +1067,13 @@
             }
 
             if (e.key === 'Tab') {
-                const focusables = modal.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+                // Only genuinely visible controls participate in the trap.
+                // Hidden steps use display:none, but we also guard against
+                // [hidden] / visibility:hidden so a future control cannot
+                // become reachable by keyboard while invisible.
+                const focusables = Array.from(modal.querySelectorAll(
+                    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+                )).filter(el => !el.hidden && el.offsetParent !== null);
                 if (focusables.length === 0) return;
                 const first = focusables[0];
                 const last = focusables[focusables.length - 1];
