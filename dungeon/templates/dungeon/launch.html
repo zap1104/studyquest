@@ -88,6 +88,43 @@
     </section>
 {% endif %}
 
+{% if active_focus %}
+    <div class="dungeon-card" style="
+        background: linear-gradient(135deg, rgba(117, 108, 243, 0.12) 0%, rgba(232, 163, 61, 0.08) 100%), var(--surface);
+        border: 1px solid rgba(117, 108, 243, 0.35);
+        border-radius: 16px;
+        padding: 18px 24px;
+        margin-bottom: 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    ">
+        <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span class="dungeon-status-tag" style="background: rgba(117, 108, 243, 0.2); color: var(--primary); font-weight: 800; font-size: 0.70rem; text-transform: uppercase;">
+                    🎯 Active Study Focus
+                </span>
+                {% if active_focus.initial_score is not None %}
+                    <span style="font-size: 0.75rem; font-weight: 700; color: var(--danger); background: rgba(239, 107, 115, 0.12); padding: 2px 8px; border-radius: 6px;">
+                        Starting Score: {{ active_focus.initial_score|floatformat:0 }}%
+                    </span>
+                {% endif %}
+            </div>
+            <h3 style="margin: 0; font-size: 1.15rem; color: var(--ink);">
+                Remediation Expeditions for {{ active_focus.subject_name }}
+            </h3>
+            <p style="margin: 4px 0 0; font-size: 0.82rem; color: var(--muted);">
+                Defeat dungeon monsters to reinforce key concepts and run Review Runs on missed questions to strengthen your knowledge!
+            </p>
+        </div>
+        <a href="{% url 'courses:focus_summary' active_focus.pk %}" class="btn btn-ghost btn-sm" style="font-size: 0.8rem;">
+            View Mastery Report &rarr;
+        </a>
+    </div>
+{% endif %}
+
 <section class="dungeon-section dungeon-catalog-section">
     <div class="dungeon-section-header">
         <h2>Choose Your Dungeon</h2>
@@ -95,10 +132,17 @@
     </div>
 
     {% for group in catalog %}
-        <div class="dungeon-course-card">
+        <div class="dungeon-course-card {% if group.is_focus_course %}focus-active-course{% endif %}" {% if group.is_focus_course %}style="border-color: rgba(117, 108, 243, 0.45); box-shadow: 0 0 16px rgba(117, 108, 243, 0.12);"{% endif %}>
             <header class="dungeon-course-header">
                 <div class="dungeon-course-info">
-                    <span class="dungeon-course-eyebrow">COURSE</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="dungeon-course-eyebrow">COURSE</span>
+                        {% if group.is_focus_course %}
+                            <span class="dungeon-status-tag" style="background: rgba(232, 163, 61, 0.18); color: var(--gold); border: 1px solid rgba(232, 163, 61, 0.35); font-size: 0.70rem; padding: 2px 7px;">
+                                🎯 Focus Course
+                            </span>
+                        {% endif %}
+                    </div>
                     <h3 class="dungeon-course-title">{{ group.course.title }}</h3>
                 </div>
                 <span class="dungeon-course-badge">
@@ -115,7 +159,14 @@
                                 {{ entry.chapter.order|stringformat:"02d" }}
                             </span>
                             <div class="dungeon-chapter-text">
-                                <h4 class="dungeon-chapter-title">{{ entry.chapter.title }}</h4>
+                                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                    <h4 class="dungeon-chapter-title">{{ entry.chapter.title }}</h4>
+                                    {% if entry.is_focus_target %}
+                                        <span class="badge" style="background: rgba(232, 163, 61, 0.18); color: var(--gold); font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; font-weight: 800;">
+                                            🎯 Focus Target
+                                        </span>
+                                    {% endif %}
+                                </div>
                                 <p class="dungeon-chapter-meta">
                                     <span>📝 {{ entry.question_count }} question{{ entry.question_count|pluralize }}</span>
                                     {% if entry.is_playable %}

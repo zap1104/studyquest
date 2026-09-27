@@ -1,0 +1,406 @@
+{% extends 'courses/base.html' %}
+{% load static %}
+
+{% block title %}Diagnostic Mastery Report: {{ focus.subject_name }} — StudyQuest{% endblock %}
+
+{% block content %}
+<style>
+    .focus-summary-shell {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: clamp(12px, 2vh, 24px) 16px clamp(32px, 4vh, 48px);
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .summary-nav-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .summary-hero-card {
+        background: linear-gradient(135deg, rgba(117, 108, 243, 0.12) 0%, rgba(0, 194, 168, 0.08) 100%), var(--surface);
+        border: 1px solid rgba(117, 108, 243, 0.35);
+        border-radius: 20px;
+        padding: clamp(20px, 3vh, 32px);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        box-shadow: var(--shadow);
+    }
+
+    .summary-badge-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .summary-title {
+        font-size: clamp(1.4rem, 2.5vw, 1.9rem);
+        font-weight: 900;
+        color: var(--ink);
+        margin: 0;
+        line-height: 1.25;
+    }
+
+    .summary-subtext {
+        font-size: 0.95rem;
+        color: var(--muted);
+        margin: 0;
+        line-height: 1.55;
+    }
+
+    .metrics-comparison-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+    }
+
+    .metric-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .metric-label {
+        font-size: 0.76rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+    }
+
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 900;
+        line-height: 1.1;
+    }
+
+    .metric-value.score-initial {
+        color: var(--danger);
+    }
+
+    .metric-value.score-mastery {
+        color: var(--accent);
+    }
+
+    .metric-value.score-gain {
+        color: var(--gold);
+    }
+
+    .metric-foot {
+        font-size: 0.78rem;
+        color: var(--muted);
+    }
+
+    .chapters-breakdown-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .breakdown-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.88rem;
+    }
+
+    .breakdown-table th {
+        text-align: left;
+        padding: 10px 14px;
+        border-bottom: 2px solid var(--border);
+        color: var(--muted);
+        font-size: 0.74rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .breakdown-table td {
+        padding: 14px;
+        border-bottom: 1px solid var(--border);
+        color: var(--ink);
+    }
+
+    .breakdown-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .summary-actions-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+</style>
+
+<div class="focus-summary-shell">
+    <div class="summary-nav-row">
+        <a href="{% url 'courses:dashboard' %}" class="btn btn-ghost" style="padding-left: 0;">
+            &larr; Back to Dashboard
+        </a>
+        {% if focus.linked_course %}
+            <a href="{% url 'courses:course_detail' focus.linked_course.pk %}" class="btn btn-ghost">
+                View Course &rarr;
+            </a>
+        {% endif %}
+    </div>
+
+    <!-- HERO REPORT -->
+    <header class="summary-hero-card">
+        <div class="summary-badge-row">
+            <span class="badge" style="background: rgba(117, 108, 243, 0.2); color: var(--primary); font-weight: 800; font-size: 0.75rem; text-transform: uppercase; padding: 4px 10px; border-radius: 999px;">
+                🎯 Institutional Diagnostic Report
+            </span>
+            {% if mastery.is_mastered %}
+                <span class="badge" style="background: rgba(0, 194, 168, 0.15); color: var(--accent); font-weight: 800; font-size: 0.75rem; text-transform: uppercase; padding: 4px 10px; border-radius: 999px;">
+                    ✓ Diagnostic Gap Remediated
+                </span>
+            {% else %}
+                <span class="badge" style="background: rgba(232, 163, 61, 0.15); color: var(--gold); font-weight: 800; font-size: 0.75rem; text-transform: uppercase; padding: 4px 10px; border-radius: 999px;">
+                    ⏳ Remediation In Progress
+                </span>
+            {% endif %}
+        </div>
+
+        <h1 class="summary-title">
+            {{ focus.subject_name }}
+            {% if focus.subject_code %}<span style="color: var(--muted); font-size: 1.1rem; font-weight: 700;">({{ focus.subject_code }})</span>{% endif %}
+        </h1>
+
+        <p class="summary-subtext">
+            {% if focus.source == 'external_assessment' %}
+                This focus originated from an external academic assessment diagnostic. StudyQuest constructed a source-grounded curriculum to address the identified learning gaps.
+            {% else %}
+                This focus was selected for targeted review and remediation.
+            {% endif %}
+        </p>
+
+        {% if focus.topic_names %}
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted);">Targeted Concept Gaps:</span>
+                {% for topic in focus.topic_names %}
+                    <span style="font-size: 0.78rem; font-weight: 700; background: rgba(232, 163, 61, 0.15); color: var(--gold); border: 1px solid rgba(232, 163, 61, 0.3); padding: 3px 9px; border-radius: 6px;">
+                        {{ topic }}
+                    </span>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </header>
+
+    <!-- METRICS COMPARISON -->
+    <section class="metrics-comparison-grid" aria-label="Remediation Metrics">
+        <div class="metric-card">
+            <span class="metric-label">Diagnostic Baseline</span>
+            <div class="metric-value score-initial">
+                {% if focus.initial_score is not None %}
+                    {{ focus.initial_score|floatformat:0 }}%
+                {% else %}
+                    N/A
+                {% endif %}
+            </div>
+            <span class="metric-foot">Prior diagnostic assessment result</span>
+        </div>
+
+        <div class="metric-card">
+            <span class="metric-label">StudyQuest Mastery</span>
+            <div class="metric-value score-mastery">
+                {{ mastery.average_score|floatformat:0 }}%
+            </div>
+            <span class="metric-foot">Current average score on focus chapters</span>
+        </div>
+
+        <div class="metric-card">
+            <span class="metric-label">Academic Gain</span>
+            <div class="metric-value score-gain">
+                {% if mastery.gain is not None %}
+                    {% if mastery.gain >= 0 %}+{% endif %}{{ mastery.gain|floatformat:0 }}%
+                {% else %}
+                    —
+                {% endif %}
+            </div>
+            <span class="metric-foot">Measured improvement over diagnostic</span>
+        </div>
+
+        <div class="metric-card">
+            <span class="metric-label">Objectives Cleared</span>
+            <div class="metric-value" style="color: var(--ink);">
+                {{ mastery.mastered_chapters }} / {{ mastery.total_targets }}
+            </div>
+            <span class="metric-foot">Chapters meeting 80%+ passing benchmark</span>
+        </div>
+    </section>
+
+    <!-- RECOMMENDED NEXT STEP (DF-5) -->
+    {% if recommendation and recommendation.has_recommendation %}
+        <section class="card" style="background: linear-gradient(135deg, rgba(117, 108, 243, 0.12) 0%, rgba(232, 163, 61, 0.08) 100%), var(--surface); border: 1px solid rgba(117, 108, 243, 0.35); border-radius: 18px; padding: 22px 26px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+            <div>
+                <span class="badge" style="background: rgba(117, 108, 243, 0.2); color: var(--primary); font-weight: 800; font-size: 0.72rem; text-transform: uppercase; padding: 3px 9px; border-radius: 999px;">
+                    🎯 Recommended Next Step
+                </span>
+                <h3 style="font-size: 1.15rem; font-weight: 800; margin: 6px 0 2px; color: var(--ink);">
+                    {{ recommendation.title }}
+                </h3>
+                <p style="margin: 0; font-size: 0.86rem; color: var(--muted); line-height: 1.45;">
+                    {{ recommendation.reason }}
+                </p>
+            </div>
+            <a href="{{ recommendation.url }}" class="btn btn-primary" style="font-weight: 800; padding: 10px 20px; white-space: nowrap; text-decoration: none;">
+                {{ recommendation.button_label }}
+            </a>
+        </section>
+    {% endif %}
+
+    <!-- TOPICS PROGRESS STATUS (DF-6) -->
+    {% if mastery.strengthened_topics or mastery.unresolved_topics %}
+        <section class="card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 22px 26px;">
+            <h2 style="font-size: 1.05rem; font-weight: 800; margin: 0 0 14px; color: var(--ink);">
+                Topics Progress Breakdown
+            </h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+                <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px;">
+                    <strong style="display: block; font-size: 0.82rem; text-transform: uppercase; color: var(--accent); margin-bottom: 8px;">
+                        ✓ Topics Strengthened (≥80%)
+                    </strong>
+                    {% if mastery.strengthened_topics %}
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                            {% for topic in mastery.strengthened_topics %}
+                                <span style="font-size: 0.78rem; font-weight: 700; background: rgba(0, 194, 168, 0.12); color: var(--accent); border: 1px solid rgba(0, 194, 168, 0.3); padding: 3px 8px; border-radius: 6px;">
+                                    ✓ {{ topic }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <span style="font-size: 0.82rem; color: var(--muted);">Complete chapter quizzes to demonstrate mastery.</span>
+                    {% endif %}
+                </div>
+
+                <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px;">
+                    <strong style="display: block; font-size: 0.82rem; text-transform: uppercase; color: var(--danger); margin-bottom: 8px;">
+                        ⚠️ Still Needing Attention (&lt;80%)
+                    </strong>
+                    {% if mastery.unresolved_topics %}
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                            {% for topic in mastery.unresolved_topics %}
+                                <span style="font-size: 0.78rem; font-weight: 700; background: rgba(239, 107, 115, 0.12); color: var(--danger); border: 1px solid rgba(239, 107, 115, 0.3); padding: 3px 8px; border-radius: 6px;">
+                                    ⚠️ {{ topic }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <span style="font-size: 0.82rem; color: var(--accent); font-weight: 700;">All focus topics meet passing criteria!</span>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+    {% endif %}
+
+    <!-- CHAPTER REMEDIATION BREAKDOWN -->
+    <section class="chapters-breakdown-card">
+        <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0; color: var(--ink);">
+            Chapter Remediation & Assessment Status
+        </h2>
+
+        {% if mastery.chapter_details %}
+            <div style="overflow-x: auto;">
+                <table class="breakdown-table">
+                    <thead>
+                        <tr>
+                            <th>Unit / Chapter</th>
+                            <th>Best Quiz Score</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for detail in mastery.chapter_details %}
+                            <tr>
+                                <td>
+                                    <strong>{{ detail.title }}</strong>
+                                </td>
+                                <td>
+                                    {% if detail.best_percentage > 0 %}
+                                        <strong>{{ detail.best_percentage|floatformat:0 }}%</strong>
+                                    {% else %}
+                                        <span style="color: var(--muted);">Not Attempted</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if detail.is_passed %}
+                                        <span style="color: var(--accent); font-weight: 800;">✓ Mastered (≥80%)</span>
+                                    {% else %}
+                                        <span style="color: var(--danger); font-weight: 700;">Needs Review (&lt;80%)</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'courses:chapter_review' detail.id %}" class="btn btn-ghost btn-sm" style="font-size: 0.78rem;">
+                                        Review Unit &rarr;
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p style="color: var(--muted); font-size: 0.9rem; margin: 0;">
+                No course chapters currently linked to this focus. Upload materials to generate the review curriculum.
+            </p>
+        {% endif %}
+    </section>
+
+    <!-- NON-EQUIVALENCE INSTITUTIONAL DISCLAIMER (DF-6) -->
+    <div style="padding: 14px 18px; border-radius: 12px; background: rgba(0, 0, 0, 0.05); border: 1px dashed var(--border); font-size: 0.78rem; color: var(--muted); line-height: 1.5;">
+        <strong>Academic Non-Equivalence Notice:</strong> StudyQuest checks evaluate student recall, concept application, and retention based strictly on the uploaded source materials. StudyQuest mastery scores reflect study proficiency within this platform and are distinct from external university grading systems.
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="summary-actions-row" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            {% if focus.linked_course %}
+                <a href="{% url 'courses:course_detail' focus.linked_course.pk %}" class="btn btn-primary">
+                    Continue Focus Course &rarr;
+                </a>
+            {% else %}
+                <a href="{% url 'courses:course_create' %}?focus_id={{ focus.pk }}" class="btn btn-primary">
+                    Upload Institutional Materials &rarr;
+                </a>
+            {% endif %}
+            <a href="{% url 'dungeon:launch' %}" class="btn btn-secondary">
+                🗝️ Dungeon Quest Remediation
+            </a>
+        </div>
+
+        <!-- Completion / Reopen Toggle -->
+        <div>
+            {% if focus.status == 'completed' %}
+                <form method="post" action="{% url 'courses:focus_reopen' focus.pk %}" style="margin: 0;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--muted);">
+                        Reopen Study Focus
+                    </button>
+                </form>
+            {% else %}
+                <form method="post" action="{% url 'courses:focus_complete' focus.pk %}" style="margin: 0;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--accent);">
+                        ✓ Mark Focus Complete
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+

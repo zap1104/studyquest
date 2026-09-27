@@ -183,6 +183,101 @@
         <h1>{{ course.title }}</h1>
         <p class="subtitle">{{ course.description|default:"No description provided." }}</p>
     </div>
+
+    {% if linked_focus %}
+    <div class="card focus-header-banner" style="
+        background: linear-gradient(135deg, rgba(117, 108, 243, 0.10) 0%, rgba(232, 163, 61, 0.08) 100%), var(--surface);
+        border: 1px solid rgba(117, 108, 243, 0.35);
+        border-radius: 14px;
+        padding: 16px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    ">
+        <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span class="badge" style="background: rgba(117, 108, 243, 0.2); color: var(--primary); font-weight: 800; font-size: 0.70rem; text-transform: uppercase; padding: 2px 8px; border-radius: 999px;">
+                    🎯 Active Study Focus
+                </span>
+                {% if linked_focus.initial_score is not None %}
+                    <span style="font-size: 0.75rem; font-weight: 700; color: var(--danger); background: rgba(239, 107, 115, 0.12); padding: 2px 8px; border-radius: 6px;">
+                        Starting Score: {{ linked_focus.initial_score|floatformat:0 }}%
+                    </span>
+                {% endif %}
+                {% if focus_mastery and focus_mastery.is_mastered %}
+                    <span style="font-size: 0.75rem; font-weight: 800; color: var(--accent); background: rgba(0, 194, 168, 0.14); padding: 2px 8px; border-radius: 6px;">
+                        ✓ Remediated ({{ focus_mastery.average_score|floatformat:0 }}%)
+                    </span>
+                {% endif %}
+            </div>
+            <div style="font-weight: 800; font-size: 1.05rem; color: var(--ink);">
+                Study Plan for {{ linked_focus.subject_name }}
+            </div>
+            {% if linked_focus.topic_names %}
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; align-items: center;">
+                    <span style="font-size: 0.75rem; color: var(--muted); font-weight: 600;">Priority Topics:</span>
+                    {% for topic in linked_focus.topic_names %}
+                        <span style="font-size: 0.75rem; font-weight: 700; background: rgba(232, 163, 61, 0.15); color: var(--gold); border: 1px solid rgba(232, 163, 61, 0.3); padding: 2px 7px; border-radius: 6px;">
+                            {{ topic }}
+                        </span>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <a href="{% url 'courses:focus_summary' linked_focus.pk %}" class="btn btn-primary btn-sm" style="font-size: 0.8rem;">
+                Mastery Report &rarr;
+            </a>
+            <a href="{% url 'courses:focus_recommendation' linked_focus.pk %}" class="btn btn-ghost btn-sm" style="font-size: 0.8rem;">
+                Details
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if linked_focus and first_focus_chapter %}
+    <!-- DF-4: CHECK YOUR UNDERSTANDING LAUNCH CARD -->
+    <div class="card" style="
+        background: linear-gradient(135deg, rgba(117, 108, 243, 0.12) 0%, rgba(0, 194, 168, 0.08) 100%), var(--surface);
+        border: 1px solid rgba(117, 108, 243, 0.35);
+        border-radius: 16px;
+        padding: 20px 24px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    ">
+        <div style="flex: 1; min-width: 260px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span class="badge" style="background: rgba(117, 108, 243, 0.2); color: var(--primary); font-weight: 800; font-size: 0.70rem; text-transform: uppercase; padding: 2px 8px; border-radius: 999px;">
+                    🎯 Check Your Understanding
+                </span>
+                <span style="font-size: 0.78rem; color: var(--muted); font-weight: 600;">
+                    {{ focus_question_count }} questions · Mixed format · About 8 minutes
+                </span>
+            </div>
+            <h3 style="font-size: 1.15rem; font-weight: 800; margin: 4px 0 4px; color: var(--ink);">
+                See how well you understand the topics in your study focus.
+            </h3>
+            <p style="margin: 0; font-size: 0.84rem; color: var(--muted); line-height: 1.4;">
+                Targeted practice prioritized on your weak topics: <strong>{{ linked_focus.topic_names|join:", "|default:linked_focus.subject_name }}</strong>.
+            </p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <a href="{% url 'courses:chapter_review' first_focus_chapter.pk %}#quiz" class="btn btn-primary" style="font-weight: 800; padding: 10px 18px; text-decoration: none;">
+                Start Check &rarr;
+            </a>
+            <a href="{% url 'courses:chapter_review' first_focus_chapter.pk %}" class="btn btn-ghost" style="border: 1px solid var(--border); font-size: 0.88rem; padding: 10px 16px; text-decoration: none;">
+                Review Materials First
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="course-progress-bar-card">
         <div class="progress-labels-row"><span>Course Progress</span><strong>{{ completed_count|default:0 }} of {{ total_chapters|default:0 }} Chapters Completed ({{ course_progress_pct|default:0 }}%)</strong></div>
         <div class="course-progress-track" role="progressbar" aria-label="Course completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ course_progress_pct|default:0 }}"><div class="course-progress-fill" data-progress="{{ course_progress_pct|default:0 }}"></div></div>
@@ -205,7 +300,14 @@
                         {% else %}Locked{% endif %}
                     </div>
                     <div class="node-header-row">
-                        <h3>{{ chapter.title }}</h3>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <h3>{{ chapter.title }}</h3>
+                            {% if chapter.is_focus_target %}
+                                <span class="badge" style="background: rgba(232, 163, 61, 0.18); color: var(--gold); font-weight: 800; font-size: 0.70rem; border: 1px solid rgba(232, 163, 61, 0.35); padding: 2px 7px; border-radius: 6px;" title="This unit covers diagnostic focus topics">
+                                    🎯 Focus Target
+                                </span>
+                            {% endif %}
+                        </div>
                         <button type="button" class="btn-edit-inline rename-chapter-trigger"
                                 data-chapter-id="{{ chapter.pk }}"
                             data-chapter-title="{{ chapter.title|escape }}"

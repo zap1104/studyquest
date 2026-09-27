@@ -365,6 +365,25 @@
                 </div>
             </div>
 
+            {% if focus_topics %}
+                <div class="card focus-chapter-banner" style="
+                    background: linear-gradient(135deg, rgba(232, 163, 61, 0.12) 0%, rgba(117, 108, 243, 0.08) 100%), var(--surface);
+                    border: 1px solid rgba(232, 163, 61, 0.35);
+                    border-radius: 12px;
+                    padding: 12px 16px;
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                ">
+                    <span style="font-size: 1.25rem;">🎯</span>
+                    <div style="font-size: 0.84rem; color: var(--ink); line-height: 1.45;">
+                        <strong>Focus Target:</strong> This unit directly strengthens your focus in 
+                        {% for t in focus_topics %}<strong>{{ t }}</strong>{% if not forloop.last %}, {% endif %}{% endfor %}.
+                        Master this review and score &ge;80% on the quiz to reach subject mastery!
+                    </div>
+                </div>
+            {% endif %}
+
             <header class="lesson-heading">
                 <div class="lesson-icon" aria-hidden="true">📖</div>
                 <div class="lesson-heading-copy">

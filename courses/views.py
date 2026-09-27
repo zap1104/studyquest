@@ -4,10 +4,12 @@ import re
 import unicodedata
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Max
 from django.http import JsonResponse
@@ -25,11 +27,31 @@ from .models import (
     ChapterCompletion,
     Choice,
     Course,
+    LearningFocus,
     Question,
     Quiz,
     QuizAttempt,
     UserCourseCompletion,
     UserProfile,
+)
+from .learning_focus_service import (
+    validate_external_assessment_payload,
+    import_external_assessment,
+    create_manual_learning_focus,
+    activate_learning_focus,
+    dismiss_learning_focus,
+    complete_learning_focus,
+    link_focus_to_course,
+    get_active_learning_focus,
+    get_pending_learning_focus,
+    get_completed_learning_focus,
+    find_matching_courses,
+    generate_course_creation_prefill,
+    annotate_course_chapters_with_focus,
+    calculate_focus_mastery,
+    get_focus_remediation_recommendations,
+    get_academic_catalogue,
+    DiagnosticPayloadError,
 )
 from .dashboard_service import (
     get_dashboard_next_action,
@@ -210,6 +232,42 @@ def calculate_course_progress(user, course):
 # --------------------------------------------------
 # 2. AUTH & DASHBOARD VIEWS
 # --------------------------------------------------
+
+def _client_ip(request):
+    """Best-effort client IP, honouring one layer of reverse proxy."""
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR", "unknown")
+
+
+def _throttle_key(scope, request):
+    return f"sq-throttle:{scope}:{_client_ip(request)}"
+
+
+def _is_throttled(scope, request):
+    """True once the caller has exceeded the allowed attempt count."""
+    limit = getattr(settings, "LOGIN_THROTTLE_MAX_ATTEMPTS", 10)
+    attempts = cache.get(_throttle_key(scope, request), 0)
+    return attempts >= limit
+
+
+def _register_attempt(scope, request):
+    """Count one failed attempt, with a rolling expiry window."""
+    window = getattr(settings, "LOGIN_THROTTLE_WINDOW_SECONDS", 300)
+    key = _throttle_key(scope, request)
+    try:
+        attempts = cache.incr(key)
+    except ValueError:
+        cache.set(key, 1, window)
+        attempts = 1
+    return attempts
+
+
+def _clear_attempts(scope, request):
+    cache.delete(_throttle_key(scope, request))
+
+
 def auth_portal(request):
     if request.user.is_authenticated:
         return redirect("courses:dashboard")
@@ -220,18 +278,38 @@ def auth_portal(request):
 
     if request.method == "POST":
         action = request.POST.get("action")
+        scope = "login" if action == "login" else "signup"
+
+        # Unauthenticated brute-force protection. The plan-based course
+        # generation quota is a separate concern and is untouched by this.
+        if _is_throttled(scope, request):
+            messages.error(
+                request,
+                "Too many attempts from this device. "
+                "Please wait a few minutes and try again.",
+            )
+            return render(request, "courses/login.html", {
+                "login_form": login_form,
+                "signup_form": signup_form,
+                "active_tab": scope,
+            }, status=429)
+
         if action == "login":
             login_form = AuthenticationForm(request, data=request.POST)
             if login_form.is_valid():
+                _clear_attempts(scope, request)
                 login(request, login_form.get_user())
                 return redirect("courses:dashboard")
+            _register_attempt(scope, request)
             active_tab = "login"
         elif action == "signup":
             signup_form = UserCreationForm(request.POST)
             if signup_form.is_valid():
+                _clear_attempts(scope, request)
                 user = signup_form.save()
                 login(request, user)
                 return redirect("courses:dashboard")
+            _register_attempt(scope, request)
             active_tab = "signup"
 
     return render(request, "courses/login.html", {
@@ -253,6 +331,15 @@ def dashboard(request):
     achievement_preview = get_achievement_preview(request.user)
     eligibility = get_generation_eligibility(profile)
 
+    owned_course_count = Course.objects.filter(user=request.user).count()
+    has_courses = owned_course_count > 0
+    active_focus = get_active_learning_focus(request.user)
+    pending_focus = get_pending_learning_focus(request.user)
+    completed_focus = get_completed_learning_focus(request.user) if not active_focus and not pending_focus else None
+
+    # Read the catalogue once; reuse it for the embedded JSON and the template.
+    academic_catalogue = get_academic_catalogue()
+
     return render(request, "courses/dashboard.html", {
         "profile": profile,
         "tier_info": tier_info,
@@ -260,9 +347,17 @@ def dashboard(request):
         "next_action": next_action,
         "recent_courses": recent_courses,
         "courses": recent_courses,
+        "owned_course_count": owned_course_count,
+        "has_courses": has_courses,
         "weekly_momentum": weekly_momentum,
         "achievement_preview": achievement_preview,
         "eligibility": eligibility,
+        "active_focus": active_focus,
+        "pending_focus": pending_focus,
+        "completed_focus": completed_focus,
+        "open_focus": request.GET.get("open_focus") == "1",
+        "academic_catalogue": academic_catalogue,
+        "academic_catalogue_json": json.dumps(academic_catalogue),
     })
 
 
@@ -293,10 +388,26 @@ def course_create(request):
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
     eligibility = get_generation_eligibility(profile)
 
+    focus_id = request.GET.get("focus_id") or request.POST.get("focus_id")
+    learning_focus = None
+    initial_title = ""
+    initial_focus = ""
+
+    if focus_id:
+        learning_focus = LearningFocus.objects.filter(pk=focus_id, user=request.user).first()
+        if learning_focus:
+            prefill = generate_course_creation_prefill(learning_focus)
+            initial_title = prefill.get("title", "")
+            initial_focus = prefill.get("review_emphasis", "")[:100]
+
     if request.method == "GET":
         return render(request, "courses/course_form.html", {
             "eligibility": eligibility,
             "profile": profile,
+            "custom_title": initial_title,
+            "study_focus": initial_focus,
+            "focus_id": focus_id,
+            "learning_focus": learning_focus,
         })
 
     if request.method == "POST":
@@ -304,7 +415,7 @@ def course_create(request):
             return render(
                 request,
                 "courses/course_form.html",
-                {"eligibility": eligibility, "profile": profile},
+                {"eligibility": eligibility, "profile": profile, "focus_id": focus_id, "learning_focus": learning_focus},
                 status=403,
             )
 
@@ -324,6 +435,8 @@ def course_create(request):
                 "generation_error": "Please select at least one study file to generate a course.",
                 "custom_title": custom_title,
                 "study_focus": study_focus,
+                "focus_id": focus_id,
+                "learning_focus": learning_focus,
             })
 
         if len(content_files) > 3:
@@ -334,6 +447,8 @@ def course_create(request):
                 "generation_error": "You can upload a maximum of 3 files per course.",
                 "custom_title": custom_title,
                 "study_focus": study_focus,
+                "focus_id": focus_id,
+                "learning_focus": learning_focus,
             })
 
         preference_data = {
@@ -351,6 +466,8 @@ def course_create(request):
                 "generation_error": "The selected study settings were invalid.",
                 "custom_title": custom_title,
                 "study_focus": study_focus,
+                "focus_id": focus_id,
+                "learning_focus": learning_focus,
             })
 
         dummy_course = Course(title=custom_title or "Untitled Course", user=request.user)
@@ -375,6 +492,11 @@ def course_create(request):
                     custom_title=custom_title,
                 )
                 consume_generation_credit(request.user, course)
+                if focus_id:
+                    target_focus = LearningFocus.objects.filter(pk=focus_id, user=request.user).first()
+                    if target_focus:
+                        link_focus_to_course(target_focus, course)
+                        activate_learning_focus(target_focus)
 
             return redirect("courses:course_detail", pk=course.pk)
 
@@ -390,6 +512,8 @@ def course_create(request):
                 "max_chars": err.max_chars,
                 "custom_title": custom_title,
                 "study_focus": study_focus,
+                "focus_id": focus_id,
+                "learning_focus": learning_focus,
             })
         except CourseGenerationError as err:
             logger.error(f"[Course Generation Pipeline Interrupted]: {err}")
@@ -400,6 +524,8 @@ def course_create(request):
                 "generation_error": str(err),
                 "custom_title": custom_title,
                 "study_focus": study_focus,
+                "focus_id": focus_id,
+                "learning_focus": learning_focus,
             })
         except Exception as error:
             logger.error(f"[Course Generation Failed Unexpectedly]: {repr(error)}")
@@ -410,6 +536,8 @@ def course_create(request):
                 "generation_error": "Course generation encountered an unexpected error. Please try again.",
                 "custom_title": custom_title,
                 "study_focus": study_focus,
+                "focus_id": focus_id,
+                "learning_focus": learning_focus,
             })
 
 
@@ -505,6 +633,19 @@ def course_detail(request, pk):
         chapter.previous_chapter = get_previous_chapter(chapter)
 
     progress = calculate_course_progress(request.user, course)
+    linked_focus = course.learning_focuses.filter(
+        status__in=[LearningFocus.STATUS_ACTIVE, LearningFocus.STATUS_PENDING, LearningFocus.STATUS_COMPLETED]
+    ).first()
+    active_focus = get_active_learning_focus(request.user)
+    current_focus = linked_focus or (active_focus if active_focus and active_focus.linked_course_id == course.id else None)
+
+    annotate_course_chapters_with_focus(chapters, current_focus)
+    focus_mastery = calculate_focus_mastery(current_focus) if current_focus else None
+    recommendation = get_focus_remediation_recommendations(request.user, current_focus) if current_focus else None
+
+    first_focus_chapter = next((c for c in chapters if getattr(c, "is_focus_target", False)), chapters[0] if chapters else None)
+    focus_target_quizzes = [c.quiz for c in chapters if getattr(c, "is_focus_target", False) and getattr(c, "quiz", None)]
+    focus_question_count = sum(q.questions.count() for q in focus_target_quizzes) or (len(focus_target_quizzes) * 5) or 10
 
     return render(request, "courses/course_detail.html", {
         "course": course,
@@ -515,6 +656,11 @@ def course_detail(request, pk):
         "guided_pass_threshold": GUIDED_PASS_THRESHOLD,
         "prior_knowledge_threshold": PRIOR_KNOWLEDGE_THRESHOLD,
         "pass_threshold": GUIDED_PASS_THRESHOLD,
+        "linked_focus": current_focus,
+        "focus_mastery": focus_mastery,
+        "recommendation": recommendation,
+        "first_focus_chapter": first_focus_chapter,
+        "focus_question_count": focus_question_count,
     })
 
 
@@ -567,6 +713,12 @@ def chapter_review(request, pk):
         .first()
     ) if quiz else None
 
+    active_focus = get_active_learning_focus(request.user)
+    focus_topics = []
+    if active_focus and (active_focus.linked_course_id == course.id or active_focus.subject_name.lower() in course.title.lower()):
+        c_text = f"{chapter.title} {chapter.review_content or ''}".lower()
+        focus_topics = [t for t in (active_focus.topic_names or []) if t.lower() in c_text]
+
     return render(request, "courses/chapter_review.html", {
         "chapter": chapter,
         "chapter_data": chapter_data,
@@ -588,6 +740,8 @@ def chapter_review(request, pk):
         "guided_threshold": GUIDED_PASS_THRESHOLD,
         "prior_knowledge_threshold": PRIOR_KNOWLEDGE_THRESHOLD,
         "pass_threshold": GUIDED_PASS_THRESHOLD,
+        "active_focus": active_focus,
+        "focus_topics": focus_topics,
     })
 
 
@@ -948,6 +1102,24 @@ def submit_quiz(request, pk=None, chapter_id=None):
 
     post_completion_state = get_chapter_completion_state(request.user, chapter)
 
+    # Check focus mastery if linked
+    active_focus = get_active_learning_focus(request.user)
+    focus_update = None
+    if active_focus and (active_focus.linked_course_id == chapter.course_id or active_focus.subject_name.lower() in chapter.course.title.lower()):
+        mastery = calculate_focus_mastery(active_focus)
+        focus_update = {
+            "focus_id": active_focus.id,
+            "subject_name": active_focus.subject_name,
+            "is_mastered": mastery["is_mastered"],
+            "mastered_chapters": mastery["mastered_chapters"],
+            "total_targets": mastery["total_targets"],
+            "average_score": mastery["average_score"],
+            "diagnostic_baseline": active_focus.initial_score,
+            "gain": mastery["gain"],
+        }
+        if mastery["is_mastered"]:
+            complete_learning_focus(active_focus)
+
     return JsonResponse({
         "score": float(total_earned),
         "maximum_score": float(total_max),
@@ -963,6 +1135,7 @@ def submit_quiz(request, pk=None, chapter_id=None):
         "new_streak": getattr(profile, "streak_days", 0) if profile else 0,
         "review_items": review_items,
         "results": review_items,
+        "focus_update": focus_update,
     })
 
 
@@ -1007,3 +1180,144 @@ def leaderboard_view(request):
         "total_learners": standings_data["total_learners"],
     }
     return render(request, "courses/leaderboard.html", context)
+
+
+# --------------------------------------------------
+# 7. DIAGNOSTIC FOCUS & EXTERNAL ASSESSMENT INTEGRATION
+# --------------------------------------------------
+@login_required
+def focus_checkin(request):
+    """Handles manual focus creation or JSON upload/paste from an external diagnostic system."""
+    if request.method == "POST":
+        assessment_file = request.FILES.get("assessment_file")
+        raw_json = request.POST.get("assessment_json", "").strip()
+
+        # 1. JSON Import Pathway
+        if assessment_file or raw_json:
+            try:
+                if assessment_file:
+                    payload = json.loads(assessment_file.read().decode("utf-8"))
+                else:
+                    payload = json.loads(raw_json)
+
+                focus, created, msg = import_external_assessment(request.user, payload)
+                messages.success(request, msg)
+                return redirect("courses:focus_recommendation", pk=focus.pk)
+            except json.JSONDecodeError:
+                messages.error(request, "Invalid JSON file or text. Please check the format.")
+                return redirect("courses:dashboard")
+            except DiagnosticPayloadError as e:
+                messages.error(request, f"Assessment format error: {e}")
+                return redirect("courses:dashboard")
+            except Exception as e:
+                logger.error(f"Error importing diagnostic assessment: {e}")
+                messages.error(request, "Could not import assessment result.")
+                return redirect("courses:dashboard")
+
+        # 2. Manual Selection Pathway
+        subject_name = request.POST.get("subject_name", "").strip()
+        if subject_name:
+            raw_topics = request.POST.get("topic_names", "")
+            topic_names = [t.strip() for t in raw_topics.split(",") if t.strip()]
+            subject_code = request.POST.get("subject_code", "").strip()
+            reason = request.POST.get("reason", "").strip()
+
+            focus = create_manual_learning_focus(
+                user=request.user,
+                subject_name=subject_name,
+                topic_names=topic_names,
+                subject_code=subject_code,
+                reason=reason,
+                activate=True,
+            )
+            messages.success(request, f"Study focus set to {focus.subject_name}!")
+            return redirect("courses:focus_recommendation", pk=focus.pk)
+
+        messages.warning(request, "Please enter a subject name or upload an assessment file.")
+        return redirect("courses:dashboard")
+
+    return redirect("/?open_focus=1")
+
+
+@login_required
+def focus_recommendation(request, pk):
+    """Presents the approved/recommended study focus, showing matching courses and creation options."""
+    focus = get_object_or_404(LearningFocus, pk=pk, user=request.user)
+    matching_courses = find_matching_courses(request.user, focus)
+
+    return render(request, "courses/focus_recommendation.html", {
+        "focus": focus,
+        "matching_courses": matching_courses,
+        "prefill": generate_course_creation_prefill(focus),
+    })
+
+
+@login_required
+@require_POST
+def focus_activate(request, pk):
+    """Approves and activates a pending or inactive LearningFocus."""
+    focus = get_object_or_404(LearningFocus, pk=pk, user=request.user)
+    activate_learning_focus(focus)
+    messages.success(request, f"Activated study focus for {focus.subject_name}!")
+    return redirect("courses:focus_recommendation", pk=focus.pk)
+
+
+@login_required
+@require_POST
+def focus_dismiss(request, pk):
+    """Dismisses a LearningFocus so it stops appearing on the dashboard."""
+    focus = get_object_or_404(LearningFocus, pk=pk, user=request.user)
+    dismiss_learning_focus(focus)
+    messages.info(request, "Study focus dismissed.")
+    return redirect("courses:dashboard")
+
+
+@login_required
+@require_POST
+def focus_link_course(request, pk, course_id):
+    """Links a LearningFocus to an existing course."""
+    focus = get_object_or_404(LearningFocus, pk=pk, user=request.user)
+    course = get_object_or_404(Course, pk=course_id, user=request.user)
+    link_focus_to_course(focus, course)
+    activate_learning_focus(focus)
+    messages.success(request, f"Connected focus '{focus.subject_name}' to course '{course.title}'!")
+    return redirect("courses:course_detail", pk=course.pk)
+
+
+@login_required
+def focus_summary(request, pk):
+    """Displays the diagnostic-to-mastery institutional summary report."""
+    focus = get_object_or_404(LearningFocus, pk=pk, user=request.user)
+    mastery = calculate_focus_mastery(focus)
+    recommendation = get_focus_remediation_recommendations(request.user, focus)
+    return render(request, "courses/focus_summary.html", {
+        "focus": focus,
+        "mastery": mastery,
+        "recommendation": recommendation,
+    })
+
+
+@login_required
+@require_POST
+def focus_complete(request, pk):
+    """Manually marks a focus as completed."""
+    focus = get_object_or_404(LearningFocus, pk=pk, user=request.user)
+    complete_learning_focus(focus)
+    messages.success(request, f"Marked study focus '{focus.subject_name}' as completed!")
+    return redirect("courses:focus_summary", pk=focus.pk)
+
+
+@login_required
+@require_POST
+def focus_reopen(request, pk):
+    """Reopens a completed focus."""
+    focus = get_object_or_404(LearningFocus, pk=pk, user=request.user)
+    activate_learning_focus(focus)
+    messages.success(request, f"Reopened study focus '{focus.subject_name}'!")
+    return redirect("courses:focus_summary", pk=focus.pk)
+
+
+@login_required
+def focus_catalogue_api(request):
+    """Returns the curated Philippine higher education academic terminology catalogue."""
+    return JsonResponse(get_academic_catalogue())

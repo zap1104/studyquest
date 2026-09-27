@@ -978,15 +978,22 @@
                     </div>
                 </div>
 
-                <div class="streak-status-pill streak-{{ streak_status.status }}">
-                    <span class="streak-icon">{{ streak_status.icon }}</span>
-                    <span class="streak-message">{{ streak_status.message }}</span>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-ghost btn-sm js-open-focus-modal" style="display: inline-flex; align-items: center; gap: 6px; border: 1px dashed var(--border); font-size: 0.8rem; padding: 6px 12px; border-radius: 999px;">
+                        🎯 {% if active_focus %}Focus: {{ active_focus.subject_name|truncatechars:18 }}{% else %}Set Study Focus{% endif %}
+                    </button>
+                    <div class="streak-status-pill streak-{{ streak_status.status }}">
+                        <span class="streak-icon">{{ streak_status.icon }}</span>
+                        <span class="streak-message">{{ streak_status.message }}</span>
+                    </div>
                 </div>
             </section>
 
             <!-- ZONE 2: PRIMARY ACTION STAGE -->
             <div class="dashboard-grid">
                 <div class="dashboard-primary">
+
+                    {% include 'courses/includes/focus_card.html' %}
 
                     <!-- Next in Your Course Card -->
                     <div class="next-action-card state-{{ next_action.state }}">
@@ -1180,7 +1187,10 @@
 
 {% else %}
     <!-- Zero Courses Onboarding State -->
-    <div class="prologue-stage">
+    <div class="prologue-stage" style="flex-direction: column; gap: 20px;">
+        <div style="width: 100%; max-width: 960px;">
+            {% include 'courses/includes/focus_card.html' %}
+        </div>
         <div class="prologue-card">
             <div class="prologue-visual">
                 <img src="{% static 'courses/images/mascot_welcome.png' %}" alt="StudyQuest Student Mascot" class="prologue-mascot-img">
@@ -1188,13 +1198,37 @@
             <div class="prologue-content">
                 <div class="prologue-badge">⚡ GETTING STARTED</div>
                 <h1 class="prologue-heading">Welcome to StudyQuest, <span class="hero-highlight">{{ request.user.username }}</span>!</h1>
-                <p class="prologue-subtext">
-                    Transform your syllabus, module slides, and lecture notes into a structured study path.
-                </p>
-                <div class="prologue-cta-wrap">
-                    <a href="{% url 'courses:course_create' %}" class="btn btn-primary btn-chunky prologue-cta">
-                        Create Your First Course &rarr;
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <p class="prologue-subtext" style="font-size: 1.05rem; font-weight: 700; color: var(--ink); margin: 0;">
+                        What would you like to improve?
+                    </p>
+                    <p class="prologue-subtext" style="margin: 0; line-height: 1.5;">
+                        Choose a subject or topic, use a school result, or connect your learning materials. StudyQuest will turn your focus into a personalized study and practice plan.
+                    </p>
+                </div>
+
+                <div class="prologue-cta-wrap" style="display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin-top: 14px; width: 100%;">
+                    <!-- Dominant Primary Action: Find My Study Focus -->
+                    <button type="button" class="btn btn-primary btn-chunky js-open-focus-modal" style="width: 100%; min-height: 56px; height: 56px; font-size: 1.05rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; box-shadow: 0 4px 14px rgba(108, 92, 231, 0.35); text-decoration: none; cursor: pointer; white-space: nowrap;">
+                        Find My Study Focus &rarr;
+                    </button>
+
+                    <!-- Subtle helper copy -->
+                    <div style="font-size: 0.85rem; color: var(--muted); text-align: center; margin: 4px 0 2px;">
+                        Already have your materials ready?
+                    </div>
+
+                    <!-- Secondary Outlined Action: Create a Course -->
+                    <a href="{% url 'courses:course_create' %}" class="btn btn-ghost" style="width: 100%; min-height: 42px; font-size: 0.92rem; font-weight: 600; border: 1px solid var(--border); border-radius: 10px; display: flex; align-items: center; justify-content: center; background: var(--surface); color: var(--ink); text-decoration: none; transition: all 0.18s ease;">
+                        Create a Course
                     </a>
+
+                    <!-- Optional third link: Skip for now -->
+                    <div style="text-align: center; margin-top: 6px;">
+                        <a href="{% url 'courses:course_list' %}" style="font-size: 0.84rem; color: var(--muted); text-decoration: none; font-weight: 600; padding: 4px 12px; border-radius: 6px; display: inline-block; transition: all 0.15s ease;">
+                            Skip for now &rarr;
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1281,6 +1315,8 @@
     </div>
 {% endif %}
 
+{% include 'courses/includes/focus_checkin_modal.html' %}
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         // 1. Progress Bar Fills
@@ -1293,6 +1329,7 @@
 
         const sponsorModal = document.getElementById('demo-sponsor-modal');
         const planModal = document.getElementById('plus-preview-modal');
+        const focusModal = document.getElementById('focus-modal');
 
         function setModalState(modal, isOpen) {
             if (!modal) return;
@@ -1305,10 +1342,22 @@
                 modal.setAttribute('hidden', '');
             }
 
-            const anyOpen = document.querySelectorAll('.sponsor-modal-backdrop.is-open:not([hidden])').length > 0;
+            const anyOpen = document.querySelectorAll('.sponsor-modal-backdrop.is-open:not([hidden]), .focus-modal-backdrop.is-open:not([hidden])').length > 0;
             document.documentElement.classList.toggle('modal-open', anyOpen);
             document.body.classList.toggle('modal-open', anyOpen);
         }
+
+        // Focus Check-In Modal Auto-Open
+        {% if open_focus %}
+            if (!sessionStorage.getItem('study_focus_dismissed')) {
+                requestAnimationFrame(() => {
+                    const trigger = document.querySelector('.js-open-focus-modal');
+                    if (trigger) trigger.click();
+                    const schoolBtn = document.querySelector('.js-select-focus-route[data-route="school"]');
+                    if (schoolBtn) schoolBtn.click();
+                });
+            }
+        {% endif %}
 
         // 3. Open Sponsor Modal (Triggered by desktop ad rail button or mobile strip)
         document.querySelectorAll('.open-sponsor-trigger, .sponsor-cta').forEach(btn => {
@@ -1357,6 +1406,7 @@
             if (e.key === 'Escape') {
                 setModalState(sponsorModal, false);
                 setModalState(planModal, false);
+                if (focusModal) setModalState(focusModal, false);
             }
         });
     });

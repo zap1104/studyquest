@@ -21,4 +21,13 @@ urlpatterns = [
     path("chapters/<int:pk>/quiz/submit/", views.submit_quiz, name="submit_quiz"),
     path("profile/", views.profile_view, name="profile"),
     path("leaderboard/", views.leaderboard_view, name="leaderboard"),
+    path("focus/checkin/", views.focus_checkin, name="focus_checkin"),
+    path("focus/<int:pk>/recommendation/", views.focus_recommendation, name="focus_recommendation"),
+    path("focus/<int:pk>/activate/", views.focus_activate, name="focus_activate"),
+    path("focus/<int:pk>/dismiss/", views.focus_dismiss, name="focus_dismiss"),
+    path("focus/<int:pk>/link-course/<int:course_id>/", views.focus_link_course, name="focus_link_course"),
+    path("focus/<int:pk>/summary/", views.focus_summary, name="focus_summary"),
+    path("focus/<int:pk>/complete/", views.focus_complete, name="focus_complete"),
+    path("focus/<int:pk>/reopen/", views.focus_reopen, name="focus_reopen"),
+    path("focus/catalogue/", views.focus_catalogue_api, name="focus_catalogue_api"),
 ]

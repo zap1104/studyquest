@@ -14,6 +14,7 @@
     --primary: #6c5ce7;
     --primary-dark: #5541d1;
     --accent: #00c2a8;
+    --success: #16a085;
     --gold: #ffb020;
     --danger: #ff5470;
     --border: #e6e8f0;
@@ -40,6 +41,7 @@
     --primary: #818cf8;
     --primary-dark: #6366f1;
     --accent: #22d3ee;
+    --success: #28cbb5;
     --gold: #fbbf24;
     --danger: #f87171;
     --border: #1f293d;
@@ -685,8 +687,11 @@ body {
     font-size: 0.95rem;
     resize: vertical;
 }
-.stacked-form input:focus, .stacked-form textarea:focus {
-    outline: none;
+.stacked-form input:focus,
+.stacked-form select:focus,
+.stacked-form textarea:focus {
+    outline: 2.5px solid rgba(129, 140, 248, 0.45);
+    outline-offset: 2px;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.2);
 }
@@ -2006,6 +2011,1050 @@ html.modal-open {
     .quiz-launch-box .sq-modal-actions a {
         width: 100% !important;
         white-space: normal !important;
+    }
+}
+
+/* =========================================================
+   STUDY FOCUS — TERMINOLOGY CATALOGUE (DF-2 DRILL-DOWN)
+   ---------------------------------------------------------
+   SCROLL OWNERSHIP CONTRACT:
+   `.focus-catalogue-body` is the ONLY element in the catalogue
+   that may scroll. The dialog itself is `overflow: hidden`,
+   and the modal body stops scrolling while the catalogue step
+   is active (see `[data-current-step="catalogue"]` below).
+   Every list, card and tray here is `overflow: visible`.
+   Do not add `overflow-y: auto` or a bounded `max-height` to
+   anything else in this section.
+   ========================================================= */
+
+/* Backdrop */
+.focus-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    background: rgba(10, 8, 6, 0.78);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.focus-modal-backdrop.is-open {
+    display: flex !important;
+}
+
+/* Modal dialogue shell */
+.study-focus-modal {
+    width: min(720px, calc(100vw - 32px));
+    max-height: min(90dvh, 800px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: var(--surface);
+    box-shadow: 0 28px 80px rgba(12, 16, 38, 0.34);
+    animation: focusModalFadeIn 0.22s ease-out;
+}
+
+/* Catalogue step: larger modal width and height, pure flex column layout */
+.study-focus-modal.focus-catalogue-dialog {
+    display: flex;
+    flex-direction: column;
+}
+
+.study-focus-modal:not([data-current-step="catalogue"]) {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    width: min(720px, calc(100vw - 32px));
+    max-height: min(90dvh, 800px);
+}
+
+.study-focus-modal[data-current-step="catalogue"] {
+    display: flex;
+    flex-direction: column;
+    width: min(760px, calc(100vw - 32px));
+    height: min(88dvh, 800px);
+    max-height: min(88dvh, 800px);
+    overflow: hidden;
+}
+
+/* Modal body in catalogue mode: bounded flex container, zero outer padding */
+.study-focus-modal[data-current-step="catalogue"] .study-focus-modal__body {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+}
+
+/* Catalogue step container: fills modal body, organizes tools, scrollable body, and tray */
+.study-focus-modal[data-current-step="catalogue"] #view-step-catalogue {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden !important;
+}
+
+/* Modal header */
+.study-focus-modal__header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 20px 28px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.study-focus-badge {
+    display: inline-block;
+    background: rgba(117, 108, 243, 0.15);
+    color: var(--primary);
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    padding: 3px 10px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+}
+
+#study-focus-title {
+    font-size: 1.35rem;
+    font-weight: 900;
+    margin: 0 0 4px;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+}
+
+#study-focus-subtitle {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--muted);
+    line-height: 1.45;
+}
+
+/* Scrollable body for non-catalogue steps */
+.study-focus-modal__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 18px 28px 20px;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
+/* 2-column layout on desktop for subject and code */
+.study-focus-row-2col {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 14px;
+    align-items: start;
+    width: 100%;
+}
+
+@media (max-width: 600px) {
+    .study-focus-row-2col {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}
+
+/* Consistent compact fields */
+.study-focus-field {
+    display: grid;
+    gap: 6px;
+    width: 100%;
+}
+
+.study-focus-field + .study-focus-field {
+    margin-top: 14px;
+}
+
+.study-focus-field label {
+    color: var(--ink);
+    font-size: 0.88rem;
+    font-weight: 800;
+}
+
+.study-focus-field input,
+.study-focus-field select,
+.study-focus-field textarea {
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    padding: 10px 14px;
+    color: var(--ink);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font: inherit;
+    box-sizing: border-box;
+}
+
+.study-focus-field textarea {
+    min-height: 180px;
+    resize: vertical;
+    font-family: ui-monospace, monospace;
+    line-height: 1.5;
+}
+
+/* Focus styles */
+.study-focus-field input:focus,
+.study-focus-field select:focus,
+.study-focus-field textarea:focus {
+    outline: 3px solid rgba(108, 92, 231, 0.16);
+    border-color: var(--primary);
+}
+
+/* Topic Chips Container & Chips */
+.study-focus-chips-wrap:empty {
+    display: none;
+    margin: 0;
+    min-height: 0;
+}
+
+.study-focus-chips-wrap:not(:empty) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+    margin-bottom: 2px;
+}
+
+.study-focus-chips-wrap.is-recently-updated {
+    animation: chipPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.study-focus-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(117, 108, 243, 0.12);
+    border: 1px solid rgba(117, 108, 243, 0.28);
+    border-radius: 999px;
+    color: var(--primary);
+    font-size: 0.86rem;
+    font-weight: 700;
+    animation: chipPop 0.15s ease-out;
+}
+
+.study-focus-chip .chip-remove {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.15rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.study-focus-chip .chip-remove:hover {
+    color: var(--danger);
+}
+
+/* Celebratory success indicator when returning with topics from catalogue */
+.focus-topic-import-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 9px 14px;
+    background: rgba(46, 204, 113, 0.12);
+    border: 1px solid rgba(46, 204, 113, 0.38);
+    border-radius: 10px;
+    color: #2ecc71;
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1.35;
+    animation: chipPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.focus-topic-import-banner strong {
+    color: #27ae60;
+}
+
+/* Modal footer */
+.study-focus-modal__footer {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 28px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.study-focus-modal__footer[hidden] {
+    display: none !important;
+}
+
+.study-focus-modal__footer .btn-primary {
+    min-height: 50px;
+    padding-inline: 24px;
+    white-space: nowrap;
+}
+
+.study-focus-choice-card {
+    transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.study-focus-choice-card:hover {
+    background: rgba(117, 108, 243, 0.08) !important;
+    border-color: var(--primary) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(12, 16, 38, 0.25);
+}
+
+.study-focus-choice-card:hover .study-focus-choice-arrow {
+    transform: translateX(4px);
+    color: var(--primary);
+}
+
+.study-focus-choice-card-create:hover {
+    background: rgba(0, 194, 168, 0.08) !important;
+    border-color: var(--accent) !important;
+}
+
+.study-focus-choice-card-create:hover .study-focus-choice-arrow {
+    color: var(--accent);
+}
+
+.study-focus-choice-arrow {
+    transition: transform 0.16s ease, color 0.16s ease;
+}
+
+.study-focus-choice-card:focus-visible {
+    outline: 2.5px solid rgba(129, 140, 248, 0.5);
+    outline-offset: 2px;
+    border-color: var(--primary) !important;
+}
+
+/* Quiet "Not now" button in choice step */
+.study-focus-skip-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 0.86rem;
+    font-weight: 600;
+    padding: 8px 22px;
+    border-radius: 10px;
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.study-focus-skip-btn:hover {
+    color: var(--ink) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    transform: translateY(-1px);
+}
+
+.study-focus-skip-btn:focus-visible {
+    outline: 2.5px solid rgba(129, 140, 248, 0.45);
+    outline-offset: 2px;
+}
+
+/* Prominent card container for "Browse Subjects and Topics" */
+.focus-catalogue-card-container {
+    margin-top: 10px;
+    width: 100%;
+}
+
+.focus-catalogue-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, rgba(117, 108, 243, 0.08) 0%, rgba(108, 92, 231, 0.03) 100%);
+    border: 1px solid rgba(117, 108, 243, 0.28);
+    border-radius: 14px;
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    box-sizing: border-box;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.focus-catalogue-card:hover {
+    background: linear-gradient(135deg, rgba(117, 108, 243, 0.15) 0%, rgba(108, 92, 231, 0.07) 100%);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 18px rgba(117, 108, 243, 0.15);
+}
+
+.focus-catalogue-card:focus-visible {
+    outline: 2.5px solid rgba(129, 140, 248, 0.5);
+    outline-offset: 2px;
+    border-color: var(--primary);
+}
+
+.focus-catalogue-card__icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: rgba(117, 108, 243, 0.14);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.16s ease, transform 0.16s ease;
+}
+
+.focus-catalogue-card:hover .focus-catalogue-card__icon-box {
+    background: rgba(117, 108, 243, 0.22);
+    transform: scale(1.05);
+}
+
+.focus-catalogue-card__icon {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.focus-catalogue-card__content {
+    flex: 1;
+    min-width: 0;
+}
+
+.focus-catalogue-card__headline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.focus-catalogue-card__title {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+}
+
+.focus-catalogue-card__pill {
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: rgba(117, 108, 243, 0.16);
+    color: var(--primary);
+    padding: 2px 7px;
+    border-radius: 6px;
+}
+
+.focus-catalogue-card__desc {
+    margin: 2px 0 0;
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.35;
+}
+
+.focus-catalogue-card__action {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.focus-catalogue-card__chevron {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--muted);
+    line-height: 1;
+    transition: transform 0.16s ease, color 0.16s ease;
+}
+
+.focus-catalogue-card:hover .focus-catalogue-card__chevron {
+    transform: translateX(3px);
+    color: var(--primary);
+}
+
+.focus-catalogue-card__footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+    padding-right: 2px;
+}
+
+.focus-catalogue-card__hint {
+    font-size: 0.74rem;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+/* Fallback link styling */
+.focus-catalog-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 8px 0;
+    color: var(--primary);
+    background: transparent;
+    border: 0;
+    font: inherit;
+    font-weight: 750;
+    cursor: pointer;
+    font-size: 0.86rem;
+    transition: color 0.15s ease, opacity 0.15s ease;
+}
+
+.focus-catalog-link:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+.focus-catalog-link:focus-visible {
+    outline: 2.5px solid rgba(129, 140, 248, 0.45);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+@keyframes focusModalFadeIn {
+    from { opacity: 0; transform: scale(0.97) translateY(8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes chipPop {
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.focus-catalogue-tools {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 28px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+
+.focus-catalogue-search-wrap {
+    position: relative;
+}
+
+.focus-catalogue-search-wrap .focus-catalogue-search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    color: var(--muted);
+    pointer-events: none;
+}
+
+.focus-catalogue-search {
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 40px;
+    color: var(--ink);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font: inherit;
+    box-sizing: border-box;
+}
+
+/* Hide native WebKit and MS search cancel buttons to prevent double-clear buttons */
+.focus-catalogue-search::-webkit-search-cancel-button,
+.focus-catalogue-search::-webkit-search-decoration,
+.focus-catalogue-search::-webkit-search-results-button,
+.focus-catalogue-search::-webkit-search-results-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+}
+
+.focus-catalogue-search::-ms-clear {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+.focus-catalogue-search-hint {
+    font-size: 0.76rem;
+    color: var(--muted);
+    margin-top: -2px;
+    padding-left: 2px;
+}
+
+.focus-catalogue-search:focus {
+    outline: 2.5px solid rgba(129, 140, 248, 0.45);
+    outline-offset: 2px;
+    border-color: var(--primary);
+}
+
+.focus-catalogue-search-clear {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 4px 6px;
+    background: none;
+    border: 0;
+    color: var(--muted);
+    font: inherit;
+    font-size: 1.05rem;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.focus-catalogue-search-clear:hover {
+    color: var(--ink);
+}
+
+/* Popular shortcuts render as real chips on a single line */
+.focus-catalogue-popular {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.focus-catalogue-popular::-webkit-scrollbar {
+    display: none;
+}
+
+.focus-catalogue-popular-label {
+    flex-shrink: 0;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+}
+
+.focus-popular-chip {
+    flex-shrink: 0;
+    white-space: nowrap;
+    min-height: 36px;
+    padding: 8px 12px;
+    color: var(--muted);
+    background: var(--surface-raised, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.80rem;
+    font-weight: 750;
+    cursor: pointer;
+    transition: color 0.14s ease, border-color 0.14s ease;
+}
+
+.focus-popular-chip:hover,
+.focus-popular-chip:focus-visible {
+    color: var(--ink);
+    border-color: var(--primary);
+    outline: 2.5px solid rgba(129, 140, 248, 0.45);
+    outline-offset: 2px;
+}
+
+/* Header: breadcrumb + level heading. */
+.focus-catalogue-breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 6px;
+    padding: 2px 0;
+    color: var(--primary);
+    background: transparent;
+    border: 0;
+    font: inherit;
+    font-size: 0.84rem;
+    font-weight: 750;
+    cursor: pointer;
+    border-radius: 6px;
+}
+
+.focus-catalogue-breadcrumb:hover {
+    text-decoration: underline;
+}
+
+.focus-catalogue-heading {
+    margin: 0 0 2px;
+    font-size: 1.20rem;
+    font-weight: 850;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+}
+
+.focus-catalogue-heading:focus-visible {
+    outline: 2.5px solid rgba(129, 140, 248, 0.45);
+    outline-offset: 3px;
+    border-radius: 6px;
+}
+
+.focus-catalogue-subheading {
+    margin: 0;
+    font-size: 0.86rem;
+    color: var(--muted);
+    line-height: 1.45;
+}
+
+/* THE one scroll owner. */
+.focus-catalogue-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    padding: 14px 28px 20px;
+}
+
+.focus-catalogue-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: visible;
+}
+
+.focus-catalogue-section-label {
+    margin: 10px 0 2px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+}
+
+.focus-catalogue-section-label:first-child {
+    margin-top: 0;
+}
+
+/* Navigation rows — always a real <button>. */
+.focus-catalogue-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 54px;
+    padding: 10px 14px;
+    text-align: left;
+    color: var(--ink);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    font: inherit;
+    cursor: pointer;
+    transition: border-color 0.14s ease, background 0.14s ease;
+}
+
+.focus-catalogue-row:hover {
+    border-color: var(--primary);
+    background: rgba(108, 92, 231, 0.05);
+}
+
+.focus-catalogue-row:focus-visible {
+    outline: 2.5px solid rgba(129, 140, 248, 0.45);
+    outline-offset: 2px;
+    border-color: var(--primary);
+}
+
+.focus-catalogue-row.is-selected {
+    border-color: var(--primary);
+    background: rgba(108, 92, 231, 0.10);
+}
+
+.focus-catalogue-row-icon {
+    flex-shrink: 0;
+    width: 24px;
+    font-size: 1.05rem;
+    line-height: 1;
+    text-align: center;
+}
+
+.focus-catalogue-row-icon:empty {
+    display: none;
+}
+
+.focus-catalogue-row-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.focus-catalogue-row-label {
+    font-size: 0.92rem;
+    font-weight: 750;
+    line-height: 1.3;
+}
+
+.focus-catalogue-row-meta {
+    font-size: 0.74rem;
+    color: var(--muted);
+    line-height: 1.3;
+}
+
+.focus-catalogue-row-meta:empty {
+    display: none;
+}
+
+.focus-catalogue-row-tag {
+    flex-shrink: 0;
+    font-size: 0.70rem;
+    font-weight: 750;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 2px 7px;
+    border-radius: 6px;
+}
+
+.focus-catalogue-row-tag:empty {
+    display: none;
+}
+
+.focus-catalogue-row-chevron {
+    flex-shrink: 0;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: var(--muted);
+}
+
+/* Secondary subject action inside the topic view. */
+.focus-catalogue-subject-action {
+    margin-bottom: 12px;
+}
+
+.focus-catalogue-subject-btn {
+    min-height: 42px;
+    padding: 8px 18px;
+    color: var(--primary);
+    background: rgba(108, 92, 231, 0.08);
+    border: 1.5px solid rgba(108, 92, 231, 0.38);
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 750;
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.focus-catalogue-subject-btn:hover {
+    background: rgba(108, 92, 231, 0.18);
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.focus-catalogue-subject-btn.is-current {
+    background: rgba(46, 204, 113, 0.12);
+    border-color: rgba(46, 204, 113, 0.45);
+    color: #2ecc71;
+    cursor: default;
+}
+
+.focus-catalogue-subject-btn.is-current:hover {
+    transform: none;
+    background: rgba(46, 204, 113, 0.12);
+}
+
+.focus-catalogue-subject-btn:focus-visible {
+    outline: 2.5px solid rgba(129, 140, 248, 0.45);
+    outline-offset: 2px;
+}
+
+
+/* Topic rows — real checkboxes inside <label>. */
+.focus-topic-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 11px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.14s ease, background 0.14s ease;
+}
+
+.focus-topic-row:hover {
+    border-color: var(--primary);
+    background: rgba(108, 92, 231, 0.05);
+}
+
+.focus-topic-row.is-selected {
+    border-color: var(--primary);
+    background: rgba(108, 92, 231, 0.10);
+}
+
+.focus-topic-row:has(.focus-topic-checkbox:focus-visible) {
+    outline: 2.5px solid rgba(129, 140, 248, 0.45);
+    outline-offset: 2px;
+}
+
+.focus-topic-checkbox {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin: 1px 0 0;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.focus-topic-label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.4;
+}
+
+.focus-topic-row.is-selected .focus-topic-label {
+    font-weight: 750;
+    color: var(--primary);
+}
+
+.focus-catalogue-empty {
+    margin: 0;
+    padding: 28px 12px;
+    text-align: center;
+    font-size: 0.86rem;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+/* Inline cap validation — replaces the old blocking alert(). */
+.focus-catalogue-cap-message {
+    margin: 10px 0 0;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--danger);
+    background: rgba(255, 84, 112, 0.10);
+    border: 1px solid rgba(255, 84, 112, 0.30);
+    border-radius: 10px;
+}
+
+/* Fixed selection summary. Never scrolls; wraps to at most two lines. */
+.focus-catalogue-tray {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 12px 28px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    overflow: visible;
+}
+
+.focus-catalogue-tray-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.focus-catalogue-tray-status {
+    font-size: 0.82rem;
+    font-weight: 750;
+    color: var(--primary);
+    white-space: nowrap;
+}
+
+.focus-catalogue-tray-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    overflow: visible;
+}
+
+.focus-topic-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    background: rgba(108, 92, 231, 0.12);
+    border: 1px solid rgba(108, 92, 231, 0.28);
+    color: var(--primary);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.focus-topic-chip button {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.95rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 1px;
+    border-radius: 4px;
+}
+
+.focus-topic-chip button:hover {
+    color: var(--danger);
+}
+
+.focus-catalogue-tray-clear {
+    font-size: 0.76rem;
+    color: var(--muted);
+    padding: 4px 10px;
+}
+
+/* Mobile: same drill-down, one scroll owner, no horizontal scrolling. */
+@media (max-width: 640px) {
+    .study-focus-modal,
+    .focus-catalogue-dialog {
+        width: calc(100vw - 20px);
+        max-height: calc(100dvh - 20px);
+        border-radius: 18px;
+    }
+
+    .focus-catalogue-tools,
+    .focus-catalogue-body,
+    .focus-catalogue-tray {
+        padding-inline: 18px;
+    }
+
+    .focus-catalogue-row {
+        min-height: 58px;
+    }
+
+    .focus-catalogue-tray {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* The focus modal's own entrance/chip animations must respect reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+    .study-focus-modal,
+    .focus-topic-chip,
+    .study-focus-chip {
+        animation: none;
+        transition: none;
     }
 }
 

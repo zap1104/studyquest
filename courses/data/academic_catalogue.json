@@ -1,0 +1,678 @@
+{
+  "catalog_version": "2026.1",
+  "catalog_title": "Curated Philippine Higher Education Terminology Catalogue",
+  "areas": [
+    {
+      "key": "mathematics",
+      "label": "Mathematics and Statistics",
+      "icon": "📐",
+      "subjects": [
+        {
+          "key": "math_modern_world",
+          "label": "Mathematics in the Modern World",
+          "code": "MMW",
+          "aliases": ["Math in the Modern World", "GE Math", "GEC-MMW"],
+          "topics": [
+            {"key": "patterns_in_nature", "label": "Patterns in Nature", "aliases": ["Nature Patterns", "Fibonacci"]},
+            {"key": "mathematical_language", "label": "Mathematical Language and Symbols", "aliases": ["Math Symbols"]},
+            {"key": "problem_solving", "label": "Problem Solving and Reasoning", "aliases": ["Polya", "Heuristics"]},
+            {"key": "data_management", "label": "Data Management and Statistics", "aliases": ["MMW Statistics"]},
+            {"key": "math_of_graphs", "label": "Mathematics of Graphs", "aliases": ["Graph Theory", "Euler"]},
+            {"key": "apportionment_voting", "label": "Apportionment and Voting", "aliases": ["Voting Methods"]}
+          ]
+        },
+        {
+          "key": "college_algebra",
+          "label": "College Algebra",
+          "code": "ALG",
+          "aliases": ["Algebra", "Advanced Algebra"],
+          "topics": [
+            {"key": "linear_equations", "label": "Linear Equations", "aliases": ["Linear Systems"]},
+            {"key": "quadratic_equations", "label": "Quadratic Equations", "aliases": ["Quadratics"]},
+            {"key": "polynomials", "label": "Polynomials and Rational Functions", "aliases": ["Polynomial Functions"]},
+            {"key": "systems_of_equations", "label": "Systems of Equations", "aliases": ["Simultaneous Equations"]},
+            {"key": "inequalities", "label": "Inequalities and Absolute Values", "aliases": ["Inequalities"]},
+            {"key": "exponential_logarithmic", "label": "Exponential and Logarithmic Functions", "aliases": ["Logarithms"]}
+          ]
+        },
+        {
+          "key": "calculus",
+          "label": "Calculus",
+          "code": "CALC",
+          "aliases": ["Calculus I", "Differential Calculus", "Integral Calculus"],
+          "topics": [
+            {"key": "limits", "label": "Limits", "aliases": ["Limit Theorems", "Continuity"]},
+            {"key": "continuity", "label": "Continuity", "aliases": ["Continuous Functions"]},
+            {"key": "derivatives", "label": "Derivatives", "aliases": ["Differentiation", "Derivative Rules"]},
+            {"key": "applications_of_derivatives", "label": "Applications of Derivatives", "aliases": ["Optimization", "Related Rates"]},
+            {"key": "integrals", "label": "Integrals", "aliases": ["Definite Integrals", "Indefinite Integrals"]},
+            {"key": "techniques_of_integration", "label": "Techniques of Integration", "aliases": ["Integration by Parts", "Substitution"]},
+            {"key": "differential_equations", "label": "Differential Equations", "aliases": ["ODE"]},
+            {"key": "multivariable_calculus", "label": "Multivariable Calculus", "aliases": ["Partial Derivatives", "Double Integrals"]}
+          ]
+        },
+        {
+          "key": "probability_statistics",
+          "label": "Probability and Statistics",
+          "code": "STAT",
+          "aliases": ["Statistics", "Probability", "Intro to Statistics"],
+          "topics": [
+            {"key": "descriptive_statistics", "label": "Descriptive Statistics", "aliases": ["Mean Median Mode", "Variance"]},
+            {"key": "probability_distributions", "label": "Probability Distributions", "aliases": ["Normal Distribution", "Binomial"]},
+            {"key": "hypothesis_testing", "label": "Hypothesis Testing", "aliases": ["T-Test", "Z-Test", "P-Value"]},
+            {"key": "correlation_regression", "label": "Correlation and Regression", "aliases": ["Linear Regression"]},
+            {"key": "sampling_methods", "label": "Sampling and Estimation", "aliases": ["Confidence Intervals"]}
+          ]
+        },
+        {
+          "key": "discrete_mathematics",
+          "label": "Discrete Mathematics",
+          "code": "DISMATH",
+          "aliases": ["Discrete Math", "Discrete Structures"],
+          "topics": [
+            {"key": "set_theory", "label": "Set Theory", "aliases": ["Sets and Operations"]},
+            {"key": "logic_and_proofs", "label": "Logic and Proofs", "aliases": ["Propositional Logic", "Induction"]},
+            {"key": "graph_theory", "label": "Graph Theory", "aliases": ["Graphs and Trees"]},
+            {"key": "combinatorics", "label": "Combinatorics", "aliases": ["Permutations and Combinations"]},
+            {"key": "relations_functions", "label": "Relations and Functions", "aliases": ["Equivalence Relations"]}
+          ]
+        },
+        {
+          "key": "linear_algebra",
+          "label": "Linear Algebra",
+          "code": "LINALG",
+          "aliases": ["Linear Alg"],
+          "topics": [
+            {"key": "matrices", "label": "Matrices and Matrix Operations", "aliases": ["Matrix Algebra"]},
+            {"key": "vectors", "label": "Vectors and Vector Spaces", "aliases": ["Vector Arithmetic"]},
+            {"key": "determinants", "label": "Determinants and Inverses", "aliases": ["Matrix Inverse"]},
+            {"key": "eigenvalues_eigenvectors", "label": "Eigenvalues and Eigenvectors", "aliases": ["Eigenspaces"]}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "natural_sciences",
+      "label": "Natural Sciences",
+      "icon": "🔬",
+      "subjects": [
+        {
+          "key": "general_chemistry",
+          "label": "General Chemistry",
+          "code": "CHEM",
+          "aliases": ["Chemistry", "Inorganic Chemistry"],
+          "topics": [
+            {"key": "atomic_structure", "label": "Atomic Structure", "aliases": ["Bohr Model", "Electron Configuration"]},
+            {"key": "periodic_table", "label": "Periodic Table and Periodic Trends", "aliases": ["Periodic Law"]},
+            {"key": "chemical_bonding", "label": "Chemical Bonding", "aliases": ["Ionic and Covalent Bonds"]},
+            {"key": "stoichiometry", "label": "Stoichiometry", "aliases": ["Mole Concept", "Molar Mass"]},
+            {"key": "acids_and_bases", "label": "Acids and Bases", "aliases": ["pH and Titration"]},
+            {"key": "thermochemistry", "label": "Thermochemistry", "aliases": ["Enthalpy", "Calorimetry"]},
+            {"key": "chemical_equilibrium", "label": "Chemical Equilibrium", "aliases": ["Le Chatelier"]},
+            {"key": "solutions_chemistry", "label": "Solutions and Solubility", "aliases": ["Concentration"]},
+            {"key": "organic_compounds", "label": "Organic Compounds", "aliases": ["Hydrocarbons"]},
+            {"key": "laboratory_safety", "label": "Laboratory Safety", "aliases": ["Lab Protocols"]}
+          ]
+        },
+        {
+          "key": "general_biology",
+          "label": "General Biology",
+          "code": "BIO",
+          "aliases": ["Biology", "General Bio"],
+          "topics": [
+            {"key": "cell_biology", "label": "Cell Biology and Organelles", "aliases": ["Cell Structure"]},
+            {"key": "cellular_respiration", "label": "Cellular Respiration and Photosynthesis", "aliases": ["Bioenergetics"]},
+            {"key": "genetics_heredity", "label": "Genetics and Heredity", "aliases": ["Mendelian Genetics", "DNA"]},
+            {"key": "evolution", "label": "Evolution and Natural Selection", "aliases": ["Darwinian Evolution"]},
+            {"key": "plant_animal_systems", "label": "Plant and Animal Physiology", "aliases": ["Organ Systems"]},
+            {"key": "ecology", "label": "Ecology and Ecosystems", "aliases": ["Food Webs", "Biomes"]}
+          ]
+        },
+        {
+          "key": "general_physics",
+          "label": "General Physics",
+          "code": "PHYS",
+          "aliases": ["Physics", "College Physics"],
+          "topics": [
+            {"key": "kinematics", "label": "Kinematics and Motion", "aliases": ["Velocity and Acceleration"]},
+            {"key": "dynamics_forces", "label": "Dynamics and Newton's Laws", "aliases": ["Forces", "Friction"]},
+            {"key": "work_energy_power", "label": "Work, Energy, and Power", "aliases": ["Conservation of Energy"]},
+            {"key": "thermodynamics_physics", "label": "Thermodynamics and Heat", "aliases": ["Thermal Energy"]},
+            {"key": "waves_and_optics", "label": "Waves and Optics", "aliases": ["Light and Sound"]},
+            {"key": "electricity_magnetism", "label": "Electricity and Magnetism", "aliases": ["Electromagnetism", "Circuits"]}
+          ]
+        },
+        {
+          "key": "science_technology_society",
+          "label": "Science, Technology and Society",
+          "code": "STS",
+          "aliases": ["STS", "Science Technology Society", "GEC-STS"],
+          "topics": [
+            {"key": "historical_antecedents", "label": "Historical Antecedents of Science", "aliases": ["Scientific Revolutions"]},
+            {"key": "information_age", "label": "The Information Age", "aliases": ["Digital Revolution"]},
+            {"key": "biodiversity_society", "label": "Biodiversity and Healthy Society", "aliases": ["Ecosystem Health"]},
+            {"key": "genetically_modified_organisms", "label": "Genetically Modified Organisms", "aliases": ["GMOs", "Biotechnology"]},
+            {"key": "climate_change", "label": "Climate Change and Environmental Hazards", "aliases": ["Global Warming"]},
+            {"key": "bioethics_technology", "label": "Bioethics and Emerging Technologies", "aliases": ["Tech Ethics", "AI Ethics"]}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "computing",
+      "label": "Computing and Information Technology",
+      "icon": "💻",
+      "subjects": [
+        {
+          "key": "technopreneurship_it",
+          "label": "Technopreneurship",
+          "code": "TECHNO",
+          "aliases": ["Technology Entrepreneurship", "Tech Entrepreneurship"],
+          "topics": [
+            {"key": "tech_business_ideas", "label": "Technology-Based Business Ideas", "aliases": ["Tech Ventures"]},
+            {"key": "opportunity_recognition", "label": "Opportunity Recognition", "aliases": ["Market Opportunity"]},
+            {"key": "design_thinking", "label": "Design Thinking", "aliases": ["Human-Centered Design"]},
+            {"key": "value_proposition", "label": "Value Proposition", "aliases": ["Value Proposition Canvas"]},
+            {"key": "business_model_canvas", "label": "Business Model Canvas", "aliases": ["BMC"]},
+            {"key": "market_validation", "label": "Market Validation", "aliases": ["Product-Market Validation"]},
+            {"key": "customer_discovery", "label": "Customer Discovery", "aliases": ["Customer Interviews"]},
+            {"key": "product_development", "label": "Product Development", "aliases": ["Agile Product Design"]},
+            {"key": "minimum_viable_product", "label": "Minimum Viable Product", "aliases": ["MVP"]},
+            {"key": "startup_financing", "label": "Startup Financing", "aliases": ["Seed Funding", "Venture Capital"]},
+            {"key": "intellectual_property", "label": "Intellectual Property", "aliases": ["IP", "Patents", "Copyright"]},
+            {"key": "digital_marketing_tech", "label": "Digital Marketing", "aliases": ["Growth Hacking"]},
+            {"key": "risk_management_startup", "label": "Risk Management", "aliases": ["Startup Risk"]},
+            {"key": "pitching", "label": "Pitching and Investor Presentation", "aliases": ["Pitch Deck"]}
+          ]
+        },
+        {
+          "key": "computer_programming",
+          "label": "Computer Programming",
+          "code": "PROG",
+          "aliases": ["Programming", "Intro to Programming", "CS1"],
+          "topics": [
+            {"key": "variables_and_types", "label": "Variables and Data Types", "aliases": ["Data Types"]},
+            {"key": "control_structures", "label": "Control Structures", "aliases": ["If-Else", "Loops"]},
+            {"key": "functions_and_methods", "label": "Functions and Modular Design", "aliases": ["Functions", "Methods"]},
+            {"key": "arrays_and_collections", "label": "Arrays and Collections", "aliases": ["Lists", "Arrays"]},
+            {"key": "debugging_techniques", "label": "Debugging and Error Handling", "aliases": ["Exceptions"]},
+            {"key": "algorithm_basics", "label": "Algorithm Basics and Flowcharts", "aliases": ["Flowcharts"]}
+          ]
+        },
+        {
+          "key": "data_structures_algorithms",
+          "label": "Data Structures and Algorithms",
+          "code": "DSA",
+          "aliases": ["DSA", "Data Structures", "Algorithms"],
+          "topics": [
+            {"key": "linked_lists_stacks_queues", "label": "Linked Lists, Stacks, and Queues", "aliases": ["Stacks", "Queues"]},
+            {"key": "trees_and_bst", "label": "Trees and Binary Search Trees", "aliases": ["BST", "Binary Trees"]},
+            {"key": "graphs_and_traversal", "label": "Graphs and Graph Traversal", "aliases": ["BFS", "DFS"]},
+            {"key": "sorting_and_searching", "label": "Sorting and Searching Algorithms", "aliases": ["Quicksort", "Binary Search"]},
+            {"key": "algorithm_complexity", "label": "Asymptotic Analysis and Big-O", "aliases": ["Big-O Notation"]}
+          ]
+        },
+        {
+          "key": "systems_integration_architecture",
+          "label": "Systems Integration and Architecture",
+          "code": "SIA",
+          "aliases": ["SIA", "Systems Architecture", "Enterprise Integration"],
+          "topics": [
+            {"key": "enterprise_architecture", "label": "Enterprise Architecture", "aliases": ["EA", "TOGAF"]},
+            {"key": "systems_integration", "label": "Systems Integration", "aliases": ["System Interconnection"]},
+            {"key": "architecture_governance", "label": "Architecture Governance", "aliases": ["IT Governance"]},
+            {"key": "tool_sprawl", "label": "Tool Sprawl and Consolidation", "aliases": ["Tool Sprawl"]},
+            {"key": "application_portfolio_management", "label": "Application Portfolio Management", "aliases": ["APM"]},
+            {"key": "interoperability", "label": "Interoperability and Data Exchange", "aliases": ["Data Standards"]},
+            {"key": "apis_and_middleware", "label": "APIs and Middleware", "aliases": ["REST APIs", "Message Queues"]},
+            {"key": "constraint_management", "label": "Constraint Management", "aliases": ["System Bottlenecks"]},
+            {"key": "technology_standards", "label": "Technology Standards", "aliases": ["IT Standards"]}
+          ]
+        },
+        {
+          "key": "web_development",
+          "label": "Web Development",
+          "code": "WEBDEV",
+          "aliases": ["Web Dev", "Fullstack Development"],
+          "topics": [
+            {"key": "html_css_layouts", "label": "HTML and Modern CSS Layouts", "aliases": ["Flexbox", "Grid"]},
+            {"key": "javascript_dom", "label": "JavaScript and DOM Manipulation", "aliases": ["JS DOM", "ES6"]},
+            {"key": "frontend_frameworks", "label": "Frontend Frameworks and Components", "aliases": ["React", "Vue"]},
+            {"key": "backend_apis", "label": "Backend APIs and Routing", "aliases": ["Django", "Express", "Node"]},
+            {"key": "database_integration_web", "label": "Database Integration and ORM", "aliases": ["ORM"]},
+            {"key": "web_security_basics", "label": "Web Security and Authentication", "aliases": ["JWT", "CORS", "XSS"]}
+          ]
+        },
+        {
+          "key": "database_management_systems",
+          "label": "Database Management Systems",
+          "code": "DBMS",
+          "aliases": ["DBMS", "Databases", "SQL"],
+          "topics": [
+            {"key": "relational_models", "label": "Relational Data Models", "aliases": ["Relational DB"]},
+            {"key": "sql_queries", "label": "SQL Queries and Joins", "aliases": ["SQL Syntax"]},
+            {"key": "schema_normalization", "label": "Database Normalization (1NF-3NF)", "aliases": ["Normalization"]},
+            {"key": "er_modeling", "label": "Entity-Relationship Diagrams", "aliases": ["ERD"]},
+            {"key": "transactions_acid", "label": "Transactions and ACID Properties", "aliases": ["ACID Transactions"]}
+          ]
+        },
+        {
+          "key": "software_engineering",
+          "label": "Software Engineering",
+          "code": "SE",
+          "aliases": ["Software Eng", "SE"],
+          "topics": [
+            {"key": "software_lifecycle", "label": "Software Development Life Cycle", "aliases": ["SDLC"]},
+            {"key": "requirements_engineering", "label": "Requirements Engineering", "aliases": ["User Stories"]},
+            {"key": "software_design_patterns", "label": "Design Patterns and Clean Code", "aliases": ["MVC", "Singleton"]},
+            {"key": "agile_and_scrum", "label": "Agile and Scrum Methodology", "aliases": ["Scrum", "Sprints"]},
+            {"key": "unit_testing_qa", "label": "Software Testing and QA", "aliases": ["Unit Testing", "TDD"]}
+          ]
+        },
+        {
+          "key": "cybersecurity",
+          "label": "Cybersecurity",
+          "code": "CYBER",
+          "aliases": ["Information Security", "InfoSec", "Network Security"],
+          "topics": [
+            {"key": "network_security_basics", "label": "Network Security and Firewalls", "aliases": ["Firewalls"]},
+            {"key": "cryptography_basics", "label": "Cryptography and Encryption", "aliases": ["RSA", "AES", "SSL"]},
+            {"key": "vulnerability_assessment", "label": "Vulnerability Assessment and Pen Testing", "aliases": ["Pentesting"]},
+            {"key": "identity_access_mgmt", "label": "Identity and Access Management", "aliases": ["IAM", "OAuth"]}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "business",
+      "label": "Business, Management, and Entrepreneurship",
+      "icon": "💼",
+      "subjects": [
+        {
+          "key": "principles_of_management",
+          "label": "Principles of Management",
+          "code": "MGT",
+          "aliases": ["Management", "Organization and Management"],
+          "topics": [
+            {"key": "planning_strategy", "label": "Planning and Strategic Formulation", "aliases": ["Strategic Planning"]},
+            {"key": "organizational_structure", "label": "Organizational Structure and Design", "aliases": ["Org Chart"]},
+            {"key": "leadership_motivation", "label": "Leadership and Motivation Theories", "aliases": ["Motivation"]},
+            {"key": "controlling_evaluation", "label": "Controlling and Operational Performance", "aliases": ["KPIs"]},
+            {"key": "business_ethics_mgt", "label": "Corporate Social Responsibility and Ethics", "aliases": ["CSR"]}
+          ]
+        },
+        {
+          "key": "principles_of_marketing",
+          "label": "Principles of Marketing",
+          "code": "MKTG",
+          "aliases": ["Marketing", "Marketing Management"],
+          "topics": [
+            {"key": "market_research_mktg", "label": "Market Research and Analysis", "aliases": ["Consumer Research"]},
+            {"key": "marketing_mix_4ps", "label": "Marketing Mix (4Ps: Product, Price, Place, Promotion)", "aliases": ["4Ps"]},
+            {"key": "consumer_behavior", "label": "Consumer Behavior and Decision Making", "aliases": ["Buyer Persona"]},
+            {"key": "brand_strategy", "label": "Brand Positioning and Identity", "aliases": ["Branding"]},
+            {"key": "segmentation_targeting", "label": "Market Segmentation, Targeting, and Positioning", "aliases": ["STP"]}
+          ]
+        },
+        {
+          "key": "financial_management",
+          "label": "Financial Management",
+          "code": "FIN",
+          "aliases": ["Finance", "Corporate Finance"],
+          "topics": [
+            {"key": "financial_statements", "label": "Financial Statement Analysis", "aliases": ["Ratio Analysis"]},
+            {"key": "time_value_money", "label": "Time Value of Money and Discounting", "aliases": ["TVM", "NPV"]},
+            {"key": "capital_budgeting", "label": "Capital Budgeting and Investment Appraisal", "aliases": ["IRR"]},
+            {"key": "working_capital", "label": "Working Capital and Cash Flow Management", "aliases": ["Cash Flow"]}
+          ]
+        },
+        {
+          "key": "basic_accounting",
+          "label": "Basic Accounting",
+          "code": "ACCT",
+          "aliases": ["Accounting", "Financial Accounting"],
+          "topics": [
+            {"key": "accounting_equation", "label": "The Accounting Equation and Principles", "aliases": ["Assets Liabilities"]},
+            {"key": "journalizing_posting", "label": "Journalizing and General Ledger", "aliases": ["Debit Credit"]},
+            {"key": "financial_reports_acct", "label": "Income Statement and Balance Sheet", "aliases": ["Balance Sheet"]},
+            {"key": "trial_balance_adjustments", "label": "Trial Balance and Adjusting Entries", "aliases": ["Adjusting Entries"]}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "social_sciences",
+      "label": "Philippine Studies and Social Sciences",
+      "icon": "🏛️",
+      "subjects": [
+        {
+          "key": "readings_philippine_history",
+          "label": "Readings in Philippine History",
+          "code": "RPH",
+          "aliases": ["Philippine History", "Kasaysayan ng Pilipinas", "GEC-RPH"],
+          "topics": [
+            {"key": "primary_secondary_sources", "label": "Primary and Secondary Historical Sources", "aliases": ["Historical Criticism"]},
+            {"key": "precolonial_philippines", "label": "Precolonial Philippine Societies", "aliases": ["Barangay", "Laguna Copperplate"]},
+            {"key": "spanish_colonial_period", "label": "Spanish Colonial Period and Reforms", "aliases": ["Encomienda", "Galleon Trade"]},
+            {"key": "philippine_revolution", "label": "Philippine Revolution and Katipunan", "aliases": ["KKK", "Bonifacio", "Aguinaldo"]},
+            {"key": "american_period", "label": "American Colonial Rule and Commonwealth", "aliases": ["Taft", "Public Education"]},
+            {"key": "japanese_occupation", "label": "Japanese Occupation and World War II", "aliases": ["Bataan Death March", "Hukbalahap"]},
+            {"key": "martial_law_era", "label": "Martial Law and EDSA People Power", "aliases": ["1972", "1986 People Power"]},
+            {"key": "contemporary_ph_issues", "label": "Contemporary Philippine History", "aliases": ["Modern Philippines"]}
+          ]
+        },
+        {
+          "key": "life_works_rizal",
+          "label": "The Life and Works of Rizal",
+          "code": "RIZAL",
+          "aliases": ["Rizal", "Buhay at mga Akda ni Rizal", "GEC-RIZAL"],
+          "topics": [
+            {"key": "rizal_law", "label": "The Rizal Law (RA 1425)", "aliases": ["Claro M. Recto", "RA 1425"]},
+            {"key": "nineteenth_century_ph", "label": "19th Century Philippines as Rizal's Context", "aliases": ["19th Century Context"]},
+            {"key": "noli_me_tangere", "label": "Noli Me Tangere", "aliases": ["Noli", "Crisostomo Ibarra"]},
+            {"key": "el_filibusterismo", "label": "El Filibusterismo", "aliases": ["Fili", "Simoun"]},
+            {"key": "rizal_essays_letters", "label": "Rizal's Essays and Letters", "aliases": ["Letter to the Young Women of Malolos", "Indolence of the Filipinos"]},
+            {"key": "dapitan_and_martyrdom", "label": "Exile in Dapitan, Trial, and Martyrdom", "aliases": ["Bagumbayan", "Mi Ultimo Adios"]}
+          ]
+        },
+        {
+          "key": "the_contemporary_world",
+          "label": "The Contemporary World",
+          "code": "TCW",
+          "aliases": ["Contemporary World", "Globalization", "GEC-TCW"],
+          "topics": [
+            {"key": "globalization_concepts", "label": "The Structures of Globalization", "aliases": ["Global Systems"]},
+            {"key": "global_economy_markets", "label": "The Global Economy and Market Integration", "aliases": ["Bretton Woods", "WTO"]},
+            {"key": "global_governance", "label": "Global Governance and International Organizations", "aliases": ["United Nations", "UN"]},
+            {"key": "north_south_divide", "label": "The Global Divides: Global South and Global North", "aliases": ["Global South"]},
+            {"key": "global_migration", "label": "Global Migration and Demographics", "aliases": ["Diaspora", "OFWs"]},
+            {"key": "sustainable_development_goals", "label": "Sustainable Development and Climate Politics", "aliases": ["SDGs"]}
+          ]
+        },
+        {
+          "key": "understanding_the_self",
+          "label": "Understanding the Self",
+          "code": "UTS",
+          "aliases": ["Understanding Self", "GEC-UTS"],
+          "topics": [
+            {"key": "philosophical_self", "label": "The Self from Philosophical Perspectives", "aliases": ["Socrates", "Descartes", "Kant"]},
+            {"key": "sociological_anthropological_self", "label": "The Self from Sociological and Anthropological Views", "aliases": ["Mead", "Culture and Self"]},
+            {"key": "psychological_self", "label": "The Self from Psychological Perspectives", "aliases": ["Freud", "William James"]},
+            {"key": "physical_sexual_self", "label": "The Physical and Sexual Self", "aliases": ["Body Image"]},
+            {"key": "emotional_spiritual_self", "label": "The Emotional and Spiritual Self", "aliases": ["Wellbeing"]},
+            {"key": "learning_how_to_learn", "label": "Metacognition and Managing One's Own Learning", "aliases": ["Self-Regulation"]}
+          ]
+        },
+        {
+          "key": "philippine_constitution",
+          "label": "Philippine Government and Constitution",
+          "code": "GOV",
+          "aliases": ["Philippine Constitution", "PolSci", "Politics and Governance"],
+          "topics": [
+            {"key": "constitutional_foundations", "label": "The 1987 Philippine Constitution", "aliases": ["1987 Constitution"]},
+            {"key": "bill_of_rights_ph", "label": "The Bill of Rights and Civil Liberties", "aliases": ["Article III"]},
+            {"key": "three_branches_govt", "label": "Executive, Legislative, and Judicial Branches", "aliases": ["Separation of Powers"]},
+            {"key": "citizenship_suffrage", "label": "Citizenship, Suffrage, and Democratic Governance", "aliases": ["Voting Rights"]}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "humanities",
+      "label": "Humanities, Communication, and Languages",
+      "icon": "🎭",
+      "subjects": [
+        {
+          "key": "purposive_communication",
+          "label": "Purposive Communication",
+          "code": "PURPCOM",
+          "aliases": ["Communication", "Oral Communication", "GEC-PC"],
+          "topics": [
+            {"key": "communication_models", "label": "Communication Processes, Principles, and Ethics", "aliases": ["Communication Models"]},
+            {"key": "intercultural_communication", "label": "Intercultural and Global Communication", "aliases": ["Cultural Sensitivity"]},
+            {"key": "communication_various_purposes", "label": "Communication for Various Purposes", "aliases": ["Informative Persuasive"]},
+            {"key": "academic_presentations", "label": "Public Speaking and Academic Presentations", "aliases": ["Public Speaking"]},
+            {"key": "workplace_correspondence", "label": "Professional and Workplace Correspondence", "aliases": ["Business Letters", "Memos"]}
+          ]
+        },
+        {
+          "key": "art_appreciation",
+          "label": "Art Appreciation",
+          "code": "ARTAPP",
+          "aliases": ["Arts", "Art History", "GEC-AA"],
+          "topics": [
+            {"key": "elements_principles_art", "label": "Elements and Principles of Visual Art", "aliases": ["Art Elements"]},
+            {"key": "art_history_movements", "label": "Art History and Global Movements", "aliases": ["Renaissance", "Modernism"]},
+            {"key": "philippine_indigenous_art", "label": "Philippine Indigenous Arts and Crafts", "aliases": ["Weaving", "Folk Art"]},
+            {"key": "performing_arts", "label": "Music, Dance, and Theater Appreciation", "aliases": ["Performing Arts"]},
+            {"key": "art_criticism", "label": "Art Criticism and Soulmaking", "aliases": ["Art Interpretation"]}
+          ]
+        },
+        {
+          "key": "ethics",
+          "label": "Ethics",
+          "code": "ETHICS",
+          "aliases": ["Moral Philosophy", "Ethics and Values", "GEC-ETH"],
+          "topics": [
+            {"key": "moral_dilemmas", "label": "Moral vs Non-Moral Standards and Dilemmas", "aliases": ["Moral Reasoning"]},
+            {"key": "virtue_ethics", "label": "Virtue Ethics (Aristotle)", "aliases": ["Aristotle Ethics"]},
+            {"key": "deontology_kant", "label": "Deontological Ethics and the Categorical Imperative (Kant)", "aliases": ["Kant"]},
+            {"key": "utilitarianism", "label": "Utilitarianism (Bentham and Mill)", "aliases": ["Greatest Good"]},
+            {"key": "applied_ethics", "label": "Applied and Environmental Ethics", "aliases": ["Professional Ethics"]}
+          ]
+        },
+        {
+          "key": "technical_writing",
+          "label": "Technical Writing",
+          "code": "TECHWRITE",
+          "aliases": ["Technical and Scientific Writing", "Business Communication"],
+          "topics": [
+            {"key": "audience_analysis_tech", "label": "Audience Analysis and Document Purpose", "aliases": ["User Analysis"]},
+            {"key": "technical_reports", "label": "Technical Reports and Incident Documentation", "aliases": ["Reports"]},
+            {"key": "proposals_and_manuals", "label": "Project Proposals and User Manuals", "aliases": ["User Guides"]},
+            {"key": "document_design", "label": "Document Design, Usability, and Visuals", "aliases": ["Layout Design"]}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "education",
+      "label": "Education",
+      "icon": "🎓",
+      "subjects": [
+        {
+          "key": "the_teaching_profession",
+          "label": "The Teaching Profession",
+          "code": "TEACHPROF",
+          "aliases": ["Foundations of Education", "Teaching Profession"],
+          "topics": [
+            {"key": "philosophy_of_education", "label": "Philosophical Foundations of Education", "aliases": ["Educational Philosophy"]},
+            {"key": "code_of_ethics_teachers", "label": "Code of Ethics for Professional Teachers", "aliases": ["Teacher Ethics"]},
+            {"key": "teacher_roles", "label": "The Teacher as a Leader and Community Pillar", "aliases": ["Community Roles"]},
+            {"key": "legal_bases_education", "label": "Legal Bases of Philippine Education", "aliases": ["DepEd CHED Laws"]}
+          ]
+        },
+        {
+          "key": "assessment_in_learning",
+          "label": "Assessment in Learning",
+          "code": "ASSESS",
+          "aliases": ["Educational Assessment", "Assessment of Learning"],
+          "topics": [
+            {"key": "formative_summative_assess", "label": "Formative, Summative, and Diagnostic Assessment", "aliases": ["Formative Assessment"]},
+            {"key": "table_of_specifications", "label": "Table of Specifications (TOS)", "aliases": ["TOS", "Test Design"]},
+            {"key": "rubrics_authentic_assess", "label": "Rubrics and Authentic Assessment", "aliases": ["Performance Tasks"]},
+            {"key": "item_analysis", "label": "Item Analysis, Validity, and Reliability", "aliases": ["Item Difficulty"]}
+          ]
+        },
+        {
+          "key": "curriculum_development",
+          "label": "Curriculum Development",
+          "code": "CURRDEV",
+          "aliases": ["Curriculum Planning"],
+          "topics": [
+            {"key": "curriculum_models", "label": "Curriculum Models and Approaches", "aliases": ["Tyler Model"]},
+            {"key": "outcomes_based_education", "label": "Outcomes-Based Education (OBE)", "aliases": ["OBE", "Learning Outcomes"]},
+            {"key": "instructional_planning", "label": "Instructional Planning and Syllabus Design", "aliases": ["Lesson Planning"]}
+          ]
+        },
+        {
+          "key": "educational_technology",
+          "label": "Educational Technology",
+          "code": "EDTECH",
+          "aliases": ["Technology for Teaching and Learning", "TTL"],
+          "topics": [
+            {"key": "tpack_framework", "label": "The TPACK and SAMR Frameworks", "aliases": ["TPACK", "SAMR"]},
+            {"key": "digital_learning_tools", "label": "Digital Learning Tools and LMS", "aliases": ["LMS", "Google Classroom"]},
+            {"key": "digital_citizenship", "label": "Digital Citizenship and Cyber Safety", "aliases": ["Media Literacy"]}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "engineering",
+      "label": "Engineering and Technology",
+      "icon": "⚙️",
+      "subjects": [
+        {
+          "key": "engineering_mathematics",
+          "label": "Engineering Mathematics",
+          "code": "ENGMATH",
+          "aliases": ["Advanced Engineering Math"],
+          "topics": [
+            {"key": "diff_equations_eng", "label": "Differential Equations and Modeling", "aliases": ["Modeling"]},
+            {"key": "laplace_transforms", "label": "Laplace and Fourier Transforms", "aliases": ["Laplace"]},
+            {"key": "vector_calculus_eng", "label": "Vector Calculus and Fields", "aliases": ["Div and Curl"]},
+            {"key": "numerical_methods_eng", "label": "Numerical Methods and Approximation", "aliases": ["Root Finding"]}
+          ]
+        },
+        {
+          "key": "statics_dynamics",
+          "label": "Statics and Dynamics",
+          "code": "ES",
+          "aliases": ["Engineering Mechanics"],
+          "topics": [
+            {"key": "equilibrium_rigid_bodies", "label": "Equilibrium of Rigid Bodies", "aliases": ["Free Body Diagrams"]},
+            {"key": "trusses_frames", "label": "Truss and Structural Analysis", "aliases": ["Trusses"]},
+            {"key": "kinematics_kinetics", "label": "Kinematics and Kinetics of Particles", "aliases": ["Particle Motion"]},
+            {"key": "work_energy_mechanics", "label": "Work, Energy, and Momentum in Mechanics", "aliases": ["Impulse Momentum"]}
+          ]
+        },
+        {
+          "key": "thermodynamics_eng",
+          "label": "Thermodynamics",
+          "code": "THERMO",
+          "aliases": ["Engineering Thermodynamics"],
+          "topics": [
+            {"key": "first_law_thermo", "label": "First Law: Energy Conservation in Closed/Open Systems", "aliases": ["Energy Balance"]},
+            {"key": "second_law_thermo", "label": "Second Law: Entropy and Efficiency", "aliases": ["Entropy", "Carnot"]},
+            {"key": "power_refrigeration_cycles", "label": "Power and Refrigeration Cycles", "aliases": ["Rankine", "Otto Cycle"]}
+          ]
+        },
+        {
+          "key": "electrical_circuits",
+          "label": "Electrical Circuits",
+          "code": "EE",
+          "aliases": ["Circuits", "Circuit Analysis"],
+          "topics": [
+            {"key": "circuit_laws", "label": "Ohm's Law, KVL, and KCL", "aliases": ["KVL", "KCL"]},
+            {"key": "network_theorems", "label": "Thevenin, Norton, and Superposition Theorems", "aliases": ["Thevenin"]},
+            {"key": "ac_analysis", "label": "Sinusoidal Steady-State AC Analysis", "aliases": ["Phasors"]}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "health_sciences",
+      "label": "Health and Allied Sciences",
+      "icon": "🩺",
+      "subjects": [
+        {
+          "key": "community_health",
+          "label": "Community Health",
+          "code": "COMMHEALTH",
+          "aliases": ["Public Health", "Community Medicine"],
+          "topics": [
+            {"key": "primary_health_care", "label": "Primary Health Care and Health Delivery Systems", "aliases": ["PHC"]},
+            {"key": "epidemiology_concepts", "label": "Epidemiological Surveillance and Disease Control", "aliases": ["Outbreak Investigation"]},
+            {"key": "health_promotion_programs", "label": "Community Health Promotion and Sanitation", "aliases": ["Sanitation"]}
+          ]
+        },
+        {
+          "key": "pharmacology",
+          "label": "Pharmacology",
+          "code": "PHARM",
+          "aliases": ["Basic Pharmacology"],
+          "topics": [
+            {"key": "pharmacokinetics_dynamics", "label": "Pharmacokinetics and Pharmacodynamics", "aliases": ["Drug Absorption"]},
+            {"key": "drug_classifications", "label": "Major Drug Classifications and Mechanisms", "aliases": ["Antibiotics", "Cardiovascular"]},
+            {"key": "dosage_administration", "label": "Medication Calculation and Administration Safety", "aliases": ["Dosage Calculation"]}
+          ]
+        },
+        {
+          "key": "pathophysiology",
+          "label": "Pathophysiology",
+          "code": "PATHPHYS",
+          "aliases": ["Pathology and Physiology"],
+          "topics": [
+            {"key": "cellular_injury_inflammation", "label": "Cellular Injury, Adaptation, and Inflammation", "aliases": ["Inflammation"]},
+            {"key": "immune_disorders", "label": "Immune Response and Autoimmune Disorders", "aliases": ["Immunity"]},
+            {"key": "systemic_pathology", "label": "Systemic Pathophysiology (Cardiovascular and Respiratory)", "aliases": ["Organ Failure"]}
+          ]
+        }
+      ]
+    },
+    {
+      "key": "academic_skills",
+      "label": "Research and Academic Skills",
+      "icon": "📚",
+      "subjects": [
+        {
+          "key": "research_methods",
+          "label": "Research Methods",
+          "code": "RESMETH",
+          "aliases": ["Methods of Research", "Thesis Writing"],
+          "topics": [
+            {"key": "problem_formulation", "label": "Research Problem and Hypothesis Formulation", "aliases": ["Research Problem"]},
+            {"key": "conceptual_framework", "label": "Theoretical and Conceptual Frameworks", "aliases": ["IPO Model"]},
+            {"key": "literature_review", "label": "Literature Review Strategy and Synthesis", "aliases": ["RRL", "Review of Related Literature"]},
+            {"key": "research_ethics", "label": "Research Ethics and Informed Consent", "aliases": ["Ethics Approval"]}
+          ]
+        },
+        {
+          "key": "quantitative_research",
+          "label": "Quantitative Research",
+          "code": "QUANTRES",
+          "aliases": ["Quantitative Methods"],
+          "topics": [
+            {"key": "survey_instrument_design", "label": "Survey Instrument Design and Validation", "aliases": ["Questionnaires"]},
+            {"key": "sampling_techniques", "label": "Probability and Non-Probability Sampling", "aliases": ["Random Sampling"]},
+            {"key": "statistical_analysis_res", "label": "Statistical Testing (Inferential and Descriptive)", "aliases": ["SPSS", "ANOVA"]}
+          ]
+        },
+        {
+          "key": "qualitative_research",
+          "label": "Qualitative Research",
+          "code": "QUALRES",
+          "aliases": ["Qualitative Methods"],
+          "topics": [
+            {"key": "qualitative_designs", "label": "Phenomenology, Case Study, and Grounded Theory", "aliases": ["Case Study"]},
+            {"key": "interview_protocols", "label": "Interview Protocols and Focus Group Discussions", "aliases": ["FGD", "Interviews"]},
+            {"key": "thematic_analysis", "label": "Thematic Analysis and Coding", "aliases": ["Qualitative Coding"]}
+          ]
+        },
+        {
+          "key": "citation_and_referencing",
+          "label": "Citation and Referencing",
+          "code": "REFACAD",
+          "aliases": ["Citation", "Academic Referencing", "APA"],
+          "topics": [
+            {"key": "apa_style", "label": "APA Citation Style (7th Edition)", "aliases": ["APA 7th", "In-text Citations"]},
+            {"key": "academic_integrity", "label": "Academic Integrity and Avoiding Plagiarism", "aliases": ["Plagiarism", "Turnitin"]},
+            {"key": "literature_synthesis", "label": "Synthesizing and Paraphrasing Academic Texts", "aliases": ["Paraphrasing"]}
+          ]
+        }
+      ]
+    }
+  ]
+}
+

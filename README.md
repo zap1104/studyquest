@@ -275,18 +275,34 @@ http://127.0.0.1:8000/
 
 ## Environment configuration
 
-Create the required local environment configuration for Gemini and Django secrets. Do not commit API keys, production secrets, or local environment files.
-
-Typical configuration includes:
+Copy `.env.example` to `.env` and fill in real values. `.env` is gitignored
+and must never be committed; `studyquest/settings.py` loads it automatically.
 
 ```text
-DJANGO_SECRET_KEY
-GEMINI_API_KEY
-DEBUG
-ALLOWED_HOSTS
+DJANGO_SECRET_KEY   # required — app refuses to start without it when DEBUG is off
+GEMINI_API_KEY      # required for AI course generation
+DEBUG               # True for local development, False (or unset) when deployed
+ALLOWED_HOSTS       # comma-separated; defaults to 127.0.0.1,localhost
 ```
 
-Refer to the project settings and example environment file, if present, for the authoritative variable names.
+Generate a secret key with:
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key as k; print(k())"
+```
+
+`DEBUG=False` automatically enables HTTPS redirect, secure cookies, HSTS and
+`X_FRAME_OPTIONS: DENY`. Verify a deployment configuration with:
+
+```bash
+python manage.py check --deploy
+```
+
+When testing from a physical phone, add your machine's LAN IP to
+`ALLOWED_HOSTS` in your local `.env` — not in source.
+
+See [docs/SECURITY_HARDENING.md](docs/SECURITY_HARDENING.md) for the hardening
+checklist and its current status.
 
 ## Running checks and tests
 

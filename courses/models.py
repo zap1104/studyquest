@@ -257,3 +257,104 @@ class UserCourseCompletion(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["user", "course"], name="unique_user_course_completion"),
         ]
+
+
+# --- DIAGNOSTIC FOCUS & EXTERNAL ASSESSMENT INTEGRATION ---
+
+class LearningFocus(models.Model):
+    """Represents a student's targeted learning emphasis, either manually selected
+
+    or imported from an institutional academic diagnostic system.
+    """
+    SOURCE_MANUAL = "manual"
+    SOURCE_EXTERNAL = "external_assessment"
+    SOURCE_STUDYQUEST = "studyquest"
+
+    SOURCE_CHOICES = [
+        (SOURCE_MANUAL, "Manual Selection"),
+        (SOURCE_EXTERNAL, "External Assessment"),
+        (SOURCE_STUDYQUEST, "StudyQuest Activity"),
+    ]
+
+    STATUS_PENDING = "pending"
+    STATUS_ACTIVE = "active"
+    STATUS_COMPLETED = "completed"
+    STATUS_DISMISSED = "dismissed"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending Review"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_DISMISSED, "Dismissed"),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="learning_focuses",
+    )
+    source = models.CharField(
+        max_length=32,
+        choices=SOURCE_CHOICES,
+        default=SOURCE_MANUAL,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+    )
+    subject_code = models.CharField(
+        max_length=64,
+        blank=True,
+    )
+    subject_name = models.CharField(
+        max_length=255,
+    )
+    topic_names = models.JSONField(
+        default=list,
+        blank=True,
+    )
+    initial_score = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Diagnostic assessment score percentage (e.g. 58.0)",
+    )
+    source_payload = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+    external_assessment_id = models.CharField(
+        max_length=255,
+        blank=True,
+        db_index=True,
+    )
+    linked_course = models.ForeignKey(
+        Course,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="learning_focuses",
+    )
+    assessed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "external_assessment_id"],
+                condition=models.Q(source="external_assessment") & ~models.Q(external_assessment_id=""),
+                name="unique_user_external_assessment_id",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} Focus: {self.subject_name} ({self.status})"

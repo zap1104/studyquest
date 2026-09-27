@@ -10,26 +10,67 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
+import sys
 from pathlib import Path
+
+from django.core.management.utils import get_random_secret_key
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load local environment configuration (.env is gitignored).
+# settings.py is imported before any service module, so this must happen here
+# rather than relying on the dotenv call inside courses/services.py.
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - dependency is pinned in requirements.txt
+    load_dotenv = None
+
+if load_dotenv is not None:
+    load_dotenv(BASE_DIR / ".env")
+
+
+def env_bool(name, default=False):
+    """Read a boolean from the environment, accepting common truthy spellings."""
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
+DEBUG = env_bool("DEBUG", default=False)
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-qg-2&jz_f7=vqo=m0nq6s!tp3$e01&lwx9g=0!gs5$0efh=&#@'
+# The key is read from the environment and is never committed.
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "").strip()
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+if not SECRET_KEY:
+    if DEBUG:
+        # Local development / CI without a .env: generate a throwaway key so
+        # `manage.py check` and the test suite still run, but make it loud.
+        SECRET_KEY = get_random_secret_key()
+        print(
+            "WARNING: DJANGO_SECRET_KEY is not set. Using a randomly generated "
+            "development key; sessions will not survive a restart. "
+            "Add DJANGO_SECRET_KEY to your .env file.",
+            file=sys.stderr,
+        )
+    else:
+        raise RuntimeError(
+            "DJANGO_SECRET_KEY is not set and DEBUG is disabled. "
+            "Set DJANGO_SECRET_KEY in the environment (see .env.example) "
+            "before starting the application."
+        )
 
+# Comma-separated host list from the environment; no LAN IPs committed.
 ALLOWED_HOSTS = [
-    "127.0.0.1",
-    "localhost",
-    "192.168.100.5",
-    "192.168.1.65",
+    host.strip()
+    for host in os.environ.get("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+    if host.strip()
 ]
 
 
@@ -134,6 +175,45 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'courses:course_list'
+
+# --------------------------------------------------
+# PRODUCTION SECURITY HARDENING
+# --------------------------------------------------
+# These are enabled only when DEBUG is off, so local HTTP development is not
+# broken by an HTTPS redirect or a secure-only cookie. Verify with:
+#     python manage.py check --deploy
+IS_PRODUCTION = not DEBUG
+
+if IS_PRODUCTION:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+    # Trust the proxy's scheme header when deployed behind a reverse proxy.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = "DENY"
+
+# --------------------------------------------------
+# AUTHENTICATION THROTTLING
+# --------------------------------------------------
+# Failed-login throttle for the login/signup portal. Backed by the cache, so
+# the locmem cache below is sufficient for a single-process dev server; a
+# shared cache (Redis/Memcached) is required for multi-process deployments.
+LOGIN_THROTTLE_MAX_ATTEMPTS = int(os.environ.get("LOGIN_THROTTLE_MAX_ATTEMPTS", "10"))
+LOGIN_THROTTLE_WINDOW_SECONDS = int(os.environ.get("LOGIN_THROTTLE_WINDOW_SECONDS", "300"))
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "studyquest-default",
+    }
+}
 
 # Course Generation Settings
 # Set to True only for offline dev or automated testing; False in production to prevent silent mock fallback

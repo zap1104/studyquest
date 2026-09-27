@@ -1,0 +1,131 @@
+{% extends 'courses/base.html' %}
+{% load static %}
+
+{% block title %}Study Focus: {{ focus.subject_name }} — StudyQuest{% endblock %}
+
+{% block content %}
+<div class="page focus-recommendation-page" style="max-width: 960px; margin: 0 auto; padding: 24px 16px 48px;">
+    
+    <!-- Top Breadcrumbs / Back -->
+    <div style="margin-bottom: 20px;">
+        <a href="{% url 'courses:dashboard' %}" class="btn btn-ghost btn-sm" style="display: inline-flex; align-items: center; gap: 6px;">
+            ← Return to Dashboard
+        </a>
+    </div>
+
+    <!-- Hero Card -->
+    <div class="card" style="padding: 28px 24px; border-radius: 16px; margin-bottom: 24px; border: 1px solid var(--border); background: var(--surface);">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 16px;">
+            <div>
+                <span class="badge" style="background: rgba(117, 108, 243, 0.15); color: var(--primary); font-weight: 700; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; padding: 4px 10px; border-radius: 999px;">
+                    🎯 Recommended Study Focus
+                </span>
+                <h1 style="font-size: clamp(1.4rem, 2.5vw, 1.9rem); font-weight: 800; margin: 10px 0 4px; color: var(--ink);">
+                    {{ focus.subject_name }}
+                    {% if focus.subject_code %}
+                        <span style="font-weight: 600; color: var(--muted); font-size: 1.1rem;">({{ focus.subject_code }})</span>
+                    {% endif %}
+                </h1>
+                <p style="color: var(--muted); margin: 0; font-size: 0.9rem;">
+                    Identified via {{ focus.get_source_display }} on {{ focus.created_at|date:"M d, Y" }}.
+                </p>
+            </div>
+
+            {% if focus.initial_score is not None %}
+                <div style="text-align: right; background: rgba(239, 107, 115, 0.1); border: 1px solid rgba(239, 107, 115, 0.3); border-radius: 12px; padding: 12px 18px;">
+                    <div style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--danger);">School Result</div>
+                    <div style="font-size: 1.8rem; font-weight: 800; color: var(--danger); line-height: 1.1;">{{ focus.initial_score|floatformat:0 }}%</div>
+                    <div style="font-size: 0.72rem; color: var(--muted);">Starting baseline</div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Priority Topics List -->
+        <div style="margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border);">
+            <h2 style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 10px;">
+                Priority Topics to Master
+            </h2>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                {% for topic in focus.topic_names %}
+                    <span style="display: inline-flex; align-items: center; gap: 6px; background: rgba(232, 163, 61, 0.12); color: var(--gold); border: 1px solid rgba(232, 163, 61, 0.3); padding: 5px 12px; border-radius: 8px; font-weight: 600; font-size: 0.85rem;">
+                        ⚠️ {{ topic }}
+                    </span>
+                {% empty %}
+                    <span style="color: var(--muted); font-size: 0.88rem;">General subject comprehension</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Stages: Connect Existing vs Create New (DF-3) -->
+    <div class="card" style="padding: 26px; border-radius: 16px; margin-bottom: 24px; border: 1px solid var(--border); background: var(--surface);">
+        <h2 style="font-size: 1.2rem; font-weight: 800; margin: 0 0 4px; color: var(--ink);">
+            Connect Your Study Focus
+        </h2>
+        <p style="font-size: 0.88rem; color: var(--muted); margin: 0 0 20px;">
+            {% if matching_courses %}
+                We found courses that may match your focus.
+            {% else %}
+                Connect this focus to an existing course or upload materials to start a focused study path.
+            {% endif %}
+        </p>
+
+        {% if matching_courses %}
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px;">
+                {% for course in matching_courses %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-radius: 12px; background: var(--bg); border: 1px solid var(--border);">
+                        <div>
+                            <strong style="font-size: 0.96rem; display: block; color: var(--ink);">{{ course.title }}</strong>
+                            <span style="font-size: 0.80rem; color: var(--muted);">{{ course.chapters.count }} chapters · Active in library</span>
+                        </div>
+                        <form method="post" action="{% url 'courses:focus_link_course' focus.pk course.pk %}" style="margin: 0;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary btn-sm" style="font-weight: 700; padding: 8px 16px;">
+                                Use This Course &rarr;
+                            </button>
+                        </form>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div style="text-align: center; color: var(--muted); font-size: 0.84rem; font-weight: 700; margin: 16px 0;">
+                or
+            </div>
+        {% endif %}
+
+        <div>
+            <a href="{% url 'courses:course_create' %}?focus_id={{ focus.id }}" class="btn {% if matching_courses %}btn-ghost{% else %}btn-primary{% endif %}" style="{% if matching_courses %}border: 1px dashed var(--border);{% endif %} width: 100%; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; text-decoration: none;">
+                Upload Materials for a New Focused Course &rarr;
+            </a>
+        </div>
+    </div>
+
+    <!-- Status Bar / Actions -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px 20px; border-radius: 12px; background: rgba(0,0,0,0.1); border: 1px solid var(--border);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 0.82rem; color: var(--muted);">Status:</span>
+            <strong style="font-size: 0.82rem; text-transform: uppercase; color: var(--ink);">{{ focus.get_status_display }}</strong>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <a href="{% url 'courses:dashboard' %}" class="btn btn-ghost btn-sm" style="color: var(--muted); text-decoration: none;">
+                Do This Later
+            </a>
+
+            {% if focus.status == 'pending' %}
+                <form method="post" action="{% url 'courses:focus_activate' focus.pk %}" style="margin: 0;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary btn-sm">Approve & Activate</button>
+                </form>
+            {% endif %}
+
+            <form method="post" action="{% url 'courses:focus_dismiss' focus.pk %}" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-ghost btn-sm" style="color: var(--muted);">Dismiss Focus</button>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
