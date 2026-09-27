@@ -4,10 +4,12 @@ import re
 import unicodedata
 from decimal import Decimal
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Max
 from django.http import JsonResponse
@@ -230,6 +232,42 @@ def calculate_course_progress(user, course):
 # --------------------------------------------------
 # 2. AUTH & DASHBOARD VIEWS
 # --------------------------------------------------
+
+def _client_ip(request):
+    """Best-effort client IP, honouring one layer of reverse proxy."""
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR", "unknown")
+
+
+def _throttle_key(scope, request):
+    return f"sq-throttle:{scope}:{_client_ip(request)}"
+
+
+def _is_throttled(scope, request):
+    """True once the caller has exceeded the allowed attempt count."""
+    limit = getattr(settings, "LOGIN_THROTTLE_MAX_ATTEMPTS", 10)
+    attempts = cache.get(_throttle_key(scope, request), 0)
+    return attempts >= limit
+
+
+def _register_attempt(scope, request):
+    """Count one failed attempt, with a rolling expiry window."""
+    window = getattr(settings, "LOGIN_THROTTLE_WINDOW_SECONDS", 300)
+    key = _throttle_key(scope, request)
+    try:
+        attempts = cache.incr(key)
+    except ValueError:
+        cache.set(key, 1, window)
+        attempts = 1
+    return attempts
+
+
+def _clear_attempts(scope, request):
+    cache.delete(_throttle_key(scope, request))
+
+
 def auth_portal(request):
     if request.user.is_authenticated:
         return redirect("courses:dashboard")
@@ -240,18 +278,38 @@ def auth_portal(request):
 
     if request.method == "POST":
         action = request.POST.get("action")
+        scope = "login" if action == "login" else "signup"
+
+        # Unauthenticated brute-force protection. The plan-based course
+        # generation quota is a separate concern and is untouched by this.
+        if _is_throttled(scope, request):
+            messages.error(
+                request,
+                "Too many attempts from this device. "
+                "Please wait a few minutes and try again.",
+            )
+            return render(request, "courses/login.html", {
+                "login_form": login_form,
+                "signup_form": signup_form,
+                "active_tab": scope,
+            }, status=429)
+
         if action == "login":
             login_form = AuthenticationForm(request, data=request.POST)
             if login_form.is_valid():
+                _clear_attempts(scope, request)
                 login(request, login_form.get_user())
                 return redirect("courses:dashboard")
+            _register_attempt(scope, request)
             active_tab = "login"
         elif action == "signup":
             signup_form = UserCreationForm(request.POST)
             if signup_form.is_valid():
+                _clear_attempts(scope, request)
                 user = signup_form.save()
                 login(request, user)
                 return redirect("courses:dashboard")
+            _register_attempt(scope, request)
             active_tab = "signup"
 
     return render(request, "courses/login.html", {
@@ -279,6 +337,9 @@ def dashboard(request):
     pending_focus = get_pending_learning_focus(request.user)
     completed_focus = get_completed_learning_focus(request.user) if not active_focus and not pending_focus else None
 
+    # Read the catalogue once; reuse it for the embedded JSON and the template.
+    academic_catalogue = get_academic_catalogue()
+
     return render(request, "courses/dashboard.html", {
         "profile": profile,
         "tier_info": tier_info,
@@ -295,8 +356,8 @@ def dashboard(request):
         "pending_focus": pending_focus,
         "completed_focus": completed_focus,
         "open_focus": request.GET.get("open_focus") == "1",
-        "academic_catalogue": get_academic_catalogue(),
-        "academic_catalogue_json": json.dumps(get_academic_catalogue()),
+        "academic_catalogue": academic_catalogue,
+        "academic_catalogue_json": json.dumps(academic_catalogue),
     })
 
 
