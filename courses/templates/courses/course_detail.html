@@ -237,6 +237,50 @@
     </div>
     {% endif %}
 
+    {% if knowledge_check and knowledge_check.status == 'offered' %}
+    <!-- STARTING KNOWLEDGE CHECK INVITATION (TE-3B) -->
+    <div class="card" style="
+        background: linear-gradient(135deg, rgba(0, 194, 168, 0.12) 0%, rgba(117, 108, 243, 0.10) 100%), var(--surface);
+        border: 1px solid rgba(0, 194, 168, 0.4);
+        border-radius: 16px;
+        padding: 20px 24px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    ">
+        <div style="flex: 1; min-width: 260px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                <span class="badge" style="background: rgba(0, 194, 168, 0.2); color: var(--accent); font-weight: 800; font-size: 0.70rem; text-transform: uppercase; padding: 2px 8px; border-radius: 999px;">
+                    ✨ Starting Knowledge Check
+                </span>
+                <span style="font-size: 0.76rem; color: var(--muted); font-weight: 600;">
+                    Optional · {{ knowledge_check.total_questions }} Questions · ~5 Mins
+                </span>
+            </div>
+            <h3 style="font-size: 1.15rem; font-weight: 800; margin: 4px 0 4px; color: var(--ink);">
+                Discover what you already know in {{ course.title }}
+            </h3>
+            <p style="margin: 0; font-size: 0.86rem; color: var(--muted); line-height: 1.45;">
+                Take a quick check to find your starting strengths and get personalized topic recommendations. This check will not affect your course grade.
+            </p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <a href="{% url 'courses:knowledge_check_start' course.pk %}" class="btn btn-primary" style="font-weight: 800; padding: 10px 18px; text-decoration: none; white-space: nowrap;">
+                Start Quick Check →
+            </a>
+            <form method="post" action="{% url 'courses:knowledge_check_dismiss' course.pk %}" style="margin: 0;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-ghost" style="border: 1px solid var(--border); font-size: 0.88rem; font-weight: 700; padding: 10px 16px; white-space: nowrap; cursor: pointer;">
+                    Skip for Now
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
     {% if recommendation and recommendation.has_recommendation %}
     <!-- RECOMMENDED NEXT STEP (TE-3A / DF-5) -->
     <div class="card" style="

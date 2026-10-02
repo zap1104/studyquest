@@ -1,0 +1,85 @@
+{% extends "courses/base.html" %}
+
+{% block title %}Starting Knowledge Check — {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="page" style="max-width: 820px; margin: 0 auto; padding: 24px 16px 64px;">
+    <!-- HEADER -->
+    <div style="margin-bottom: 24px;">
+        <a href="{% url 'courses:course_detail' course.pk %}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.86rem; color: var(--muted); text-decoration: none; margin-bottom: 12px; font-weight: 600;">
+            ← Return to Course
+        </a>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+            <span class="badge" style="background: rgba(0, 194, 168, 0.18); color: var(--accent); font-weight: 800; font-size: 0.74rem; text-transform: uppercase; padding: 3px 10px; border-radius: 999px;">
+                ✨ Starting Diagnostic
+            </span>
+            <span style="font-size: 0.82rem; color: var(--muted); font-weight: 600;">
+                {{ questions|length }} Questions · Grounded in uploaded materials
+            </span>
+        </div>
+        <h1 style="font-size: 1.8rem; font-weight: 900; margin: 0 0 6px; color: var(--ink);">
+            Starting Knowledge Check
+        </h1>
+        <p style="margin: 0; font-size: 0.95rem; color: var(--muted); line-height: 1.5;">
+            Answer these quick questions to see your starting strengths across the topics in <strong>{{ course.title }}</strong>. This check is purely diagnostic and <strong>will not affect your course grade or chapter progress</strong>.
+        </p>
+    </div>
+
+    <!-- QUIZ FORM -->
+    <form method="post" action="{% url 'courses:knowledge_check_submit' course.pk %}" id="knowledgeCheckForm">
+        {% csrf_token %}
+
+        {% for question in questions %}
+            <div class="card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px 26px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <span style="font-size: 0.76rem; font-weight: 800; text-transform: uppercase; color: var(--muted); letter-spacing: 0.04em;">
+                        Question {{ forloop.counter }} of {{ questions|length }}
+                    </span>
+                    {% with topics=question.topic_links.all %}
+                        {% if topics %}
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                {% for link in topics %}
+                                    <span style="font-size: 0.70rem; font-weight: 700; background: rgba(117, 108, 243, 0.12); color: var(--primary); padding: 2px 7px; border-radius: 6px;">
+                                        {{ link.topic.name }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+
+                <div style="font-size: 1.05rem; font-weight: 700; color: var(--ink); line-height: 1.5; margin-bottom: 16px;">
+                    {{ question.text }}
+                </div>
+
+                <!-- CHOICE INPUTS -->
+                {% if question.question_type == 'multiple_choice' or question.question_type == 'true_false' %}
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        {% for choice in question.choices.all %}
+                            <label style="display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: background 0.15s; background: var(--bg);">
+                                <input type="radio" name="question_{{ question.id }}" value="{{ choice.id }}" style="margin-top: 3px; accent-color: var(--primary);">
+                                <span style="font-size: 0.92rem; color: var(--ink); line-height: 1.4;">{{ choice.text }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <!-- TEXT IDENTIFICATION -->
+                    <div>
+                        <input type="text" name="question_text_{{ question.id }}" placeholder="Type your answer here..." style="width: 100%; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; font-size: 0.95rem; background: var(--bg); color: var(--ink);">
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+
+        <!-- ACTIONS ROW -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; flex-wrap: wrap; gap: 16px;">
+            <a href="{% url 'courses:course_detail' course.pk %}" class="btn btn-ghost" style="border: 1px solid var(--border); padding: 12px 20px;">
+                Cancel / Return to Course
+            </a>
+            <button type="submit" class="btn btn-primary" style="font-weight: 800; font-size: 1rem; padding: 12px 28px;">
+                Submit Knowledge Check →
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

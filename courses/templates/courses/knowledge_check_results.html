@@ -1,0 +1,137 @@
+{% extends "courses/base.html" %}
+
+{% block title %}Knowledge Check Results — {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="page" style="max-width: 860px; margin: 0 auto; padding: 24px 16px 64px;">
+    <!-- HEADER -->
+    <div style="margin-bottom: 24px;">
+        <a href="{% url 'courses:course_detail' course.pk %}" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.86rem; color: var(--muted); text-decoration: none; margin-bottom: 12px; font-weight: 600;">
+            ← Return to Course
+        </a>
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+            <span class="badge" style="background: rgba(0, 194, 168, 0.18); color: var(--accent); font-weight: 800; font-size: 0.74rem; text-transform: uppercase; padding: 3px 10px; border-radius: 999px;">
+                ✓ Diagnostic Complete
+            </span>
+            <span style="font-size: 0.82rem; color: var(--muted); font-weight: 600;">
+                {{ check.total_questions }} Questions Assessed
+            </span>
+        </div>
+        <h1 style="font-size: 1.8rem; font-weight: 900; margin: 0 0 6px; color: var(--ink);">
+            Starting Knowledge Check Results
+        </h1>
+        <p style="margin: 0; font-size: 0.95rem; color: var(--muted); line-height: 1.5;">
+            Here is your starting baseline for <strong>{{ course.title }}</strong>. These diagnostic results do not affect your course grade or chapter completion.
+        </p>
+    </div>
+
+    <!-- OVERALL SCORE BANNER -->
+    <section class="card" style="background: linear-gradient(135deg, rgba(117, 108, 243, 0.12) 0%, rgba(0, 194, 168, 0.10) 100%), var(--surface); border: 1px solid rgba(117, 108, 243, 0.35); border-radius: 18px; padding: 22px 26px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap;">
+        <div>
+            <span class="badge" style="background: rgba(117, 108, 243, 0.2); color: var(--primary); font-weight: 800; font-size: 0.72rem; text-transform: uppercase; padding: 3px 9px; border-radius: 999px;">
+                Starting Score
+            </span>
+            <h2 style="font-size: 2.2rem; font-weight: 900; margin: 6px 0 2px; color: var(--ink);">
+                {{ check.score|floatformat:0 }}%
+            </h2>
+            <p style="margin: 0; font-size: 0.88rem; color: var(--muted);">
+                Baseline accuracy across {{ check.total_questions }} validated questions.
+            </p>
+        </div>
+        <div style="text-align: right;">
+            {% if check.score >= 80 %}
+                <span class="badge" style="background: rgba(0, 194, 168, 0.18); color: var(--accent); font-weight: 800; font-size: 0.85rem; padding: 6px 14px; border-radius: 999px;">
+                    Strong Foundation
+                </span>
+            {% elif check.score >= 60 %}
+                <span class="badge" style="background: rgba(232, 163, 61, 0.18); color: var(--gold); font-weight: 800; font-size: 0.85rem; padding: 6px 14px; border-radius: 999px;">
+                    Steady Baseline
+                </span>
+            {% else %}
+                <span class="badge" style="background: rgba(239, 107, 115, 0.18); color: var(--danger); font-weight: 800; font-size: 0.85rem; padding: 6px 14px; border-radius: 999px;">
+                    Review Recommended
+                </span>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- TOPIC EVIDENCE BREAKDOWN -->
+    <section class="card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 22px 26px; margin-bottom: 24px;">
+        <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0 0 14px; color: var(--ink);">
+            Topic Understanding Breakdown
+        </h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px;">
+            {% for item in topic_evidence_list %}
+                <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <strong style="font-size: 0.96rem; color: var(--ink);">{{ item.topic_name }}</strong>
+                            <span class="badge" style="font-size: 0.70rem; font-weight: 800; padding: 2px 8px; border-radius: 999px;
+                                {% if item.needs_attention %}
+                                    background: rgba(232, 163, 61, 0.15); color: var(--gold);
+                                {% else %}
+                                    background: rgba(0, 194, 168, 0.15); color: var(--accent);
+                                {% endif %}">
+                                {{ item.status_label }}
+                            </span>
+                        </div>
+                        <p style="font-size: 0.82rem; color: var(--muted); margin: 0 0 8px;">
+                            {{ item.correct_count }} of {{ item.unique_assessed }} questions answered correctly.
+                        </p>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem; font-weight: 700; color: var(--muted); border-top: 1px solid var(--border); padding-top: 8px;">
+                        <span>Accuracy</span>
+                        <span>{{ item.accuracy|floatformat:0 }}%</span>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <!-- STUDY FOCUS SUGGESTION & APPROVAL FORM -->
+    <section class="card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 24px 28px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <span class="badge" style="background: rgba(117, 108, 243, 0.15); color: var(--primary); font-weight: 800; font-size: 0.72rem; text-transform: uppercase; padding: 3px 9px; border-radius: 999px;">
+                🎯 Recommended Study Focus
+            </span>
+        </div>
+        <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0 0 8px; color: var(--ink);">
+            Approve Your Personalized Study Focus
+        </h2>
+        <p style="font-size: 0.88rem; color: var(--muted); line-height: 1.5; margin: 0 0 18px;">
+            Based on your answers, we have selected the topics that will benefit most from targeted practice. You can adjust the checkboxes below before confirming. <strong>Your Study Focus will only be updated with your approval.</strong>
+        </p>
+
+        <form method="post" action="{% url 'courses:knowledge_check_adopt_focus' course.pk %}">
+            {% csrf_token %}
+
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px;">
+                {% for topic in topics %}
+                    <label style="display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; background: var(--bg);">
+                        <input type="checkbox" name="topic_keys" value="{{ topic.key }}"
+                            {% if topic.key in suggested_keys %}checked{% endif %}
+                            style="width: 18px; height: 18px; accent-color: var(--primary);">
+                        <div style="flex: 1;">
+                            <span style="font-size: 0.95rem; font-weight: 700; color: var(--ink);">{{ topic.name }}</span>
+                            {% if topic.key in suggested_keys %}
+                                <span style="font-size: 0.72rem; font-weight: 700; color: var(--gold); background: rgba(232, 163, 61, 0.15); padding: 1px 7px; border-radius: 6px; margin-left: 8px;">
+                                    Recommended for review
+                                </span>
+                            {% endif %}
+                        </div>
+                    </label>
+                {% endfor %}
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;">
+                <a href="{% url 'courses:course_detail' course.pk %}" class="btn btn-ghost" style="border: 1px solid var(--border); padding: 12px 20px;">
+                    Continue Without Setting Focus
+                </a>
+                <button type="submit" class="btn btn-primary" style="font-weight: 800; font-size: 1rem; padding: 12px 28px;">
+                    Approve & Set as Study Focus →
+                </button>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}

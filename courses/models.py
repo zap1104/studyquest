@@ -443,3 +443,79 @@ class LearningFocus(models.Model):
 
     def __str__(self):
         return f"{self.user.username} Focus: {self.subject_name} ({self.status})"
+
+
+# --- SPRINT TE-3B: STARTING KNOWLEDGE CHECK ---
+
+class StartingKnowledgeCheck(models.Model):
+    """Optional diagnostic assessment offered once per course to establish a baseline.
+
+    Uses existing validated, topic-tagged questions from the course.
+    Does NOT affect course grades or progression.
+    """
+    STATUS_OFFERED = "offered"
+    STATUS_DISMISSED = "dismissed"
+    STATUS_COMPLETED = "completed"
+
+    STATUS_CHOICES = [
+        (STATUS_OFFERED, "Offered"),
+        (STATUS_DISMISSED, "Dismissed"),
+        (STATUS_COMPLETED, "Completed"),
+    ]
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="knowledge_checks",
+    )
+    course = models.OneToOneField(
+        Course,
+        on_delete=models.CASCADE,
+        related_name="starting_knowledge_check",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_OFFERED,
+    )
+
+    question_ids = models.JSONField(
+        default=list,
+        blank=True,
+    )
+    answers = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+    score = models.FloatField(
+        default=0.0,
+    )
+    total_questions = models.IntegerField(
+        default=0,
+    )
+    topic_evidence = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+    suggested_topic_keys = models.JSONField(
+        default=list,
+        blank=True,
+    )
+    focus_adopted = models.BooleanField(
+        default=False,
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.username} Knowledge Check for {self.course.title} ({self.status})"
+
