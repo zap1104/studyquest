@@ -35,6 +35,7 @@ from .models import (
     QuizAttempt,
     UserCourseCompletion,
     UserProfile,
+    StartingKnowledgeCheck,
 )
 from .learning_focus_service import (
     validate_external_assessment_payload,
@@ -714,6 +715,9 @@ def course_detail(request, pk):
     focus_target_quizzes = [c.quiz for c in chapters if getattr(c, "is_focus_target", False) and getattr(c, "quiz", None)]
     focus_question_count = sum(q.questions.count() for q in focus_target_quizzes) or (len(focus_target_quizzes) * 5) or 10
 
+    from .knowledge_check_services import get_or_create_knowledge_check
+    knowledge_check = get_or_create_knowledge_check(request.user, course)
+
     return render(request, "courses/course_detail.html", {
         "course": course,
         "chapters": chapters,
@@ -728,6 +732,7 @@ def course_detail(request, pk):
         "recommendation": recommendation,
         "first_focus_chapter": first_focus_chapter,
         "focus_question_count": focus_question_count,
+        "knowledge_check": knowledge_check,
     })
 
 
@@ -1394,3 +1399,113 @@ def focus_reopen(request, pk):
 def focus_catalogue_api(request):
     """Returns the curated Philippine higher education academic terminology catalogue."""
     return JsonResponse(get_academic_catalogue())
+
+
+# -----------------------------------------------------------------------------
+# STARTING KNOWLEDGE CHECK VIEWS (TE-3B)
+# -----------------------------------------------------------------------------
+
+@login_required
+def knowledge_check_start(request, course_id):
+    """Presents the 5-10 question Starting Knowledge Check quiz."""
+    course = get_object_or_404(Course, pk=course_id, user=request.user)
+    from .knowledge_check_services import get_or_create_knowledge_check
+    check = get_or_create_knowledge_check(request.user, course)
+
+    if not check:
+        messages.warning(request, "This course does not have enough topic questions for a starting knowledge check.")
+        return redirect("courses:course_detail", pk=course.pk)
+
+    if check.status == StartingKnowledgeCheck.STATUS_COMPLETED:
+        return redirect("courses:knowledge_check_results", course_id=course.pk)
+
+    questions = list(
+        Question.objects.filter(id__in=check.question_ids)
+        .prefetch_related("choices", "topic_links__topic")
+    )
+    q_map = {q.id: q for q in questions}
+    ordered_questions = [q_map[qid] for qid in check.question_ids if qid in q_map]
+
+    return render(request, "courses/knowledge_check.html", {
+        "course": course,
+        "check": check,
+        "questions": ordered_questions,
+    })
+
+
+@login_required
+@require_POST
+def knowledge_check_submit(request, course_id):
+    """Grades submitted answers and records starting topic evidence without affecting grades."""
+    course = get_object_or_404(Course, pk=course_id, user=request.user)
+    from .knowledge_check_services import get_or_create_knowledge_check, grade_knowledge_check
+    check = get_or_create_knowledge_check(request.user, course)
+
+    if not check:
+        return redirect("courses:course_detail", pk=course.pk)
+
+    submitted_answers = {}
+    for qid in check.question_ids:
+        choice_val = request.POST.get(f"question_{qid}")
+        text_val = request.POST.get(f"question_text_{qid}")
+        if choice_val:
+            submitted_answers[str(qid)] = {"choice_id": choice_val}
+        elif text_val:
+            submitted_answers[str(qid)] = {"text": text_val.strip()}
+        else:
+            submitted_answers[str(qid)] = {}
+
+    grade_knowledge_check(check, submitted_answers)
+    messages.success(request, f"Starting Knowledge Check completed! You scored {check.score:.0f}%.")
+    return redirect("courses:knowledge_check_results", course_id=course.pk)
+
+
+@login_required
+def knowledge_check_results(request, course_id):
+    """Presents diagnostic results and recommended study focus topics for approval."""
+    course = get_object_or_404(Course, pk=course_id, user=request.user)
+    check = get_object_or_404(StartingKnowledgeCheck, course=course, user=request.user)
+
+    if check.status != StartingKnowledgeCheck.STATUS_COMPLETED:
+        return redirect("courses:knowledge_check_start", course_id=course.pk)
+
+    topics = list(course.topics.all().order_by("order", "id"))
+    topic_evidence_list = list(check.topic_evidence.values())
+
+    return render(request, "courses/knowledge_check_results.html", {
+        "course": course,
+        "check": check,
+        "topics": topics,
+        "topic_evidence_list": topic_evidence_list,
+        "suggested_keys": set(check.suggested_topic_keys or []),
+    })
+
+
+@login_required
+@require_POST
+def knowledge_check_adopt_focus(request, course_id):
+    """Adopts user-approved topic selections into an active Study Focus."""
+    course = get_object_or_404(Course, pk=course_id, user=request.user)
+    check = get_object_or_404(StartingKnowledgeCheck, course=course, user=request.user)
+    selected_keys = request.POST.getlist("topic_keys")
+
+    from .knowledge_check_services import adopt_knowledge_check_focus
+    adopt_knowledge_check_focus(request.user, check, selected_keys)
+    messages.success(request, f"Study Focus set for {course.title} with {len(selected_keys)} priority topics!")
+    return redirect("courses:course_detail", pk=course.pk)
+
+
+@login_required
+@require_POST
+def knowledge_check_dismiss(request, course_id):
+    """Dismisses/skips the Starting Knowledge Check so it never appears again automatically."""
+    course = get_object_or_404(Course, pk=course_id, user=request.user)
+    from .knowledge_check_services import get_or_create_knowledge_check
+    check = get_or_create_knowledge_check(request.user, course)
+
+    if check:
+        check.status = StartingKnowledgeCheck.STATUS_DISMISSED
+        check.save(update_fields=["status"])
+
+    messages.info(request, "Starting Knowledge Check skipped. You can always review course materials directly.")
+    return redirect("courses:course_detail", pk=course.pk)

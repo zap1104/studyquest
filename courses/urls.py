@@ -30,4 +30,9 @@ urlpatterns = [
     path("focus/<int:pk>/complete/", views.focus_complete, name="focus_complete"),
     path("focus/<int:pk>/reopen/", views.focus_reopen, name="focus_reopen"),
     path("focus/catalogue/", views.focus_catalogue_api, name="focus_catalogue_api"),
+    path("courses/<int:course_id>/knowledge-check/", views.knowledge_check_start, name="knowledge_check_start"),
+    path("courses/<int:course_id>/knowledge-check/submit/", views.knowledge_check_submit, name="knowledge_check_submit"),
+    path("courses/<int:course_id>/knowledge-check/results/", views.knowledge_check_results, name="knowledge_check_results"),
+    path("courses/<int:course_id>/knowledge-check/adopt/", views.knowledge_check_adopt_focus, name="knowledge_check_adopt_focus"),
+    path("courses/<int:course_id>/knowledge-check/dismiss/", views.knowledge_check_dismiss, name="knowledge_check_dismiss"),
 ]

@@ -11,6 +11,7 @@ from .models import (
     XPTransaction,
     QuizAttempt,
     ChapterCompletion,
+    StartingKnowledgeCheck,
 )
 
 class ChapterInline(admin.TabularInline):
@@ -67,6 +68,11 @@ class XPTransactionAdmin(admin.ModelAdmin):
 @admin.register(ChapterCompletion)
 class ChapterCompletionAdmin(admin.ModelAdmin):
     list_display = ('user', 'chapter', 'completed_at')
+
+@admin.register(StartingKnowledgeCheck)
+class StartingKnowledgeCheckAdmin(admin.ModelAdmin):
+    list_display = ('user', 'course', 'status', 'score', 'total_questions', 'focus_adopted', 'created_at')
+    list_filter = ('status', 'focus_adopted')
 
 admin.site.register(Chapter)
 admin.site.register(Quiz)
