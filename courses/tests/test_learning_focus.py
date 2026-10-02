@@ -452,9 +452,9 @@ class LearningFocusViewTests(TestCase):
 
         response = self.client.get(f"/focus/{focus.id}/summary/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Institutional Diagnostic Report")
+        self.assertContains(response, "Study Focus Summary")
         self.assertContains(response, "Cybersecurity Operations")
-        self.assertContains(response, "Diagnostic Gap Remediated")
+        self.assertContains(response, "Focus Goal Reached")
         self.assertContains(response, "45%")
         self.assertContains(response, "85%")
         self.assertContains(response, "+40%")
@@ -491,7 +491,7 @@ class LearningFocusViewTests(TestCase):
         # Launch page renders focus tags
         response = self.client.get("/dungeon/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Remediation Expeditions for Data Structures")
+        self.assertContains(response, "Focus Expeditions for Data Structures")
         self.assertContains(response, "Focus Course")
         self.assertContains(response, "Focus Target")
 

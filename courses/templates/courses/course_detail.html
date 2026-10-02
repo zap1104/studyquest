@@ -208,7 +208,7 @@
                 {% endif %}
                 {% if focus_mastery and focus_mastery.is_mastered %}
                     <span style="font-size: 0.75rem; font-weight: 800; color: var(--accent); background: rgba(0, 194, 168, 0.14); padding: 2px 8px; border-radius: 6px;">
-                        ✓ Remediated ({{ focus_mastery.average_score|floatformat:0 }}%)
+                        ✓ Goal Reached ({{ focus_mastery.average_score|floatformat:0 }}%)
                     </span>
                 {% endif %}
             </div>
@@ -228,7 +228,7 @@
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
             <a href="{% url 'courses:focus_summary' linked_focus.pk %}" class="btn btn-primary btn-sm" style="font-size: 0.8rem;">
-                Mastery Report &rarr;
+                Progress Report &rarr;
             </a>
             <a href="{% url 'courses:focus_recommendation' linked_focus.pk %}" class="btn btn-ghost btn-sm" style="font-size: 0.8rem;">
                 Details
@@ -264,7 +264,7 @@
                 See how well you understand the topics in your study focus.
             </h3>
             <p style="margin: 0; font-size: 0.84rem; color: var(--muted); line-height: 1.4;">
-                Targeted practice prioritized on your weak topics: <strong>{{ linked_focus.topic_names|join:", "|default:linked_focus.subject_name }}</strong>.
+                Targeted practice prioritized on your focus topics: <strong>{{ linked_focus.topic_names|join:", "|default:linked_focus.subject_name }}</strong>.
             </p>
         </div>
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
@@ -303,7 +303,7 @@
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                             <h3>{{ chapter.title }}</h3>
                             {% if chapter.is_focus_target %}
-                                <span class="badge" style="background: rgba(232, 163, 61, 0.18); color: var(--gold); font-weight: 800; font-size: 0.70rem; border: 1px solid rgba(232, 163, 61, 0.35); padding: 2px 7px; border-radius: 6px;" title="This unit covers diagnostic focus topics">
+                                <span class="badge" style="background: rgba(232, 163, 61, 0.18); color: var(--gold); font-weight: 800; font-size: 0.70rem; border: 1px solid rgba(232, 163, 61, 0.35); padding: 2px 7px; border-radius: 6px;" title="This unit covers focus topics">
                                     🎯 Focus Target
                                 </span>
                             {% endif %}

@@ -133,14 +133,14 @@
                 Check My Understanding
             </a>
             <a href="{% url 'courses:focus_summary' active_focus.pk %}" class="btn btn-ghost btn-sm">
-                Summary & Progress
+                Progress & Summary
             </a>
         {% else %}
             <a href="{% url 'courses:focus_recommendation' active_focus.pk %}" class="btn btn-primary btn-sm">
                 Connect Materials &rarr;
             </a>
             <a href="{% url 'courses:focus_summary' active_focus.pk %}" class="btn btn-ghost btn-sm">
-                Summary
+                Progress Report
             </a>
         {% endif %}
     </div>
