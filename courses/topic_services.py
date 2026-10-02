@@ -81,6 +81,16 @@ def create_course_topic(
     if not clean_name:
         raise ValueError("Topic name cannot be blank.")
 
+    existing = CourseTopic.objects.filter(course=course, key=clean_key).first()
+    if existing:
+        if existing.name.lower() != clean_name.lower():
+            import logging
+            logging.getLogger(__name__).warning(
+                f"CourseTopic key '{clean_key}' already declared with name '{existing.name}'. "
+                f"Ignoring conflicting name '{clean_name}' from subsequent declaration."
+            )
+        return existing
+
     return CourseTopic.objects.create(
         course=course,
         key=clean_key,

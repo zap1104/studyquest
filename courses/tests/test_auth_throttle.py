@@ -88,7 +88,7 @@ class AuthThrottleTests(TestCase):
     def test_counter_expires_after_the_window(self):
         with override_settings(
             LOGIN_THROTTLE_MAX_ATTEMPTS=2,
-            LOGIN_THROTTLE_WINDOW_SECONDS=1,
+            LOGIN_THROTTLE_WINDOW_SECONDS=300,
         ):
             self._failed_login()
             self._failed_login()

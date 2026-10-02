@@ -85,6 +85,7 @@ class GeneratedQuestion(BaseModel):
     accepted_answers: List[str] = Field(default_factory=list)
     expected_items: List[dict] = Field(default_factory=list)
     order_matters: bool = False
+    topic_keys: Optional[List[str]] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_question_integrity(self):
@@ -201,6 +202,25 @@ class GeneratedCommonConfusion(BaseModel):
     concept_b: str
     difference: str
 
+class GeneratedTopic(BaseModel):
+    key: Optional[str] = Field(default="", max_length=140)
+    name: str = Field(min_length=1, max_length=255)
+    description: Optional[str] = Field(default="", max_length=500)
+
+    @model_validator(mode="after")
+    def normalize_key(self):
+        from django.utils.text import slugify
+        raw_key = (self.key or "").strip()
+        cleaned_key = slugify(raw_key)
+        if not cleaned_key:
+            cleaned_key = slugify((self.name or "").strip())
+        if not cleaned_key:
+            raise ValueError(f"Topic '{self.name}' produced an empty key after normalization.")
+        self.key = cleaned_key
+        self.name = self.name.strip()
+        self.description = (self.description or "").strip()
+        return self
+
 class GeneratedChapter(BaseModel):
     order: int
     title: str = Field(min_length=1, max_length=200)
@@ -210,6 +230,7 @@ class GeneratedChapter(BaseModel):
     analogy: Optional[GeneratedAnalogy] = None  # Expected by test_hand_transcribed_chapter_validates
     estimated_minutes: int = Field(default=15, ge=2, le=60)
     learning_objectives: List[str] = Field(default_factory=list)
+    topics: Optional[List[GeneratedTopic]] = Field(default_factory=list)
     sections: List[GeneratedSection] = Field(default_factory=list)
     key_terms: Optional[List[GeneratedKeyTerm]] = Field(default_factory=list)
     comparisons: Optional[List[GeneratedComparison]] = Field(default_factory=list)
@@ -219,6 +240,56 @@ class GeneratedChapter(BaseModel):
     source_files: Optional[List[str]] = Field(default_factory=list, max_length=3)
     primary_source_file: Optional[str] = None
     quiz: GeneratedQuiz
+
+    @model_validator(mode="after")
+    def validate_and_deduplicate_topics(self):
+        """Deduplicates topics within this chapter by normalized key."""
+        if not self.topics:
+            self.topics = []
+            return self
+
+        seen_keys = set()
+        deduped = []
+        for topic in self.topics:
+            if topic.key not in seen_keys:
+                seen_keys.add(topic.key)
+                deduped.append(topic)
+            else:
+                import logging
+                logging.getLogger(__name__).warning(
+                    f"Chapter '{self.title}' declared duplicate topic key '{topic.key}'. Keeping first declaration."
+                )
+        self.topics = deduped
+        return self
+
+    @model_validator(mode="after")
+    def validate_chapter_question_topic_keys(self):
+        """Ensures question topic_keys reference only topics declared in this chapter.
+
+        Undeclared or cross-chapter keys are pruned with an internal warning,
+        preserving question validity.
+        """
+        chapter_keys = {topic.key for topic in (self.topics or [])}
+        for question in getattr(self.quiz, "questions", []):
+            if not getattr(question, "topic_keys", None):
+                question.topic_keys = []
+                continue
+
+            from django.utils.text import slugify
+            valid_keys = []
+            for raw_k in question.topic_keys:
+                norm_k = slugify(str(raw_k).strip())
+                if norm_k in chapter_keys:
+                    if norm_k not in valid_keys:
+                        valid_keys.append(norm_k)
+                else:
+                    import logging
+                    logging.getLogger(__name__).warning(
+                        f"Question {question.order} in chapter '{self.title}' "
+                        f"referenced undeclared topic key: '{raw_k}'"
+                    )
+            question.topic_keys = valid_keys
+        return self
 
 # --------------------------------------------------
 # 4. ROOT JOURNEY CONTRACT
