@@ -43,12 +43,12 @@
         <!-- Priority Topics List -->
         <div style="margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border);">
             <h2 style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 10px;">
-                Priority Topics to Master
+                Priority Topics to Review
             </h2>
             <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                 {% for topic in focus.topic_names %}
                     <span style="display: inline-flex; align-items: center; gap: 6px; background: rgba(232, 163, 61, 0.12); color: var(--gold); border: 1px solid rgba(232, 163, 61, 0.3); padding: 5px 12px; border-radius: 8px; font-weight: 600; font-size: 0.85rem;">
-                        ⚠️ {{ topic }}
+                        📌 {{ topic }}
                     </span>
                 {% empty %}
                     <span style="color: var(--muted); font-size: 0.88rem;">General subject comprehension</span>

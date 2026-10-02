@@ -167,10 +167,12 @@ dependency footprint unchanged.
 
 **Known limitation:** the locmem cache is per-process. A multi-process or
 multi-worker deployment needs a shared cache (Redis/Memcached) for the
-throttle to be effective across workers. Note also that
-`HTTP_X_FORWARDED_FOR` is trusted for the client IP, which is correct behind a
-proxy but spoofable if the app is ever exposed directly — at that point the
-header should be stripped at the edge.
+throttle to be effective across workers.
+
+**Client IP trust boundary:** `REMOTE_ADDR` is authoritative by default.
+`HTTP_X_FORWARDED_FOR` is ignored to prevent client header spoofing unless
+`TRUST_PROXY_HEADERS = True` is explicitly configured AND `REMOTE_ADDR` matches
+an address in `TRUSTED_PROXY_IPS`.
 
 ---
 

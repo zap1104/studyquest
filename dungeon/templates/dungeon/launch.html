@@ -113,14 +113,14 @@
                 {% endif %}
             </div>
             <h3 style="margin: 0; font-size: 1.15rem; color: var(--ink);">
-                Remediation Expeditions for {{ active_focus.subject_name }}
+                Focus Expeditions for {{ active_focus.subject_name }}
             </h3>
             <p style="margin: 4px 0 0; font-size: 0.82rem; color: var(--muted);">
                 Defeat dungeon monsters to reinforce key concepts and run Review Runs on missed questions to strengthen your knowledge!
             </p>
         </div>
         <a href="{% url 'courses:focus_summary' active_focus.pk %}" class="btn btn-ghost btn-sm" style="font-size: 0.8rem;">
-            View Mastery Report &rarr;
+            View Progress Report &rarr;
         </a>
     </div>
 {% endif %}

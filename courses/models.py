@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -150,6 +151,12 @@ class Question(models.Model):
     text = models.TextField()
     explanation = models.TextField(blank=True, default="")
     answer_data = models.JSONField(default=dict, blank=True)
+    topics = models.ManyToManyField(
+        "CourseTopic",
+        through="QuestionTopic",
+        related_name="questions",
+        blank=True,
+    )
 
     class Meta:
         ordering = ["order"]
@@ -173,6 +180,84 @@ class Choice(models.Model):
 
     def __str__(self):
         return self.text
+
+
+# --- TOPIC EVIDENCE & TAXONOMY (TE-1A) ---
+
+class CourseTopic(models.Model):
+    """A learning topic or concept strictly scoped to a single Course.
+
+    Topics represent conceptual units within the course material (e.g., 'market-validation',
+    'customer-discovery') rather than global skills.
+    """
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name="topics",
+    )
+    key = models.SlugField(max_length=140)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, default="")
+    order = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["order", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["course", "key"],
+                name="unique_course_topic_key",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.course.title}: {self.name} ({self.key})"
+
+
+class QuestionTopic(models.Model):
+    """Associates a quiz Question with a CourseTopic from the same course."""
+
+    question = models.ForeignKey(
+        Question,
+        on_delete=models.CASCADE,
+        related_name="topic_links",
+    )
+    topic = models.ForeignKey(
+        CourseTopic,
+        on_delete=models.CASCADE,
+        related_name="question_links",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["question", "topic"],
+                name="unique_question_topic",
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.question_id and self.topic_id:
+            try:
+                question_course_id = self.question.quiz.chapter.course_id
+            except (AttributeError, Quiz.DoesNotExist, Chapter.DoesNotExist):
+                question_course_id = None
+
+            topic_course_id = self.topic.course_id
+            if question_course_id != topic_course_id:
+                raise ValidationError(
+                    "A Question can only be linked to a CourseTopic belonging to the same Course."
+                )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Q{self.question_id} -> {self.topic.name}"
 
 
 # --- SPRINT B: QUIZ PERSISTENCE & XP LEDGER ---

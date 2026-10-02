@@ -1,23 +1,54 @@
 from django.contrib import admin
-from .models import Chapter, Choice, Course, Question, Quiz, UserProfile, XPTransaction, QuizAttempt, ChapterCompletion
+from .models import (
+    Chapter,
+    Choice,
+    Course,
+    CourseTopic,
+    Question,
+    QuestionTopic,
+    Quiz,
+    UserProfile,
+    XPTransaction,
+    QuizAttempt,
+    ChapterCompletion,
+)
 
 class ChapterInline(admin.TabularInline):
     model = Chapter
     extra = 0
 
+class CourseTopicInline(admin.TabularInline):
+    model = CourseTopic
+    extra = 0
+
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
     list_display = ('title', 'created_at')
-    inlines = [ChapterInline]
+    inlines = [ChapterInline, CourseTopicInline]
 
 class ChoiceInline(admin.TabularInline):
     model = Choice
     extra = 0
 
+class QuestionTopicInline(admin.TabularInline):
+    model = QuestionTopic
+    extra = 0
+
 @admin.register(Question)
 class QuestionAdmin(admin.ModelAdmin):
     list_display = ('text', 'quiz')
-    inlines = [ChoiceInline]
+    inlines = [ChoiceInline, QuestionTopicInline]
+
+@admin.register(CourseTopic)
+class CourseTopicAdmin(admin.ModelAdmin):
+    list_display = ('name', 'key', 'course', 'order', 'created_at')
+    list_filter = ('course',)
+    search_fields = ('name', 'key', 'course__title')
+
+@admin.register(QuestionTopic)
+class QuestionTopicAdmin(admin.ModelAdmin):
+    list_display = ('question', 'topic', 'created_at')
+    list_filter = ('topic__course',)
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):

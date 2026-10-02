@@ -162,6 +162,15 @@ SOURCE-GROUNDING & INTEGRITY MANDATES:
 5. Quizzes: All quiz questions must be strictly solvable using the generated chapter content.
 """
 
+TOPIC_GROUNDING_RULES = """
+TOPIC IDENTIFICATION & ASSESSMENT TAGGING MANDATES:
+1. TOPIC GRANULARITY: For each chapter, identify 2-5 core topics or conceptual skills taught in that chapter.
+2. STABLE TOPIC KEYS: Each topic must have a slugified "key" (lowercase, hyphens, alphanumeric, max 140 chars), a human-readable "name" (max 255 chars), and a concise "description".
+3. CHAPTER SCOPING: A chapter's questions may ONLY reference topic keys declared in that same chapter's "topics" list.
+4. QUESTION TAGGING: Every quiz question should specify "topic_keys" containing 1 or more topic keys from its chapter that the question directly evaluates.
+5. NO GENERIC CATCH-ALLS: Never invent generic topics like "general-topic" or "miscellaneous". Ground topics in specific concepts from the text.
+"""
+
 CURRICULUM_JSON_SCHEMA = """
 OUTPUT FORMAT: Output valid JSON matching this exact structure:
 {
@@ -187,6 +196,13 @@ OUTPUT FORMAT: Output valid JSON matching this exact structure:
       "learning_objectives": [
         "Actionable outcome 1",
         "Actionable outcome 2"
+      ],
+      "topics": [
+        {
+          "key": "bdat-architecture",
+          "name": "BDAT Architecture",
+          "description": "Core enterprise architecture domains: Business, Data, Application, and Technology."
+        }
       ],
       "sections": [
         {
@@ -255,6 +271,7 @@ OUTPUT FORMAT: Output valid JSON matching this exact structure:
             "difficulty": "medium",
             "text": "Question prompt testing comprehension?",
             "explanation": "Educational explanation defining why this answer is correct.",
+            "topic_keys": ["bdat-architecture"],
             "choices": [
               {"text": "Option A text", "is_correct": false},
               {"text": "Option B text", "is_correct": true},
@@ -268,30 +285,33 @@ OUTPUT FORMAT: Output valid JSON matching this exact structure:
             "difficulty": "medium",
             "text": "True or False statement prompt?",
             "explanation": "Educational explanation explicitly explaining why the statement is true or false.",
+            "topic_keys": ["bdat-architecture"],
             "choices": [
               {"text": "True", "is_correct": true},
               {"text": "False", "is_correct": false}
             ]
-                    },
-                    {
-                        "order": 3,
-                        "type": "identification",
-                        "text": "Identify the framework used to organize architecture artifacts.",
-                        "explanation": "The Zachman Framework organizes architecture artifacts across perspectives and concerns.",
-                        "accepted_answers": ["Zachman Framework", "Zachman"]
-                    },
-                    {
-                        "order": 4,
-                        "type": "enumeration",
-                        "text": "Enumerate the four BDAT domains.",
-                        "explanation": "BDAT stands for Business, Data, Application, and Technology, the four domains used to classify architecture concerns.",
-                        "order_matters": true,
-                        "expected_items": [
-                            {"canonical": "Business", "accepted_variants": []},
-                            {"canonical": "Data", "accepted_variants": []},
-                            {"canonical": "Application", "accepted_variants": []},
-                            {"canonical": "Technology", "accepted_variants": []}
-                        ]
+          },
+          {
+            "order": 3,
+            "type": "identification",
+            "text": "Identify the framework used to organize architecture artifacts.",
+            "explanation": "The Zachman Framework organizes architecture artifacts across perspectives and concerns.",
+            "accepted_answers": ["Zachman Framework", "Zachman"],
+            "topic_keys": ["zachman-framework"]
+          },
+          {
+            "order": 4,
+            "type": "enumeration",
+            "text": "Enumerate the four BDAT domains.",
+            "explanation": "BDAT stands for Business, Data, Application, and Technology, the four domains used to classify architecture concerns.",
+            "order_matters": true,
+            "expected_items": [
+                {"canonical": "Business", "accepted_variants": []},
+                {"canonical": "Data", "accepted_variants": []},
+                {"canonical": "Application", "accepted_variants": []},
+                {"canonical": "Technology", "accepted_variants": []}
+            ],
+            "topic_keys": ["bdat-architecture"]
           }
         ]
       }
@@ -380,6 +400,8 @@ Do not replace requested Identification or Enumeration questions with Multiple C
 {QUIZ_RULES}
 
 {SOURCE_GROUNDING_RULES}
+
+{TOPIC_GROUNDING_RULES}
 
 {CURRICULUM_JSON_SCHEMA}
 
@@ -972,6 +994,23 @@ def _generate_mock_journey(title, assessment_formats=None, source_filenames=None
                     "Distinguish between TOGAF, Zachman, and BDAT domains.",
                     "Analyze organizational separation of concerns."
                 ],
+                "topics": [
+                    {
+                        "key": "bdat-architecture",
+                        "name": "BDAT Architecture",
+                        "description": "The four core domains: Business, Data, Application, and Technology.",
+                    },
+                    {
+                        "key": "togaf-framework",
+                        "name": "TOGAF Framework",
+                        "description": "Standardized enterprise architecture methodology and Architecture Development Method (ADM).",
+                    },
+                    {
+                        "key": "zachman-framework",
+                        "name": "Zachman Framework",
+                        "description": "Enterprise ontology and classification matrix for architecture artifacts across perspectives.",
+                    },
+                ],
                 "sections": [
                     {
                         "order": 1,
@@ -1109,10 +1148,12 @@ def _build_mock_questions(assessment_mix):
     questions = []
 
     for index in range(assessment_mix["multiple_choice"]):
+        topic = ["bdat-architecture", "togaf-framework", "zachman-framework"][index % 3]
         questions.append({
             "type": "multiple_choice",
             "text": f"Which architecture principle is highlighted in mock question {index + 1}?",
             "explanation": "The selected principle keeps architecture decisions aligned with the course concepts and prevents unrelated design choices.",
+            "topic_keys": [topic],
             "choices": [
                 {"text": "Layered separation", "is_correct": True},
                 {"text": "Unbounded duplication", "is_correct": False},
@@ -1122,10 +1163,12 @@ def _build_mock_questions(assessment_mix):
         })
 
     for index in range(assessment_mix["true_false"]):
+        topic = ["togaf-framework", "zachman-framework", "bdat-architecture"][index % 3]
         questions.append({
             "type": "true_false",
             "text": f"True or False: mock architecture statement {index + 1} supports clear separation of concerns.",
             "explanation": "The statement is true because separating concerns makes systems easier to reason about, change, and govern.",
+            "topic_keys": [topic],
             "choices": [
                 {"text": "True", "is_correct": True},
                 {"text": "False", "is_correct": False},
@@ -1133,30 +1176,31 @@ def _build_mock_questions(assessment_mix):
         })
 
     identification_answers = [
-        ("Identify the framework that organizes architecture artifacts.", ["Zachman Framework", "Zachman"]),
-        ("Identify the methodology that guides architecture development.", ["TOGAF", "TOGAF ADM"]),
-        ("Identify the architecture domain covering organizational goals.", ["Business"]),
-        ("Identify the architecture domain covering stored information.", ["Data"]),
-        ("Identify the architecture domain covering infrastructure.", ["Technology"]),
+        ("Identify the framework that organizes architecture artifacts.", ["Zachman Framework", "Zachman"], ["zachman-framework"]),
+        ("Identify the methodology that guides architecture development.", ["TOGAF", "TOGAF ADM"], ["togaf-framework"]),
+        ("Identify the architecture domain covering organizational goals.", ["Business"], ["bdat-architecture"]),
+        ("Identify the architecture domain covering stored information.", ["Data"], ["bdat-architecture"]),
+        ("Identify the architecture domain covering infrastructure.", ["Technology"], ["bdat-architecture"]),
     ]
     for index in range(assessment_mix["identification"]):
-        text, accepted_answers = identification_answers[index]
+        text, accepted_answers, topic_keys = identification_answers[index]
         questions.append({
             "type": "identification",
             "text": text,
             "explanation": "The accepted term is the precise concept used by the architecture framework in this lesson.",
             "accepted_answers": accepted_answers,
+            "topic_keys": topic_keys,
         })
 
     enumeration_items = [
-        (["Business", "Data", "Application", "Technology"], True),
-        (["Plan", "Build", "Measure"], False),
-        (["People", "Process", "Technology"], False),
-        (["Scope", "Time", "Cost"], True),
-        (["Identify", "Assess", "Treat"], False),
+        (["Business", "Data", "Application", "Technology"], True, ["bdat-architecture"]),
+        (["Plan", "Build", "Measure"], False, ["togaf-framework"]),
+        (["People", "Process", "Technology"], False, ["togaf-framework"]),
+        (["Scope", "Time", "Cost"], True, ["togaf-framework"]),
+        (["Identify", "Assess", "Treat"], False, ["togaf-framework"]),
     ]
     for index in range(assessment_mix["enumeration"]):
-        items, order_matters = enumeration_items[index]
+        items, order_matters, topic_keys = enumeration_items[index]
         questions.append({
             "type": "enumeration",
             "text": f"Enumerate the mock framework components for list {index + 1}.",
@@ -1166,6 +1210,7 @@ def _build_mock_questions(assessment_mix):
                 {"canonical": item, "accepted_variants": []}
                 for item in items
             ],
+            "topic_keys": topic_keys,
         })
 
     for order, question in enumerate(questions, start=1):

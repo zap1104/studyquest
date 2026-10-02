@@ -10,12 +10,14 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Max
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from .topic_services import create_course_topic, link_question_to_topic
 from .grading import _grade_question, normalize_text_answer
 from .credits import (
     award_course_completion_bonus,
@@ -234,11 +236,27 @@ def calculate_course_progress(user, course):
 # --------------------------------------------------
 
 def _client_ip(request):
-    """Best-effort client IP, honouring one layer of reverse proxy."""
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR", "unknown")
+    """Authoritative client IP for rate-limiting.
+
+    Defaults strictly to REMOTE_ADDR. Forwarded headers (e.g. HTTP_X_FORWARDED_FOR)
+    are untrusted and ignored unless TRUST_PROXY_HEADERS is explicitly True AND
+    REMOTE_ADDR matches a configured trusted proxy in TRUSTED_PROXY_IPS.
+    """
+    remote_addr = request.META.get("REMOTE_ADDR", "").strip() or "unknown"
+
+    trust_proxy = getattr(settings, "TRUST_PROXY_HEADERS", False)
+    trusted_proxies = getattr(settings, "TRUSTED_PROXY_IPS", None) or []
+    if isinstance(trusted_proxies, str):
+        trusted_proxies = [ip.strip() for ip in trusted_proxies.split(",") if ip.strip()]
+
+    if trust_proxy and remote_addr in trusted_proxies:
+        forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
+        if forwarded:
+            client = forwarded.split(",")[0].strip()
+            if client:
+                return client
+
+    return remote_addr
 
 
 def _throttle_key(scope, request):
@@ -565,6 +583,33 @@ def _build_journey(course_or_user, journey_data=None, journey_override=None, cus
             structured_content=data,
         )
 
+    # 1. Collect and register unique CourseTopic records for this course via topic_services
+    course_topics_by_key = {}
+    topic_order = 1
+    for chapter_data in data.get("chapters", []):
+        for raw_topic in chapter_data.get("topics", []):
+            if isinstance(raw_topic, dict):
+                k = raw_topic.get("key", "")
+                n = raw_topic.get("name", "")
+                d = raw_topic.get("description", "")
+            else:
+                k = getattr(raw_topic, "key", "")
+                n = getattr(raw_topic, "name", "")
+                d = getattr(raw_topic, "description", "")
+
+            clean_k = (k or "").strip().lower()
+            clean_n = (n or "").strip()
+            if clean_k and clean_n and clean_k not in course_topics_by_key:
+                topic = create_course_topic(
+                    course=course,
+                    key=clean_k,
+                    name=clean_n,
+                    description=d,
+                    order=topic_order,
+                )
+                course_topics_by_key[clean_k] = topic
+                topic_order += 1
+
     for chapter_data in data["chapters"]:
         chapter = Chapter.objects.create(
             course=course,
@@ -607,6 +652,22 @@ def _build_journey(course_or_user, journey_data=None, journey_override=None, cus
                         question=question,
                         text=choice_data["text"],
                         is_correct=choice_data["is_correct"],
+                    )
+
+            # Link question to valid declared topics for its course
+            for raw_key in question_data.get("topic_keys", []):
+                clean_key = (raw_key or "").strip().lower()
+                topic = course_topics_by_key.get(clean_key)
+                if topic is not None:
+                    try:
+                        link_question_to_topic(question=question, topic=topic)
+                    except ValidationError as err:
+                        logger.warning(
+                            f"Validation failed linking question {question.id} to topic '{clean_key}': {err}"
+                        )
+                else:
+                    logger.debug(
+                        f"Skipping unknown topic key '{clean_key}' on question {question.order} in chapter '{chapter.title}'"
                     )
 
     return course

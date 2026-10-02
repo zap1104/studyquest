@@ -1,7 +1,7 @@
 {% extends 'courses/base.html' %}
 {% load static %}
 
-{% block title %}Diagnostic Mastery Report: {{ focus.subject_name }} — StudyQuest{% endblock %}
+{% block title %}Your Study Focus Progress: {{ focus.subject_name }} — StudyQuest{% endblock %}
 
 {% block content %}
 <style>
@@ -161,15 +161,15 @@
     <header class="summary-hero-card">
         <div class="summary-badge-row">
             <span class="badge" style="background: rgba(117, 108, 243, 0.2); color: var(--primary); font-weight: 800; font-size: 0.75rem; text-transform: uppercase; padding: 4px 10px; border-radius: 999px;">
-                🎯 Institutional Diagnostic Report
+                🎯 Study Focus Summary
             </span>
             {% if mastery.is_mastered %}
                 <span class="badge" style="background: rgba(0, 194, 168, 0.15); color: var(--accent); font-weight: 800; font-size: 0.75rem; text-transform: uppercase; padding: 4px 10px; border-radius: 999px;">
-                    ✓ Diagnostic Gap Remediated
+                    ✓ Focus Goal Reached
                 </span>
             {% else %}
                 <span class="badge" style="background: rgba(232, 163, 61, 0.15); color: var(--gold); font-weight: 800; font-size: 0.75rem; text-transform: uppercase; padding: 4px 10px; border-radius: 999px;">
-                    ⏳ Remediation In Progress
+                    ⏳ Review In Progress
                 </span>
             {% endif %}
         </div>
@@ -181,15 +181,15 @@
 
         <p class="summary-subtext">
             {% if focus.source == 'external_assessment' %}
-                This focus originated from an external academic assessment diagnostic. StudyQuest constructed a source-grounded curriculum to address the identified learning gaps.
+                This focus was established from a school assessment result. StudyQuest created a structured learning path to help you review and practice the key concepts.
             {% else %}
-                This focus was selected for targeted review and remediation.
+                This focus was selected for targeted review and practice.
             {% endif %}
         </p>
 
         {% if focus.topic_names %}
             <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted);">Targeted Concept Gaps:</span>
+                <span style="font-size: 0.8rem; font-weight: 700; color: var(--muted);">Topics to Review:</span>
                 {% for topic in focus.topic_names %}
                     <span style="font-size: 0.78rem; font-weight: 700; background: rgba(232, 163, 61, 0.15); color: var(--gold); border: 1px solid rgba(232, 163, 61, 0.3); padding: 3px 9px; border-radius: 6px;">
                         {{ topic }}
@@ -200,9 +200,9 @@
     </header>
 
     <!-- METRICS COMPARISON -->
-    <section class="metrics-comparison-grid" aria-label="Remediation Metrics">
+    <section class="metrics-comparison-grid" aria-label="Progress Metrics">
         <div class="metric-card">
-            <span class="metric-label">Diagnostic Baseline</span>
+            <span class="metric-label">Starting Score</span>
             <div class="metric-value score-initial">
                 {% if focus.initial_score is not None %}
                     {{ focus.initial_score|floatformat:0 }}%
@@ -210,19 +210,25 @@
                     N/A
                 {% endif %}
             </div>
-            <span class="metric-foot">Prior diagnostic assessment result</span>
+            <span class="metric-foot">School result or initial baseline</span>
         </div>
 
         <div class="metric-card">
-            <span class="metric-label">StudyQuest Mastery</span>
+            <span class="metric-label">Latest Quiz Average</span>
             <div class="metric-value score-mastery">
                 {{ mastery.average_score|floatformat:0 }}%
             </div>
-            <span class="metric-foot">Current average score on focus chapters</span>
+            <span class="metric-foot">
+                {% if mastery.attempted_targets > 0 %}
+                    Based on {{ mastery.attempted_targets }} of {{ mastery.total_targets }} focus {% if mastery.total_targets == 1 %}unit{% else %}units{% endif %} attempted
+                {% else %}
+                    No focus units attempted yet
+                {% endif %}
+            </span>
         </div>
 
         <div class="metric-card">
-            <span class="metric-label">Academic Gain</span>
+            <span class="metric-label">Progress Gain</span>
             <div class="metric-value score-gain">
                 {% if mastery.gain is not None %}
                     {% if mastery.gain >= 0 %}+{% endif %}{{ mastery.gain|floatformat:0 }}%
@@ -230,15 +236,15 @@
                     —
                 {% endif %}
             </div>
-            <span class="metric-foot">Measured improvement over diagnostic</span>
+            <span class="metric-foot">Improvement over initial score</span>
         </div>
 
         <div class="metric-card">
-            <span class="metric-label">Objectives Cleared</span>
+            <span class="metric-label">Focus Goals Reached</span>
             <div class="metric-value" style="color: var(--ink);">
                 {{ mastery.mastered_chapters }} / {{ mastery.total_targets }}
             </div>
-            <span class="metric-foot">Chapters meeting 80%+ passing benchmark</span>
+            <span class="metric-foot">Units meeting 80%+ passing benchmark</span>
         </div>
     </section>
 
@@ -271,7 +277,7 @@
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
                 <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px;">
                     <strong style="display: block; font-size: 0.82rem; text-transform: uppercase; color: var(--accent); margin-bottom: 8px;">
-                        ✓ Topics Strengthened (≥80%)
+                        ✓ Showing Progress (≥80%)
                     </strong>
                     {% if mastery.strengthened_topics %}
                         <div style="display: flex; flex-wrap: wrap; gap: 6px;">
@@ -282,19 +288,19 @@
                             {% endfor %}
                         </div>
                     {% else %}
-                        <span style="font-size: 0.82rem; color: var(--muted);">Complete chapter quizzes to demonstrate mastery.</span>
+                        <span style="font-size: 0.82rem; color: var(--muted);">Complete chapter quizzes to demonstrate progress.</span>
                     {% endif %}
                 </div>
 
                 <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px;">
                     <strong style="display: block; font-size: 0.82rem; text-transform: uppercase; color: var(--danger); margin-bottom: 8px;">
-                        ⚠️ Still Needing Attention (&lt;80%)
+                        Topics to Review (<80%)
                     </strong>
                     {% if mastery.unresolved_topics %}
                         <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                             {% for topic in mastery.unresolved_topics %}
                                 <span style="font-size: 0.78rem; font-weight: 700; background: rgba(239, 107, 115, 0.12); color: var(--danger); border: 1px solid rgba(239, 107, 115, 0.3); padding: 3px 8px; border-radius: 6px;">
-                                    ⚠️ {{ topic }}
+                                    📌 {{ topic }}
                                 </span>
                             {% endfor %}
                         </div>
@@ -309,7 +315,7 @@
     <!-- CHAPTER REMEDIATION BREAKDOWN -->
     <section class="chapters-breakdown-card">
         <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0; color: var(--ink);">
-            Chapter Remediation & Assessment Status
+            Unit Review & Assessment Status
         </h2>
 
         {% if mastery.chapter_details %}
@@ -338,9 +344,9 @@
                                 </td>
                                 <td>
                                     {% if detail.is_passed %}
-                                        <span style="color: var(--accent); font-weight: 800;">✓ Mastered (≥80%)</span>
+                                        <span style="color: var(--accent); font-weight: 800;">✓ Goal Reached (≥80%)</span>
                                     {% else %}
-                                        <span style="color: var(--danger); font-weight: 700;">Needs Review (&lt;80%)</span>
+                                        <span style="color: var(--danger); font-weight: 700;">Needs Review (<80%)</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -362,7 +368,7 @@
 
     <!-- NON-EQUIVALENCE INSTITUTIONAL DISCLAIMER (DF-6) -->
     <div style="padding: 14px 18px; border-radius: 12px; background: rgba(0, 0, 0, 0.05); border: 1px dashed var(--border); font-size: 0.78rem; color: var(--muted); line-height: 1.5;">
-        <strong>Academic Non-Equivalence Notice:</strong> StudyQuest checks evaluate student recall, concept application, and retention based strictly on the uploaded source materials. StudyQuest mastery scores reflect study proficiency within this platform and are distinct from external university grading systems.
+        <strong>Academic Non-Equivalence Notice:</strong> StudyQuest checks evaluate student recall, concept application, and retention based strictly on the uploaded source materials. StudyQuest scores reflect study progress within this platform and are distinct from external university grading systems.
     </div>
 
     <!-- ACTIONS -->
