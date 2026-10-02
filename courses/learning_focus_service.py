@@ -440,6 +440,14 @@ def get_focus_remediation_recommendations(user, focus: Optional[LearningFocus]) 
         }
 
     course = focus.linked_course
+
+    # Use topic-aware recommendations engine when course has topics (TE-3A)
+    if course.topics.exists():
+        from courses.topic_services import get_topic_recommendation
+        topic_rec = get_topic_recommendation(user, course, focus=focus)
+        if topic_rec is not None:
+            return topic_rec
+
     chapters = list(course.chapters.select_related("quiz").all())
     topics = [t.lower() for t in (focus.topic_names or []) if str(t).strip()]
 

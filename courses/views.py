@@ -702,7 +702,13 @@ def course_detail(request, pk):
 
     annotate_course_chapters_with_focus(chapters, current_focus)
     focus_mastery = calculate_focus_mastery(current_focus) if current_focus else None
-    recommendation = get_focus_remediation_recommendations(request.user, current_focus) if current_focus else None
+    if current_focus:
+        recommendation = get_focus_remediation_recommendations(request.user, current_focus)
+    elif course.topics.exists():
+        from courses.topic_services import get_topic_recommendation
+        recommendation = get_topic_recommendation(request.user, course)
+    else:
+        recommendation = None
 
     first_focus_chapter = next((c for c in chapters if getattr(c, "is_focus_target", False)), chapters[0] if chapters else None)
     focus_target_quizzes = [c.quiz for c in chapters if getattr(c, "is_focus_target", False) and getattr(c, "quiz", None)]
@@ -1351,10 +1357,16 @@ def focus_summary(request, pk):
     focus = get_object_or_404(LearningFocus, pk=pk, user=request.user)
     mastery = calculate_focus_mastery(focus)
     recommendation = get_focus_remediation_recommendations(request.user, focus)
+    topic_progress = None
+    if focus.linked_course and focus.linked_course.topics.exists():
+        from courses.topic_services import get_course_topic_progress
+        topic_progress = get_course_topic_progress(request.user, focus.linked_course)
+
     return render(request, "courses/focus_summary.html", {
         "focus": focus,
         "mastery": mastery,
         "recommendation": recommendation,
+        "topic_progress": topic_progress,
     })
 
 
