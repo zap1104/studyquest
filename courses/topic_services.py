@@ -449,3 +449,274 @@ def get_course_topic_progress(user, course: Course) -> dict:
         "state_counts": state_counts,
     }
 
+
+# -----------------------------------------------------------------------------
+# TOPIC-AWARE RECOMMENDATIONS ENGINE (TE-3A)
+# -----------------------------------------------------------------------------
+
+def _find_chapter_for_topic(course: Course, topic_id: int) -> Optional[Chapter]:
+    """Finds the best matching Chapter for a CourseTopic.
+
+    1. Looks for a Chapter whose Quiz has Questions linked to this topic.
+    2. If multiple chapters link to this topic, returns the earliest chapter by order.
+    3. Fallback: returns the earliest Chapter in the course.
+    """
+    ch = (
+        Chapter.objects.filter(
+            course=course,
+            quiz__questions__topic_links__topic_id=topic_id,
+        )
+        .distinct()
+        .order_by("order", "id")
+        .first()
+    )
+    if ch:
+        return ch
+    return course.chapters.order_by("order", "id").first()
+
+
+def _format_topic_recommendation_reason(topic: dict, priority_level: int) -> str:
+    """Formats clear, observable evidence counts without overly technical terms."""
+    unresolved = topic.get("unresolved_count", 0)
+    incorrect = topic.get("incorrect_count", 0)
+    partial = topic.get("partial_count", 0)
+    correct = topic.get("correct_count", 0)
+    total = topic.get("unique_questions_assessed", 0)
+    acc = int(round(topic.get("accuracy", 0.0)))
+    q_unit = "question" if unresolved == 1 else "questions"
+    need_verb = "needs" if unresolved == 1 else "need"
+
+    if priority_level == 1:  # Needs Attention
+        if unresolved > 0 and incorrect > 0 and partial > 0:
+            m_unit = "mistake" if incorrect == 1 else "mistakes"
+            rem_verb = "remains" if incorrect == 1 else "remain"
+            return f"{unresolved} questions need attention. {incorrect} {m_unit} {rem_verb} unresolved."
+        elif unresolved > 0 and incorrect > 0:
+            m_unit = "mistake" if unresolved == 1 else "mistakes"
+            rem_verb = "remains" if unresolved == 1 else "remain"
+            return f"{unresolved} {q_unit} {need_verb} attention. {unresolved} {m_unit} {rem_verb} unresolved."
+        elif unresolved > 0 and partial > 0:
+            return f"{unresolved} {q_unit} {need_verb} attention to reach full credit."
+        else:
+            return f"{correct} of {total} questions answered correctly ({acc}%). Review recommended."
+
+    elif priority_level == 2:  # Developing
+        if unresolved > 0:
+            m_unit = "mistake" if unresolved == 1 else "mistakes"
+            rem_verb = "remains" if unresolved == 1 else "remain"
+            return f"{unresolved} {q_unit} {need_verb} attention. {unresolved} {m_unit} {rem_verb} unresolved ({acc}% accuracy)."
+        else:
+            return f"{correct} of {total} questions answered correctly ({acc}%). Practice recommended to strengthen this topic."
+
+    elif priority_level == 3:  # Showing Progress with unresolved mistakes
+        m_unit = "mistake" if unresolved == 1 else "mistakes"
+        rem_verb = "remains" if unresolved == 1 else "remain"
+        return f"{correct} of {total} questions answered correctly ({acc}%), but {unresolved} {m_unit} {rem_verb} to review."
+
+    elif priority_level == 4:  # Assessment Needed (Not Assessed or Early Evidence)
+        if total == 0:
+            return "No questions assessed yet. Take a quiz or review to establish your starting level."
+        else:
+            return f"{correct} of {total} questions answered correctly. More practice needed to establish a progress level."
+
+    return "All course topics are consistently demonstrated! Test your long-term recall in Dungeon Quest."
+
+
+def get_topic_recommendation(user, course: Course, focus=None) -> Optional[dict]:
+    """Generates an evidence-backed topic recommendation for a Course (TE-3A).
+
+    Prioritizes topics strictly in order:
+    1. Needs Attention
+    2. Developing
+    3. Showing Progress with unresolved mistakes
+    4. Not Assessed / Early Evidence (more evidence needed)
+    5. Consistently Demonstrated topics are NEVER recommended for review.
+       When all topics are mastered, recommends Dungeon Quest for long-term retention.
+
+    Routes learners only to existing activities:
+    - Chapter Review
+    - Chapter Quiz
+    - Review Run
+    - Dungeon Quest
+
+    Returns None if the course has no topics.
+    """
+    if not course:
+        return None
+
+    evidence_map = get_course_topics_evidence_map(user, course)
+    if not evidence_map:
+        return None
+
+    topics = list(evidence_map.values())
+    if not topics:
+        return None
+
+    # Identify user's active focus target topics for tie-breaking
+    focus_topic_keys = set()
+    focus_topic_names = set()
+    if focus and getattr(focus, "topic_names", None):
+        from django.utils.text import slugify
+        for tn in focus.topic_names:
+            clean = str(tn).strip().lower()
+            if clean:
+                focus_topic_names.add(clean)
+                focus_topic_keys.add(slugify(clean))
+
+    def _is_focus(t: dict) -> bool:
+        return (t["topic_key"] in focus_topic_keys) or (t["topic_name"].lower() in focus_topic_names)
+
+    # 1. Bucket topics by priority
+    needs_attention = [t for t in topics if t["evidence_state"] == "Needs Attention"]
+    developing = [t for t in topics if t["evidence_state"] == "Developing"]
+    showing_progress_unresolved = [
+        t for t in topics if t["evidence_state"] == "Showing Progress" and t.get("unresolved_count", 0) > 0
+    ]
+    assessment_needed = [t for t in topics if t["evidence_state"] in ("Not Assessed", "Early Evidence")]
+
+    selected_topic = None
+    priority_level = None
+
+    if needs_attention:
+        priority_level = 1
+        # Sort: focus target first, highest unresolved count, lowest accuracy, lowest topic_id
+        needs_attention.sort(
+            key=lambda t: (
+                -1 if _is_focus(t) else 0,
+                -t.get("unresolved_count", 0),
+                t.get("accuracy", 0.0),
+                t.get("topic_id", 0),
+            )
+        )
+        selected_topic = needs_attention[0]
+
+    elif developing:
+        priority_level = 2
+        # Sort: focus target first, highest unresolved count, lowest accuracy, lowest topic_id
+        developing.sort(
+            key=lambda t: (
+                -1 if _is_focus(t) else 0,
+                -t.get("unresolved_count", 0),
+                t.get("accuracy", 0.0),
+                t.get("topic_id", 0),
+            )
+        )
+        selected_topic = developing[0]
+
+    elif showing_progress_unresolved:
+        priority_level = 3
+        # Sort: focus target first, highest unresolved count, lowest accuracy, lowest topic_id
+        showing_progress_unresolved.sort(
+            key=lambda t: (
+                -1 if _is_focus(t) else 0,
+                -t.get("unresolved_count", 0),
+                t.get("accuracy", 0.0),
+                t.get("topic_id", 0),
+            )
+        )
+        selected_topic = showing_progress_unresolved[0]
+
+    elif assessment_needed:
+        priority_level = 4
+        # Sort: focus target first, Early Evidence first (needs fewer questions to resolve), lowest topic_id
+        assessment_needed.sort(
+            key=lambda t: (
+                -1 if _is_focus(t) else 0,
+                0 if t["evidence_state"] == "Early Evidence" else 1,
+                t.get("topic_id", 0),
+            )
+        )
+        selected_topic = assessment_needed[0]
+
+    else:
+        # Priority 5: All topics are Consistently Demonstrated or cleanly Showing Progress!
+        # Consistently Demonstrated topics are NOT recommended for review.
+        return {
+            "has_recommendation": True,
+            "is_topic_aware": True,
+            "topic_id": None,
+            "topic_key": "",
+            "topic_name": "",
+            "evidence_state": "Consistently Demonstrated",
+            "priority_level": 5,
+            "badge_label": "MASTERY DEMONSTRATED",
+            "title": "Dungeon Expedition",
+            "reason": "All course topics are consistently demonstrated! Test your long-term recall in Dungeon Quest.",
+            "button_label": "Enter Dungeon Quest →",
+            "url": "/dungeon/",
+            "secondary_button_label": None,
+            "secondary_url": None,
+            "action_type": "dungeon_quest",
+            "chapter_id": None,
+            "chapter_title": "",
+            "unresolved_count": 0,
+            "accuracy": 100.0,
+        }
+
+    # Resolve target chapter and actions for selected_topic
+    chapter = _find_chapter_for_topic(course, selected_topic["topic_id"])
+    reason_text = _format_topic_recommendation_reason(selected_topic, priority_level)
+    unres_cnt = selected_topic.get("unresolved_count", 0)
+
+    if priority_level == 1:
+        badge_label = "RECOMMENDED FOR REVIEW"
+        action_type = "topic_review"
+    elif priority_level == 2:
+        badge_label = "RECOMMENDED FOR REVIEW" if unres_cnt > 0 else "PRACTICE RECOMMENDED"
+        action_type = "topic_practice"
+    elif priority_level == 3:
+        badge_label = "RECOMMENDED FOR REVIEW"
+        action_type = "topic_review"
+    else:  # priority_level == 4
+        badge_label = "ASSESSMENT RECOMMENDED"
+        action_type = "topic_assessment"
+
+    if chapter:
+        review_url = f"/chapters/{chapter.id}/review/"
+        quiz_url = f"/chapters/{chapter.id}/quiz/"
+        ch_title = chapter.title
+        ch_id = chapter.id
+    else:
+        review_url = f"/courses/{course.id}/"
+        quiz_url = f"/courses/{course.id}/"
+        ch_title = ""
+        ch_id = None
+
+    if priority_level in (1, 2, 3):
+        button_label = "Open Chapter Review →"
+        url = review_url
+        if unres_cnt > 0:
+            secondary_button_label = "Start Review Run →"
+            secondary_url = "/dungeon/"
+        else:
+            secondary_button_label = "Take Chapter Quiz →"
+            secondary_url = quiz_url
+    else:  # priority_level == 4 (Assessment needed)
+        button_label = "Open Chapter Review →"
+        url = review_url
+        secondary_button_label = "Take Chapter Quiz →"
+        secondary_url = quiz_url
+
+    return {
+        "has_recommendation": True,
+        "is_topic_aware": True,
+        "topic_id": selected_topic["topic_id"],
+        "topic_key": selected_topic["topic_key"],
+        "topic_name": selected_topic["topic_name"],
+        "evidence_state": selected_topic["evidence_state"],
+        "priority_level": priority_level,
+        "badge_label": badge_label,
+        "title": selected_topic["topic_name"],
+        "reason": reason_text,
+        "button_label": button_label,
+        "url": url,
+        "secondary_button_label": secondary_button_label,
+        "secondary_url": secondary_url,
+        "action_type": action_type,
+        "chapter_id": ch_id,
+        "chapter_title": ch_title,
+        "unresolved_count": unres_cnt,
+        "accuracy": selected_topic.get("accuracy", 0.0),
+    }
+
+
