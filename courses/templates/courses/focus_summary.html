@@ -214,11 +214,17 @@
         </div>
 
         <div class="metric-card">
-            <span class="metric-label">Latest Quiz Score</span>
+            <span class="metric-label">Latest Quiz Average</span>
             <div class="metric-value score-mastery">
                 {{ mastery.average_score|floatformat:0 }}%
             </div>
-            <span class="metric-foot">Average score across completed focus units</span>
+            <span class="metric-foot">
+                {% if mastery.attempted_targets > 0 %}
+                    Based on {{ mastery.attempted_targets }} of {{ mastery.total_targets }} focus {% if mastery.total_targets == 1 %}unit{% else %}units{% endif %} attempted
+                {% else %}
+                    No focus units attempted yet
+                {% endif %}
+            </span>
         </div>
 
         <div class="metric-card">
@@ -234,7 +240,7 @@
         </div>
 
         <div class="metric-card">
-            <span class="metric-label">Units Completed</span>
+            <span class="metric-label">Focus Goals Reached</span>
             <div class="metric-value" style="color: var(--ink);">
                 {{ mastery.mastered_chapters }} / {{ mastery.total_targets }}
             </div>
