@@ -5,7 +5,9 @@ course-generation quota lives in credits.py and is tested separately.
 """
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
+
+from courses.views import _client_ip
 
 
 class AuthThrottleTests(TestCase):
@@ -18,12 +20,12 @@ class AuthThrottleTests(TestCase):
     def tearDown(self):
         cache.clear()
 
-    def _failed_login(self):
+    def _failed_login(self, **kwargs):
         return self.client.post("/login/", {
             "action": "login",
             "username": "throttle_student",
             "password": "wrong-password",
-        })
+        }, **kwargs)
 
     def test_legitimate_single_login_is_unaffected(self):
         resp = self.client.post("/login/", {
@@ -95,3 +97,146 @@ class AuthThrottleTests(TestCase):
             # Expire the throttle window and confirm the caller is allowed back.
             cache.clear()
             self.assertEqual(self._failed_login().status_code, 200)
+
+    def test_spoofed_forwarded_for_cannot_bypass_login_throttle(self):
+        """Rotating X-Forwarded-For header values does not bypass login throttling."""
+        limit = 3
+        with override_settings(LOGIN_THROTTLE_MAX_ATTEMPTS=limit):
+            # Attempt login failures with different spoofed IPs in each request
+            for i in range(limit):
+                resp = self.client.post(
+                    "/login/",
+                    {
+                        "action": "login",
+                        "username": "throttle_student",
+                        "password": "wrong-password",
+                    },
+                    HTTP_X_FORWARDED_FOR=f"198.51.100.{i + 1}",
+                )
+                self.assertEqual(resp.status_code, 200)
+
+            # Next attempt from the same client is throttled, even with a new spoofed header
+            resp = self.client.post(
+                "/login/",
+                {
+                    "action": "login",
+                    "username": "throttle_student",
+                    "password": "wrong-password",
+                },
+                HTTP_X_FORWARDED_FOR="198.51.100.99",
+            )
+            self.assertEqual(resp.status_code, 429)
+
+    def test_rotating_forwarded_for_shares_same_throttle_counter(self):
+        """Confirm attempts with varying X-Forwarded-For accumulate on the same key."""
+        limit = 2
+        with override_settings(LOGIN_THROTTLE_MAX_ATTEMPTS=limit):
+            self.client.post(
+                "/login/",
+                {"action": "login", "username": "throttle_student", "password": "wrong-password"},
+                HTTP_X_FORWARDED_FOR="1.1.1.1",
+            )
+            self.client.post(
+                "/login/",
+                {"action": "login", "username": "throttle_student", "password": "wrong-password"},
+                HTTP_X_FORWARDED_FOR="2.2.2.2",
+            )
+            # Third attempt should be blocked
+            resp = self.client.post(
+                "/login/",
+                {"action": "login", "username": "throttle_student", "password": "wrong-password"},
+                HTTP_X_FORWARDED_FOR="3.3.3.3",
+            )
+            self.assertEqual(resp.status_code, 429)
+
+    def test_spoofed_forwarded_for_cannot_bypass_signup_throttle(self):
+        """Rotating X-Forwarded-For header does not bypass signup throttling."""
+        limit = 2
+        with override_settings(LOGIN_THROTTLE_MAX_ATTEMPTS=limit):
+            for i in range(limit):
+                resp = self.client.post(
+                    "/login/",
+                    {
+                        "action": "signup",
+                        "username": "student_invalid",
+                        "password1": "pass1",
+                        "password2": "mismatch2",
+                    },
+                    HTTP_X_FORWARDED_FOR=f"10.200.0.{i + 1}",
+                )
+                self.assertEqual(resp.status_code, 200)
+
+            blocked_resp = self.client.post(
+                "/login/",
+                {
+                    "action": "signup",
+                    "username": "student_invalid",
+                    "password1": "pass1",
+                    "password2": "mismatch2",
+                },
+                HTTP_X_FORWARDED_FOR="10.200.0.99",
+            )
+            self.assertEqual(blocked_resp.status_code, 429)
+
+    def test_different_remote_addrs_independently_throttled(self):
+        """Different physical REMOTE_ADDR clients do not exhaust each other's limit."""
+        limit = 2
+        with override_settings(LOGIN_THROTTLE_MAX_ATTEMPTS=limit):
+            # Exhaust client A at 192.0.2.1
+            for _ in range(limit):
+                self.client.post(
+                    "/login/",
+                    {"action": "login", "username": "throttle_student", "password": "bad"},
+                    REMOTE_ADDR="192.0.2.1",
+                )
+            self.assertEqual(
+                self.client.post(
+                    "/login/",
+                    {"action": "login", "username": "throttle_student", "password": "bad"},
+                    REMOTE_ADDR="192.0.2.1",
+                ).status_code,
+                429,
+            )
+
+            # Client B at 192.0.2.2 is unaffected
+            client_b_resp = self.client.post(
+                "/login/",
+                {"action": "login", "username": "throttle_student", "password": "bad"},
+                REMOTE_ADDR="192.0.2.2",
+            )
+            self.assertEqual(client_b_resp.status_code, 200)
+
+    def test_ipv6_remote_addr_handled_consistently(self):
+        """IPv6 REMOTE_ADDR is throttled properly without error."""
+        limit = 2
+        with override_settings(LOGIN_THROTTLE_MAX_ATTEMPTS=limit):
+            for _ in range(limit):
+                self.client.post(
+                    "/login/",
+                    {"action": "login", "username": "throttle_student", "password": "bad"},
+                    REMOTE_ADDR="2001:db8::1",
+                )
+            resp = self.client.post(
+                "/login/",
+                {"action": "login", "username": "throttle_student", "password": "bad"},
+                REMOTE_ADDR="2001:db8::1",
+            )
+            self.assertEqual(resp.status_code, 429)
+
+    def test_forwarded_for_honored_only_when_proxy_trusted_and_addr_matches(self):
+        """X-Forwarded-For is respected ONLY when TRUST_PROXY_HEADERS=True AND REMOTE_ADDR is in TRUSTED_PROXY_IPS."""
+        rf = RequestFactory()
+
+        # Case 1: Untrusted by default (TRUST_PROXY_HEADERS False)
+        req1 = rf.get("/", HTTP_X_FORWARDED_FOR="203.0.113.195", REMOTE_ADDR="127.0.0.1")
+        self.assertEqual(_client_ip(req1), "127.0.0.1")
+
+        # Case 2: TRUST_PROXY_HEADERS True but REMOTE_ADDR is NOT in TRUSTED_PROXY_IPS
+        with override_settings(TRUST_PROXY_HEADERS=True, TRUSTED_PROXY_IPS=["10.0.0.1"]):
+            req2 = rf.get("/", HTTP_X_FORWARDED_FOR="203.0.113.195", REMOTE_ADDR="192.168.1.50")
+            self.assertEqual(_client_ip(req2), "192.168.1.50")
+
+        # Case 3: TRUST_PROXY_HEADERS True AND REMOTE_ADDR matches a trusted proxy
+        with override_settings(TRUST_PROXY_HEADERS=True, TRUSTED_PROXY_IPS=["10.0.0.1"]):
+            req3 = rf.get("/", HTTP_X_FORWARDED_FOR="203.0.113.195, 10.0.0.1", REMOTE_ADDR="10.0.0.1")
+            self.assertEqual(_client_ip(req3), "203.0.113.195")

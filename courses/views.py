@@ -234,11 +234,27 @@ def calculate_course_progress(user, course):
 # --------------------------------------------------
 
 def _client_ip(request):
-    """Best-effort client IP, honouring one layer of reverse proxy."""
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR", "unknown")
+    """Authoritative client IP for rate-limiting.
+
+    Defaults strictly to REMOTE_ADDR. Forwarded headers (e.g. HTTP_X_FORWARDED_FOR)
+    are untrusted and ignored unless TRUST_PROXY_HEADERS is explicitly True AND
+    REMOTE_ADDR matches a configured trusted proxy in TRUSTED_PROXY_IPS.
+    """
+    remote_addr = request.META.get("REMOTE_ADDR", "").strip() or "unknown"
+
+    trust_proxy = getattr(settings, "TRUST_PROXY_HEADERS", False)
+    trusted_proxies = getattr(settings, "TRUSTED_PROXY_IPS", None) or []
+    if isinstance(trusted_proxies, str):
+        trusted_proxies = [ip.strip() for ip in trusted_proxies.split(",") if ip.strip()]
+
+    if trust_proxy and remote_addr in trusted_proxies:
+        forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
+        if forwarded:
+            client = forwarded.split(",")[0].strip()
+            if client:
+                return client
+
+    return remote_addr
 
 
 def _throttle_key(scope, request):
