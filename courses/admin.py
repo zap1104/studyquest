@@ -3,6 +3,7 @@ from .models import (
     Chapter,
     Choice,
     Course,
+    CourseGenerationJob,
     CourseTopic,
     Question,
     QuestionTopic,
@@ -76,3 +77,17 @@ class StartingKnowledgeCheckAdmin(admin.ModelAdmin):
 
 admin.site.register(Chapter)
 admin.site.register(Quiz)
+
+
+@admin.register(CourseGenerationJob)
+class CourseGenerationJobAdmin(admin.ModelAdmin):
+    """Inspection surface for stuck or failed generation jobs."""
+    list_display = (
+        'attempt_id', 'course', 'status', 'stage',
+        'retry_count', 'queued_at', 'completed_at',
+    )
+    list_filter = ('status', 'stage')
+    search_fields = ('attempt_id', 'course__title')
+    readonly_fields = ('attempt_id', 'queued_at', 'source_bundle', 'generation_profile')
+    # source_bundle is deliberately read-only: it holds extracted course text,
+    # not something an admin should edit by hand.

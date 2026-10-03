@@ -1,0 +1,90 @@
+{% extends 'courses/base.html' %}
+{% load static %}
+
+{% block title %}StudyQuest Camp Sandbox — StudyQuest{% endblock %}
+{% block page_class %}forge-page forge-sandbox-page{% endblock %}
+
+{% block content %}
+<div class="page forge-page-wrap forge-sandbox-wrap">
+
+    <header class="page-header forge-sandbox-header">
+        <div>
+            <div class="forge-sandbox-badge-row">
+                <span class="forge-badge">COURSE FORGE</span>
+                <span class="forge-sandbox-pill">🧪 DEVELOPER SANDBOX</span>
+            </div>
+            <h1>StudyQuest Camp Sandbox</h1>
+            <p class="subtitle">Internal test environment for minigame mechanics, upgrades, touch controls, and completion states.</p>
+        </div>
+        <div class="forge-sandbox-nav-actions">
+            <a href="{% url 'courses:dashboard' %}" class="btn btn-ghost btn-sm">&larr; Return to Dashboard</a>
+        </div>
+    </header>
+
+    {# Persistent isolation notice #}
+    <div class="forge-sandbox-notice" role="note">
+        <span class="notice-icon" aria-hidden="true">🔒</span>
+        <div>
+            <strong>Isolated Sandbox Environment:</strong>
+            <span>Resources, upgrades, and simulation actions are strictly local to this session (<code>studyquest:forge:sandbox</code>) and never modify academic courses, credits, XP, or background generation workers.</span>
+        </div>
+    </div>
+
+    {# Slot where simulated course completion ready card appears #}
+    <div data-sandbox-ready-slot class="forge-sandbox-ready-slot"></div>
+
+    {# Main minigame mount slot with sandbox course-id #}
+    <section class="forge-game-slot" data-camp-root data-course-id="sandbox" aria-label="StudyQuest Camp Developer Sandbox"></section>
+
+    {# Developer Controls Panel #}
+    <section class="card forge-sandbox-panel" data-sandbox-controls aria-labelledby="sandbox-controls-title">
+        <div class="forge-sandbox-panel-head">
+            <h2 id="sandbox-controls-title">🛠️ Developer Test Controls</h2>
+            <span class="forge-sandbox-mode-indicator">Mode: <strong>Active Sandbox</strong></span>
+        </div>
+
+        <div class="forge-sandbox-buttons-grid">
+            <button type="button" class="btn btn-secondary btn-sm" data-sandbox-add-wood>
+                🪵 +25 Wood
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" data-sandbox-add-crystals>
+                💎 +10 Crystals
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" data-sandbox-simulate-ready>
+                🏆 Simulate Course Completion
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" data-sandbox-pause-resume>
+                ⏸️ Pause Camp
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" data-sandbox-toggle-mute>
+                🔊 Toggle Mute
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" data-sandbox-show-summary>
+                📊 Inspect Summary
+            </button>
+            <button type="button" class="btn btn-ghost btn-sm btn-danger-soft" data-sandbox-reset>
+                🔄 Reset Sandbox State
+            </button>
+            <a href="{% url 'courses:dashboard' %}" class="btn btn-ghost btn-sm">
+                Dashboard &rarr;
+            </a>
+        </div>
+
+        <pre data-sandbox-summary-output class="forge-sandbox-summary-output" hidden aria-live="polite"></pre>
+    </section>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'courses/js/forge/forge_state.js' %}"></script>
+<script src="{% static 'courses/js/forge/forge_input.js' %}"></script>
+<script src="{% static 'courses/js/forge/forge_camera.js' %}"></script>
+<script src="{% static 'courses/js/forge/forge_spatial.js' %}"></script>
+<script src="{% static 'courses/js/forge/forge_entities.js' %}"></script>
+<script src="{% static 'courses/js/forge/forge_plots.js' %}"></script>
+<script src="{% static 'courses/js/forge/forge_renderer.js' %}"></script>
+<script src="{% static 'courses/js/forge/forge_camp.js' %}"></script>
+<script src="{% static 'courses/js/forge/forge_sandbox.js' %}"></script>
+{% endblock %}
+

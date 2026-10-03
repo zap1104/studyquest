@@ -1,0 +1,162 @@
+{% extends 'courses/base.html' %}
+{% load static %}
+
+{% block title %}Preparing {{ course.title }} — StudyQuest{% endblock %}
+{% block body_class %}forge-body{% endblock %}
+{% block page_class %}forge-page{% endblock %}
+
+{% block content %}
+<div class="forge-page-wrap">
+
+    {# Two-Column Viewport-Aware Workspace (75% Game / 25% Status) #}
+    <div class="course-forge-workspace">
+
+        {# Left Column: Course Generation Status Panel #}
+        <section class="card forge-status-panel"
+                 data-forge-status
+                 data-course-id="{{ course.id }}"
+                 data-status-url="{{ status_url }}"
+                 data-ready-url="{{ ready_url }}"
+                 data-retry-url="{{ retry_url }}"
+                 data-initial-status="{{ course.status }}"
+                 aria-label="Course generation status">
+
+            <div class="forge-status-top-content">
+                {# Header Block inside Left Status Panel #}
+                <div class="forge-panel-section forge-course-meta">
+                    <div class="forge-badge forge-badge-generating">
+                        <span class="forge-badge-dot" aria-hidden="true"></span>
+                        <span>COURSE FORGE</span>
+                    </div>
+                    <div class="forge-prep-block">
+                        <span class="forge-prep-label">PREPARING COURSE</span>
+                        <h1 class="forge-course-title">{{ course.title }}</h1>
+                    </div>
+                </div>
+
+                <div class="forge-panel-section forge-status-overview">
+                    <div class="forge-status-main">
+                        <span class="forge-status-dot" data-forge-dot aria-hidden="true"></span>
+                        <div class="forge-status-titles">
+                            <strong class="forge-status-heading" data-forge-status-label>
+                                {% if course.status == 'failed' %}
+                                    Generation could not be completed
+                                {% else %}
+                                    Creating your course
+                                {% endif %}
+                            </strong>
+                            <p class="forge-status-message" data-forge-message role="status" aria-live="polite">
+                                {% if course.status == 'failed' %}
+                                    {{ course.generation_error|default:"StudyQuest could not finish this course. You can try again." }}
+                                {% elif job %}
+                                    {{ job.learner_stage_message }}
+                                {% else %}
+                                    Building lessons and learning activities...
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {# Collapsible Progress & Details (Expanded on Desktop, Compact Strip on Mobile) #}
+                <details class="forge-mobile-details" open>
+                    <summary class="forge-details-summary">
+                        <span>Generation details &amp; activity</span>
+                        <span class="forge-summary-arrow" aria-hidden="true">▾</span>
+                    </summary>
+                    <div class="forge-details-inner">
+                        {# Honest Activity Progress Tracker #}
+                        <div class="forge-panel-section forge-timeline-section" data-forge-timeline>
+                            <div class="forge-section-label">ACTIVITY</div>
+                            <ul class="forge-timeline-list" role="list">
+                                <li class="forge-timeline-item is-done" data-stage="received" title="Syllabus &amp; source material validated">
+                                    <span class="timeline-marker" aria-hidden="true">✓</span>
+                                    <div class="timeline-text">
+                                        <strong>Request received</strong>
+                                    </div>
+                                </li>
+                                <li class="forge-timeline-item is-active" data-stage="building" title="Structuring chapters &amp; interactive milestones">
+                                    <span class="timeline-marker timeline-pulse" aria-hidden="true">●</span>
+                                    <div class="timeline-text">
+                                        <strong>Creating course content</strong>
+                                    </div>
+                                </li>
+                                <li class="forge-timeline-item is-pending" data-stage="activities" title="Synthesizing quizzes, checks &amp; summaries">
+                                    <span class="timeline-marker" aria-hidden="true">○</span>
+                                    <div class="timeline-text">
+                                        <strong>Organizing activities</strong>
+                                    </div>
+                                </li>
+                                <li class="forge-timeline-item is-pending" data-stage="finalizing" title="Saving journey to your study dashboard">
+                                    <span class="timeline-marker" aria-hidden="true">○</span>
+                                    <div class="timeline-text">
+                                        <strong>Finalizing course</strong>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {# Reassurance Box #}
+                        <div class="forge-panel-section forge-reassurance-box">
+                            <span class="reassurance-icon" aria-hidden="true">💡</span>
+                            <div class="reassurance-body">
+                                <strong>Safe to leave:</strong>
+                                <p>You can leave this page. Course generation continues in the background.</p>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            {# Actions Footer #}
+            <div class="forge-panel-footer">
+                {% if course.status == 'failed' %}
+                    <div class="forge-actions">
+                        <form method="post" action="{{ retry_url }}" style="margin:0; width: 100%;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Try Again</button>
+                        </form>
+                        <a href="{{ dashboard_url|default:'/' }}" class="btn btn-ghost btn-sm" style="width: 100%; text-align: center;">&larr; Back to Dashboard</a>
+                    </div>
+                {% else %}
+                    {# No-JS fallback: manual refresh is the honest alternative to polling #}
+                    <noscript>
+                        <p class="forge-note">
+                            Automatic updates need JavaScript. Refresh this page to check progress.
+                        </p>
+                    </noscript>
+
+                    <div class="forge-actions forge-processing-actions" data-forge-processing-actions>
+                        <a href="{% url 'courses:dashboard' %}" class="btn btn-ghost btn-sm forge-back-link">
+                            &larr; Return to Dashboard
+                        </a>
+                        <button type="button" class="forge-refresh-quiet" data-forge-refresh title="Check progress manually" hidden>
+                            Refresh status
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+
+        </section>
+
+        {# Right Column: StudyQuest Camp Minigame Workspace #}
+        <section class="forge-game-panel" aria-label="StudyQuest Camp">
+            <div class="forge-game-slot" data-camp-root data-course-id="{{ course.id }}" hidden aria-label="StudyQuest Camp minigame"></div>
+        </section>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'courses/js/forge/forge_state.js' %}"></script>
+<script src="{% static 'courses/js/forge/forge_input.js' %}"></script>
+<script src="{% static 'courses/js/forge/forge_camera.js' %}"></script>
+<script src="{% static 'courses/js/forge/forge_spatial.js' %}"></script>
+<script src="{% static 'courses/js/forge/forge_entities.js' %}"></script>
+<script src="{% static 'courses/js/forge/forge_plots.js' %}"></script>
+<script src="{% static 'courses/js/forge/forge_renderer.js' %}"></script>
+<script src="{% static 'courses/js/forge/forge_camp.js' %}"></script>
+<script src="{% static 'courses/js/course_forge.js' %}"></script>
+{% endblock %}
