@@ -4181,3 +4181,1072 @@ body.show-result-mascot .result-presentation {
         transform: translateX(-50%);
     }
 }
+
+/* =========================================================
+   COURSE FORGE (async generation status page)
+    ========================================================= */
+/* Suppress footer on Course Forge generation view to guarantee zero page scrolling */
+body.forge-body {
+    overflow: hidden;
+}
+body.forge-body .footer {
+    display: none !important;
+}
+
+/* Override the generic 1000px container and excessive padding on Course Forge waiting page */
+main.page.forge-page {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.forge-page-wrap {
+    width: 100%;
+    max-width: 1720px;
+    margin: 0 auto;
+    min-height: calc(100dvh - var(--topbar-height, 70px));
+    display: flex;
+    flex-direction: column;
+    padding: 16px clamp(24px, 2.5vw, 40px);
+    box-sizing: border-box;
+}
+
+.forge-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 10px;
+    color: var(--primary);
+    background: rgba(108, 92, 231, 0.15);
+    border: 1px solid rgba(108, 92, 231, 0.28);
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    width: fit-content;
+}
+
+.forge-badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--primary);
+    animation: forgePulse 1.8s ease-out infinite;
+}
+
+/* Viewport-Aware Two-Column Workspace (25% Status / 75% Camp Game) */
+.course-forge-workspace {
+    display: grid;
+    grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+    gap: 22px;
+    align-items: start;
+    width: 100%;
+    min-height: 0;
+}
+
+/* Left-Side Generation Status Panel (Compact 25% Rail) */
+.forge-status-panel {
+    background: var(--surface, #1e293b);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg, 14px);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    min-height: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.forge-status-top-content {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Header inside Status Panel */
+.forge-course-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.forge-prep-block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.forge-prep-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-transform: uppercase;
+}
+
+.forge-course-title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.forge-section-label {
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.forge-status-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.forge-status-dot {
+    flex-shrink: 0;
+    width: 12px;
+    height: 12px;
+    margin-top: 4px;
+    border-radius: 50%;
+    background: var(--primary);
+    box-shadow: 0 0 0 0 rgba(108, 92, 231, 0.5);
+    animation: forgePulse 1.8s ease-out infinite;
+}
+
+.forge-status-dot.is-ready { background: var(--success); animation: none; }
+.forge-status-dot.is-failed { background: var(--danger); animation: none; }
+
+@keyframes forgePulse {
+    0%   { box-shadow: 0 0 0 0 rgba(108, 92, 231, 0.45); }
+    70%  { box-shadow: 0 0 0 10px rgba(108, 92, 231, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(108, 92, 231, 0); }
+}
+
+.forge-status-heading {
+    display: block;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--ink);
+    line-height: 1.3;
+}
+
+.forge-status-message {
+    margin: 3px 0 0;
+    font-size: 0.82rem;
+    color: var(--muted);
+    line-height: 1.4;
+}
+
+/* Collapsible Details Drawer */
+.forge-mobile-details {
+    display: block;
+    margin: 0;
+}
+
+.forge-details-summary {
+    display: none; /* Hidden on desktop */
+}
+
+.forge-details-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Honest Activity Progress Timeline */
+.forge-timeline-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+}
+
+.forge-timeline-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.82rem;
+    padding: 2px 0;
+}
+
+.timeline-marker {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 800;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.forge-timeline-item.is-done .timeline-marker {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.forge-timeline-item.is-active .timeline-marker {
+    background: rgba(108, 92, 231, 0.2);
+    color: var(--primary);
+    border: 1px solid var(--primary);
+}
+
+.timeline-pulse {
+    animation: forgePulse 1.8s infinite;
+}
+
+.forge-timeline-item.is-pending .timeline-marker {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--muted);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.timeline-text strong {
+    display: block;
+    color: var(--ink);
+    font-size: 0.82rem;
+    line-height: 1.25;
+}
+
+/* Reassurance Card */
+.forge-reassurance-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-radius: 10px;
+    padding: 8px 12px;
+}
+
+.reassurance-icon {
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.reassurance-body strong {
+    display: inline;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #38bdf8;
+    margin-right: 4px;
+}
+
+.reassurance-body p {
+    display: inline;
+    margin: 0;
+    font-size: 0.76rem;
+    color: var(--muted);
+    line-height: 1.35;
+}
+
+/* Panel Actions Footer */
+.forge-panel-footer {
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+.forge-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.forge-processing-actions {
+    justify-content: space-between;
+}
+
+.forge-back-link {
+    font-size: 0.78rem;
+    padding: 4px 10px;
+    color: var(--muted);
+}
+
+.forge-back-link:hover {
+    color: var(--ink);
+}
+
+.forge-refresh-quiet {
+    background: transparent;
+    border: none;
+    font-size: 0.75rem;
+    color: var(--muted);
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 4px;
+    border-radius: 4px;
+    transition: color 0.15s ease;
+}
+
+.forge-refresh-quiet:hover {
+    color: var(--ink);
+}
+
+.forge-note {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+/* Right-Side Game Panel */
+.forge-game-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.forge-game-slot {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin: 0;
+}
+
+/* =========================================================
+   STUDYQUEST CAMP MINIGAME
+   ========================================================= */
+.forge-camp-container {
+    background: var(--card-bg, #1a2234);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg, 14px);
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.forge-camp-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 14px;
+    background: rgba(0, 0, 0, 0.32);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    min-height: 44px;
+}
+
+.forge-camp-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.forge-camp-badge {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #38bdf8;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+}
+
+.forge-camp-status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 8px;
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #4ade80;
+}
+
+.forge-chip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+    animation: forgePulse 1.8s infinite;
+}
+
+.forge-camp-controls-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.forge-camp-controls-row .btn-sm {
+    padding: 3px 10px;
+    font-size: 0.74rem;
+    min-height: 30px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.forge-camp-canvas-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #08110b;
+    overflow: hidden;
+    display: block;
+}
+
+.forge-camp-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    outline: none;
+}
+
+/* Virtual Touch Overlay (Touchscreens & Mobile) */
+.forge-touch-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 16px 20px;
+    z-index: 10;
+}
+
+.forge-joystick-zone {
+    pointer-events: auto;
+    touch-action: none;
+    width: 96px;
+    height: 96px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.forge-joystick-base {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.forge-joystick-knob {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    position: absolute;
+    pointer-events: none;
+}
+
+.forge-touch-actions {
+    pointer-events: auto;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.forge-touch-btn {
+    border: none;
+    border-radius: 999px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+    transition: transform 0.08s ease;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.forge-touch-btn:active {
+    transform: scale(0.92);
+}
+
+.forge-touch-action {
+    padding: 12px 18px;
+    font-size: 0.92rem;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #0f172a;
+    letter-spacing: 0.04em;
+}
+
+.forge-touch-upgrade {
+    width: 46px;
+    height: 46px;
+    font-size: 1.15rem;
+    background: rgba(30, 41, 59, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Hide touch joystick on pure desktop mouse/pointer devices */
+@media (hover: hover) and (pointer: fine) {
+    .forge-touch-overlay {
+        display: none;
+    }
+}
+
+/* Upgrade Drawer Modal */
+.forge-upgrade-modal {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+    padding: 16px;
+}
+
+.forge-upgrade-modal[hidden] {
+    display: none !important;
+}
+
+.forge-upgrade-card {
+    width: 100%;
+    max-width: 460px;
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+}
+
+.forge-upgrade-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.forge-upgrade-head h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    color: #f8fafc;
+}
+
+.forge-upgrade-close {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 1.4rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px 6px;
+}
+
+.forge-upgrade-close:hover {
+    color: #ffffff;
+}
+
+.forge-upgrade-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 240px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+    padding-right: 4px;
+}
+
+.forge-upgrade-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.forge-upgrade-item.is-max {
+    opacity: 0.7;
+}
+
+.forge-upgrade-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9rem;
+    color: #f8fafc;
+}
+
+.forge-upg-tier {
+    font-size: 0.76rem;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.12);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 700;
+}
+
+.forge-upgrade-desc {
+    margin: 3px 0 0;
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.35;
+}
+
+.forge-upgrade-action {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.forge-upgrade-cost {
+    font-size: 0.76rem;
+    display: flex;
+    gap: 6px;
+}
+
+.forge-upgrade-cost .cost-ok {
+    color: #4ade80;
+}
+
+.forge-upgrade-cost .cost-need {
+    color: #ef4444;
+}
+
+.forge-upgrade-cost .badge-max {
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+.forge-btn-buy {
+    font-size: 0.78rem;
+    padding: 4px 12px;
+}
+
+.forge-upgrade-note {
+    margin: 0;
+    font-size: 0.74rem;
+    color: var(--muted);
+    text-align: center;
+}
+
+/* Calm Mode Resting Card */
+.forge-calm-card {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f1a14;
+    text-align: center;
+    padding: 20px;
+    z-index: 20;
+}
+
+.forge-calm-card[hidden] {
+    display: none !important;
+}
+
+.forge-calm-content {
+    max-width: 380px;
+}
+
+.forge-calm-icon {
+    font-size: 2.5rem;
+    margin: 0 0 8px;
+}
+
+.forge-calm-content h3 {
+    margin: 0 0 6px;
+    color: #f8fafc;
+    font-size: 1.15rem;
+}
+
+.forge-calm-content p {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin: 0 0 14px;
+    line-height: 1.45;
+}
+
+/* Bottom Hint Bar */
+.forge-camp-hintbar {
+    padding: 8px 18px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    background: rgba(0, 0, 0, 0.24);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    min-height: 38px;
+    box-sizing: border-box;
+}
+
+.forge-camp-hintbar strong {
+    color: #e2e8f0;
+}
+
+.forge-hint-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.forge-hint-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+/* Ready Camp Summary Badge */
+.forge-camp-summary-card {
+    margin: 4px 0 10px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.22);
+}
+
+.forge-camp-summary-card .summary-badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #38bdf8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+}
+
+.forge-camp-summary-card .summary-stats {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--ink);
+    line-height: 1.45;
+}
+
+.forge-camp-summary-card strong {
+    color: #f59e0b;
+}
+
+@media (max-width: 1199px) and (min-width: 900px) {
+    .course-forge-workspace {
+        grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+        gap: 16px;
+    }
+    .forge-status-panel {
+        padding: 14px 16px;
+    }
+}
+
+@media (max-width: 899px) {
+    body.forge-body {
+        overflow-y: auto !important;
+    }
+    main.page.forge-page {
+        overflow: visible !important;
+    }
+    .forge-page-wrap {
+        height: auto;
+        min-height: 100dvh;
+        overflow: visible;
+        padding: 12px 16px 28px;
+    }
+    .course-forge-workspace {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    .forge-status-panel {
+        max-height: none;
+        overflow: visible;
+        width: 100%;
+        padding: 14px 16px;
+        gap: 12px;
+    }
+    .forge-details-summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 7px 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 0.74rem;
+        font-weight: 700;
+        color: var(--muted);
+        cursor: pointer;
+        user-select: none;
+        transition: color 0.15s ease, background 0.15s ease;
+    }
+    .forge-details-summary:hover {
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.08);
+    }
+    .forge-mobile-details[open] .forge-summary-arrow {
+        transform: rotate(180deg);
+    }
+    .forge-summary-arrow {
+        display: inline-block;
+        transition: transform 0.2s ease;
+    }
+    .forge-details-inner {
+        padding-top: 10px;
+        gap: 12px;
+    }
+    .forge-game-panel {
+        min-height: 0;
+        width: 100%;
+    }
+    .forge-camp-container {
+        max-width: 100%;
+        width: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .forge-actions {
+        flex-direction: column;
+    }
+    .forge-actions .btn,
+    .forge-actions form {
+        width: 100%;
+    }
+    .forge-actions form .btn {
+        width: 100%;
+    }
+    .forge-camp-status-chip {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .forge-status-dot { animation: none; }
+    .sandbox-toast { transition: none !important; }
+}
+
+/* =========================================================
+   STUDYQUEST CAMP DEVELOPER SANDBOX & UNLOCK TOAST
+   ========================================================= */
+.sandbox-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: rgba(15, 23, 42, 0.94);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.45);
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-weight: 600;
+    font-size: 0.88rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 15px rgba(56, 189, 248, 0.2);
+    backdrop-filter: blur(8px);
+    transform: translateY(16px);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+    z-index: 10000;
+}
+
+.sandbox-toast.is-visible {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.forge-sandbox-wrap {
+    max-width: 980px;
+    margin: 0 auto;
+    padding-bottom: 40px;
+}
+
+.forge-sandbox-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.forge-sandbox-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.forge-sandbox-pill {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.forge-sandbox-notice {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    background: rgba(30, 41, 59, 0.65);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-left: 4px solid #f59e0b;
+    border-radius: 8px;
+    font-size: 0.84rem;
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.forge-sandbox-notice .notice-icon {
+    font-size: 1.2rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.forge-sandbox-notice strong {
+    color: #f1f5f9;
+    display: inline-block;
+    margin-right: 4px;
+}
+
+.forge-sandbox-notice code {
+    background: rgba(0, 0, 0, 0.35);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #38bdf8;
+}
+
+.forge-sandbox-ready-slot {
+    margin-bottom: 20px;
+}
+
+.forge-mock-ready-card {
+    border: 1px solid rgba(56, 189, 248, 0.45);
+    box-shadow: 0 0 24px rgba(56, 189, 248, 0.15);
+}
+
+.forge-sandbox-panel {
+    margin-top: 24px;
+    padding: 20px;
+    background: var(--card-bg, #1a2234);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg, 14px);
+}
+
+.forge-sandbox-panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.forge-sandbox-panel-head h2 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 0;
+    color: #f8fafc;
+}
+
+.forge-sandbox-mode-indicator {
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.forge-sandbox-mode-indicator strong {
+    color: #10b981;
+}
+
+.forge-sandbox-buttons-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.forge-sandbox-buttons-grid .btn {
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 6px;
+}
+
+.btn-danger-soft {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.btn-danger-soft:hover {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: #ef4444;
+    color: #fca5a5;
+}
+
+.forge-sandbox-summary-output {
+    margin-top: 16px;
+    padding: 12px;
+    background: #0b1120;
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.78rem;
+    color: #38bdf8;
+    max-height: 240px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+@media (max-width: 640px) {
+    .forge-sandbox-buttons-grid .btn {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
+}
