@@ -232,6 +232,21 @@ or:
 ./run.sh
 ```
 
+### Course generation needs a second process
+
+Course generation is **asynchronous**. The web server queues the work; a
+separate worker performs it. Start both, in two terminals:
+
+```powershell
+.\run.bat          # web application
+.\run_worker.bat   # course generation worker
+```
+
+Without the worker, submitted courses stay queued and Course Forge will say
+so rather than spinning forever. See
+[docs/COURSE_FORGE.md](docs/COURSE_FORGE.md) for worker startup, failure
+inspection, retry, and the production-queue migration path.
+
 ### Manual setup
 
 Create and activate a virtual environment:
