@@ -9,9 +9,11 @@ import pdfplumber
 from dotenv import load_dotenv, find_dotenv
 from pptx import Presentation
 from django.conf import settings
+from django.db import transaction
 from google import genai
 from courses.schemas import GeneratedJourney, get_assessment_mix
 from .plan_policies import get_plan_policy
+from .topic_services import create_course_topic, link_question_to_topic
 
 from google.genai import types
 
@@ -747,6 +749,75 @@ def generate_course_journey(
     return validated
 
 
+def generate_course_journey_from_bundle(
+    course_title,
+    source_bundle,
+    *,
+    study_goal="balanced_review",
+    assessment_formats=None,
+    study_focus="",
+):
+    """Run the AI generation step from an already-extracted source bundle.
+
+    This is the background worker's entry point. It is the bundle-taking twin of
+    ``generate_course_journey``: extraction already happened in the request
+    (because UploadedFile handles do not survive it), so the worker starts from
+    the persisted ``bundled_text`` instead.
+
+    Holds no database transaction -- the AI call can take minutes and must never
+    pin a write lock.
+    """
+    bundle = source_bundle or {}
+    extracted_text = bundle.get("bundled_text", "") or ""
+    filenames = bundle.get("filenames") or None
+
+    if len(extracted_text) <= 40:
+        if getattr(settings, "USE_MOCK_COURSE_GENERATION", False):
+            return _generate_mock_journey(
+                course_title, assessment_formats=assessment_formats,
+                source_filenames=filenames,
+            )
+        raise CourseGenerationError(
+            "Extracted study material does not contain sufficient readable text to build a course."
+        )
+
+    prompt = build_curriculum_prompt(
+        course_title=course_title,
+        extracted_text=extracted_text,
+        study_goal=study_goal,
+        assessment_formats=assessment_formats,
+        study_focus=study_focus,
+        source_filenames=filenames,
+    )
+
+    response = call_gemini_with_retry(prompt)
+    if response is None:
+        return _generate_mock_journey(
+            course_title, assessment_formats=assessment_formats,
+            source_filenames=filenames,
+        )
+
+    try:
+        validated = _validate_response(response.text, get_assessment_mix(assessment_formats))
+    except Exception as validation_err:
+        logger.error(f"[AI Schema Validation Failed]: {validation_err}")
+        if getattr(settings, "USE_MOCK_COURSE_GENERATION", False):
+            return _generate_mock_journey(
+                course_title, assessment_formats=assessment_formats,
+                source_filenames=filenames,
+            )
+        raise CourseGenerationError(
+            "The AI generated an invalid course structure. "
+            "Your course was not created, and no generation credit was consumed. Please try again."
+        ) from validation_err
+
+    if bundle:
+        validated["course"]["source_bundle_count"] = len(filenames or [])
+        validated["course"]["source_filenames"] = filenames or []
+
+    return validated
+
+
 def validate_question_mix(journey, required_mix):
     for chapter in journey.chapters:
         actual = {question_type: 0 for question_type in required_mix}
@@ -1216,3 +1287,127 @@ def _build_mock_questions(assessment_mix):
     for order, question in enumerate(questions, start=1):
         question["order"] = order
     return questions
+
+# --------------------------------------------------
+# SHARED JOURNEY PERSISTENCE (request path AND worker)
+# --------------------------------------------------
+# Moved verbatim from views.py so the background worker does not have to import
+# the view layer. The topic pipeline (CourseTopic registration and QuestionTopic
+# linking) is preserved exactly: a course generated in the background must be
+# topic-grounded identically to one generated synchronously.
+@transaction.atomic
+def persist_journey(course_or_user, journey_data=None, journey_override=None, custom_title=""):
+    """Persist a generated journey, including course topics and question links."""
+    from django.core.exceptions import ValidationError
+    from .models import Chapter, Choice, Course, Question, Quiz
+
+    data = journey_override if journey_override is not None else journey_data
+
+    if isinstance(course_or_user, Course):
+        course = course_or_user
+        if journey_override is None:
+            from .services import _generate_mock_journey
+            data = _generate_mock_journey(course)
+        course.structured_content = data
+        course.save(update_fields=["structured_content"])
+    else:
+        if data is None:
+            raise ValueError("Journey data is required.")
+        user = course_or_user
+        course_meta = data["course"]
+        final_title = custom_title or course_meta["title"]
+        course = Course.objects.create(
+            user=user,
+            title=final_title,
+            description=course_meta["description"],
+            structured_content=data,
+        )
+
+    # 1. Collect and register unique CourseTopic records for this course via topic_services
+    course_topics_by_key = {}
+    topic_order = 1
+    for chapter_data in data.get("chapters", []):
+        for raw_topic in chapter_data.get("topics", []):
+            if isinstance(raw_topic, dict):
+                k = raw_topic.get("key", "")
+                n = raw_topic.get("name", "")
+                d = raw_topic.get("description", "")
+            else:
+                k = getattr(raw_topic, "key", "")
+                n = getattr(raw_topic, "name", "")
+                d = getattr(raw_topic, "description", "")
+
+            clean_k = (k or "").strip().lower()
+            clean_n = (n or "").strip()
+            if clean_k and clean_n and clean_k not in course_topics_by_key:
+                topic = create_course_topic(
+                    course=course,
+                    key=clean_k,
+                    name=clean_n,
+                    description=d,
+                    order=topic_order,
+                )
+                course_topics_by_key[clean_k] = topic
+                topic_order += 1
+
+    for chapter_data in data["chapters"]:
+        chapter = Chapter.objects.create(
+            course=course,
+            order=chapter_data["order"],
+            title=chapter_data["title"],
+            review_content=chapter_data.get("overview", ""),
+            source_data=chapter_data,
+        )
+
+        quiz_data = chapter_data["quiz"]
+        quiz = Quiz.objects.create(chapter=chapter, title=quiz_data["title"])
+
+        for question_data in quiz_data["questions"]:
+            question_type = (
+                question_data.get("type")
+                or question_data.get("question_type", "multiple_choice")
+            )
+
+            answer_data = {}
+            if question_type == "identification":
+                answer_data = {"accepted_answers": question_data.get("accepted_answers", [])}
+            elif question_type == "enumeration":
+                answer_data = {
+                    "expected_items": question_data.get("expected_items", []),
+                    "order_matters": question_data.get("order_matters", False),
+                }
+
+            question = Question.objects.create(
+                quiz=quiz,
+                order=question_data["order"],
+                question_type=question_type,
+                text=question_data["text"],
+                explanation=question_data.get("explanation", ""),
+                answer_data=answer_data,
+            )
+
+            if question_type in {"multiple_choice", "true_false"}:
+                for choice_data in question_data.get("choices", []):
+                    Choice.objects.create(
+                        question=question,
+                        text=choice_data["text"],
+                        is_correct=choice_data["is_correct"],
+                    )
+
+            # Link question to valid declared topics for its course
+            for raw_key in question_data.get("topic_keys", []):
+                clean_key = (raw_key or "").strip().lower()
+                topic = course_topics_by_key.get(clean_key)
+                if topic is not None:
+                    try:
+                        link_question_to_topic(question=question, topic=topic)
+                    except ValidationError as err:
+                        logger.warning(
+                            f"Validation failed linking question {question.id} to topic '{clean_key}': {err}"
+                        )
+                else:
+                    logger.debug(
+                        f"Skipping unknown topic key '{clean_key}' on question {question.order} in chapter '{chapter.title}'"
+                    )
+
+    return course

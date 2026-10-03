@@ -176,9 +176,15 @@ def _persist_and_activate(job, course, journey_data):
         )
 
     # Clear any partial chapters from an earlier interrupted attempt so a retry
-    # cannot duplicate content.
+    # cannot duplicate content. CourseTopic rows cascade from the course but
+    # QuestionTopic links attach to questions, so chapters (and their quizzes
+    # and questions) are the thing to clear.
     locked.chapters.all().delete()
 
+    # persist_journey is the SHARED implementation also used by the request
+    # path. It registers CourseTopic rows and links QuestionTopic records, so a
+    # background-generated course is topic-grounded identically to a
+    # synchronously-generated one.
     persist_journey(
         locked,
         journey_override=journey_data,

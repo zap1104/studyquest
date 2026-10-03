@@ -4,7 +4,7 @@ from django.test import TestCase
 from courses.models import Chapter, Course, Quiz, Question, Choice
 from courses.schemas import GeneratedJourney
 from courses.services import _generate_mock_journey, get_assessment_mix
-from courses.views import _build_journey
+from courses.services import persist_journey as _build_journey
 
 
 class MockJourneySchemaTests(TestCase):
