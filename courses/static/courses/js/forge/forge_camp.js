@@ -567,14 +567,40 @@
                 cancelAnimationFrame(rafId);
                 rafId = null;
             }
+            // Stop accepting game input too. Cancelling the loop alone leaves
+            // keys, the joystick and the action buttons live, so the learner
+            // could keep pressing controls behind the Course Ready overlay and
+            // queue actions that would fire on any later resume.
+            if (input.setEnabled) input.setEnabled(false);
+            setControlsDisabled(true);
         }
 
         function resume() {
             if (!isRunning) {
                 isRunning = true;
+                if (input.setEnabled) input.setEnabled(true);
+                setControlsDisabled(false);
                 lastTime = performance.now();
                 rafId = requestAnimationFrame(loop);
             }
+        }
+
+        /** Visually and functionally disable the on-screen controls. */
+        function setControlsDisabled(disabled) {
+            var nodes = root.querySelectorAll(
+                '[data-action-btn], [data-upgrade-btn], [data-joy-base], button'
+            );
+            Array.prototype.forEach.call(nodes, function (node) {
+                if (disabled) {
+                    node.setAttribute('disabled', '');
+                    node.setAttribute('aria-disabled', 'true');
+                    node.style.pointerEvents = 'none';
+                } else {
+                    node.removeAttribute('disabled');
+                    node.removeAttribute('aria-disabled');
+                    node.style.pointerEvents = '';
+                }
+            });
         }
 
         function destroy() {
@@ -593,6 +619,7 @@
             getState: function () { return state; },
             getCamera: function () { return camera; },
             getEntities: function () { return entities; },
+            getInput: function () { return input; },
             getSummary: function () { return state.getSummary(); }
         };
     }
@@ -630,6 +657,14 @@
         getCamera: function () {
             if (window.CourseForgeCampInstance) {
                 return window.CourseForgeCampInstance.getCamera();
+            }
+            return null;
+        },
+        // Exposed so the Course Ready lifecycle can be verified end to end:
+        // input must report disabled once the course becomes ready.
+        getInput: function () {
+            if (window.CourseForgeCampInstance) {
+                return window.CourseForgeCampInstance.getInput();
             }
             return null;
         }

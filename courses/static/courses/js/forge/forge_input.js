@@ -14,6 +14,7 @@
         var listeners = [];
         var activeKeys = new Set();
         var queuedActions = new Set();
+        var enabled = true;
 
         var joyState = {
             active: false,
@@ -42,6 +43,10 @@
             // Ignore keystrokes when typing in inputs/textareas
             var tag = (e.target && e.target.tagName) || '';
             if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+            // Input is disabled once the Course is ready. Swallow movement keys
+            // entirely so they are not tracked or queued behind the overlay.
+            if (!enabled) return;
 
             var key = e.key.toLowerCase();
             if (['w', 'a', 's', 'd', 'arrowup', 'arrowleft', 'arrowdown', 'arrowright'].includes(key)) {
@@ -169,6 +174,8 @@
 
         // --- Public Query API ---
         function getMoveVector() {
+            if (!enabled) return { x: 0, y: 0 };
+
             var x = 0;
             var y = 0;
 
@@ -199,6 +206,12 @@
         }
 
         function consume(actionName) {
+            if (!enabled) {
+                // Drain rather than leak: a queued action must never survive a
+                // disabled period and fire on a later resume.
+                queuedActions.clear();
+                return false;
+            }
             if (queuedActions.has(actionName)) {
                 queuedActions.delete(actionName);
                 return true;
@@ -207,12 +220,38 @@
         }
 
         function trigger(actionName) {
+            if (!enabled) return;
             queuedActions.add(actionName);
+        }
+
+        /**
+         * Enable or disable all game input.
+         * Called with false the moment the Course becomes ready, so the
+         * learner cannot keep moving or buying upgrades behind the Course
+         * Ready overlay. Releasing keys, the joystick and the action queue
+         * here means nothing stale can fire if the game is ever resumed.
+         */
+        function setEnabled(next) {
+            enabled = !!next;
+            if (!enabled) {
+                activeKeys.clear();
+                queuedActions.clear();
+                joyState.active = false;
+                joyState.pointerId = null;
+                joyState.dx = 0;
+                joyState.dy = 0;
+                joyState.dist = 0;
+            }
+        }
+
+        function isEnabled() {
+            return enabled;
         }
 
         function destroy() {
             listeners.forEach(function (off) { off(); });
             listeners.length = 0;
+            enabled = false;
             activeKeys.clear();
             queuedActions.clear();
             joyState.active = false;
@@ -222,6 +261,8 @@
             getMoveVector: getMoveVector,
             consume: consume,
             trigger: trigger,
+            setEnabled: setEnabled,
+            isEnabled: isEnabled,
             bindJoystickElements: bindJoystickElements,
             bindActionButton: bindActionButton,
             destroy: destroy

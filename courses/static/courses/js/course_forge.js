@@ -110,9 +110,22 @@
         function onFinished(payload) {
             stop();
 
-            // Tell the minigame to freeze before we change anything visual.
-            if (window.CourseForgeCamp && typeof window.CourseForgeCamp.pause === 'function') {
-                try { window.CourseForgeCamp.pause(); } catch (e) { /* never block readiness */ }
+            // Freeze the minigame before changing anything visual. `pause()`
+            // cancels the animation frame AND disables game input, so the
+            // learner cannot keep moving, chopping or buying upgrades behind
+            // the Course Ready overlay -- and nothing stale is left queued.
+            var summary = null;
+            if (window.CourseForgeCamp) {
+                try {
+                    if (typeof window.CourseForgeCamp.getSummary === 'function') {
+                        summary = window.CourseForgeCamp.getSummary();
+                    }
+                } catch (e) { /* a summary must never block readiness */ }
+                try {
+                    if (typeof window.CourseForgeCamp.pause === 'function') {
+                        window.CourseForgeCamp.pause();
+                    }
+                } catch (e) { /* never block readiness */ }
             }
 
             if (payload.status === 'active') {
@@ -124,11 +137,8 @@
                 var actions = panel.querySelector('[data-forge-processing-actions]');
                 if (actions) actions.remove();
 
-                // Check minigame session summary to display a celebratory note
-                var summary = null;
-                if (window.CourseForgeCamp && typeof window.CourseForgeCamp.getSummary === 'function') {
-                    try { summary = window.CourseForgeCamp.getSummary(); } catch (e) {}
-                }
+                // Session summary is cosmetic only. It never awards XP, credit,
+                // topic evidence or any other academic state.
                 if (summary && (summary.wood > 0 || summary.crystals > 0 || summary.treesChopped > 0 || summary.enemiesDefeated > 0)) {
                     var summaryNote = document.createElement('div');
                     summaryNote.className = 'forge-camp-summary-card';
