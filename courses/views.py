@@ -13,12 +13,15 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Max
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.http import require_GET, require_POST
 
 from .topic_services import create_course_topic, link_question_to_topic
 from .grading import _grade_question, normalize_text_answer
+from .course_generation_queue import enqueue_course_generation, has_open_job
 from .credits import (
     award_course_completion_bonus,
     consume_generation_credit,
@@ -29,6 +32,7 @@ from .models import (
     ChapterCompletion,
     Choice,
     Course,
+    CourseGenerationJob,
     LearningFocus,
     Question,
     Quiz,
@@ -72,7 +76,13 @@ from .gamification import (
     get_weekly_momentum,
 )
 from .schemas import GenerationPreferences
-from .services import CourseGenerationError, generate_course_journey, SourceBundleError
+from .services import (
+    CourseGenerationError,
+    SourceBundleError,
+    extract_and_bundle_sources,
+    generate_course_journey,
+    persist_journey,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -359,6 +369,9 @@ def dashboard(request):
     # Read the catalogue once; reuse it for the embedded JSON and the template.
     academic_catalogue = get_academic_catalogue()
 
+    # Surface in-flight generation so the learner can return to Course Forge.
+    processing_courses = Course.objects.filter(user=request.user, status="processing")
+
     return render(request, "courses/dashboard.html", {
         "profile": profile,
         "tier_info": tier_info,
@@ -377,6 +390,7 @@ def dashboard(request):
         "open_focus": request.GET.get("open_focus") == "1",
         "academic_catalogue": academic_catalogue,
         "academic_catalogue_json": json.dumps(academic_catalogue),
+        "processing_courses": processing_courses,
     })
 
 
@@ -385,6 +399,9 @@ def course_list(request):
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
     active_courses = Course.objects.filter(user=request.user, status="active")
     archived_courses = Course.objects.filter(user=request.user, status="archived")
+    # Async generation surfaces: courses still being built, and ones that failed.
+    processing_courses = Course.objects.filter(user=request.user, status="processing")
+    failed_courses = Course.objects.filter(user=request.user, status="failed")
     for course in active_courses:
         progress = calculate_course_progress(request.user, course)
         course.progress_pct = progress["percentage"]
@@ -393,6 +410,8 @@ def course_list(request):
         "active_tab": request.GET.get("tab", "active"),
         "active_courses": active_courses,
         "archived_courses": archived_courses,
+        "processing_courses": processing_courses,
+        "failed_courses": failed_courses,
         "active_count": active_courses.count(),
         "active_limit": get_generation_eligibility(profile).active_limit,
         "eligibility": get_generation_eligibility(profile),
@@ -489,36 +508,17 @@ def course_create(request):
                 "learning_focus": learning_focus,
             })
 
-        dummy_course = Course(title=custom_title or "Untitled Course", user=request.user)
-
+        # --- Extract in the request, generate in the background ---------------
+        #
+        # Extraction stays here on purpose:
+        #   * it is fast (file parsing, not an AI call),
+        #   * it already has thorough per-file error handling, and
+        #   * persisting its result means the worker never needs the original
+        #     UploadedFile handles, which Django destroys when the request ends.
+        #
+        # The AI call is what takes minutes, so that is what moves out.
         try:
-            # Gemini generation is executed outside of any open database transaction
-            journey_data = generate_course_journey(
-                dummy_course,
-                uploaded_files=content_files,
-                study_goal=preferences.study_goal,
-                assessment_formats=preferences.assessment_formats,
-                study_focus=study_focus,
-                plan_name=profile.plan,
-            )
-            journey_data["generation_profile"] = preferences.model_dump()
-
-            # Transaction is isolated strictly to persistence and credit consumption
-            with transaction.atomic():
-                course = _build_journey(
-                    request.user,
-                    journey_data=journey_data,
-                    custom_title=custom_title,
-                )
-                consume_generation_credit(request.user, course)
-                if focus_id:
-                    target_focus = LearningFocus.objects.filter(pk=focus_id, user=request.user).first()
-                    if target_focus:
-                        link_focus_to_course(target_focus, course)
-                        activate_learning_focus(target_focus)
-
-            return redirect("courses:course_detail", pk=course.pk)
-
+            bundle = extract_and_bundle_sources(content_files, plan_name=profile.plan)
         except SourceBundleError as err:
             logger.warning(f"[Source Bundle Validation/Extraction Error]: {err}")
             return render(request, "courses/course_form.html", {
@@ -534,144 +534,226 @@ def course_create(request):
                 "focus_id": focus_id,
                 "learning_focus": learning_focus,
             })
-        except CourseGenerationError as err:
-            logger.error(f"[Course Generation Pipeline Interrupted]: {err}")
-            return render(request, "courses/course_form.html", {
-                "eligibility": eligibility,
-                "profile": profile,
-                "generation_failed": True,
-                "generation_error": str(err),
-                "custom_title": custom_title,
-                "study_focus": study_focus,
-                "focus_id": focus_id,
-                "learning_focus": learning_focus,
-            })
         except Exception as error:
-            logger.error(f"[Course Generation Failed Unexpectedly]: {repr(error)}")
+            logger.error(f"[Source Extraction Failed Unexpectedly]: {repr(error)}")
             return render(request, "courses/course_form.html", {
                 "eligibility": eligibility,
                 "profile": profile,
                 "generation_failed": True,
-                "generation_error": "Course generation encountered an unexpected error. Please try again.",
+                "generation_error": "The uploaded files could not be read. Please try again.",
                 "custom_title": custom_title,
                 "study_focus": study_focus,
                 "focus_id": focus_id,
                 "learning_focus": learning_focus,
             })
 
-
-@transaction.atomic
-def _build_journey(course_or_user, journey_data=None, journey_override=None, custom_title=""):
-    data = journey_override if journey_override is not None else journey_data
-
-    if isinstance(course_or_user, Course):
-        course = course_or_user
-        if journey_override is None:
-            from .services import _generate_mock_journey
-            data = _generate_mock_journey(course)
-        course.structured_content = data
-        course.save(update_fields=["structured_content"])
-    else:
-        if data is None:
-            raise ValueError("Journey data is required.")
-        user = course_or_user
-        course_meta = data["course"]
-        final_title = custom_title or course_meta["title"]
-        course = Course.objects.create(
-            user=user,
-            title=final_title,
-            description=course_meta["description"],
-            structured_content=data,
-        )
-
-    # 1. Collect and register unique CourseTopic records for this course via topic_services
-    course_topics_by_key = {}
-    topic_order = 1
-    for chapter_data in data.get("chapters", []):
-        for raw_topic in chapter_data.get("topics", []):
-            if isinstance(raw_topic, dict):
-                k = raw_topic.get("key", "")
-                n = raw_topic.get("name", "")
-                d = raw_topic.get("description", "")
-            else:
-                k = getattr(raw_topic, "key", "")
-                n = getattr(raw_topic, "name", "")
-                d = getattr(raw_topic, "description", "")
-
-            clean_k = (k or "").strip().lower()
-            clean_n = (n or "").strip()
-            if clean_k and clean_n and clean_k not in course_topics_by_key:
-                topic = create_course_topic(
-                    course=course,
-                    key=clean_k,
-                    name=clean_n,
-                    description=d,
-                    order=topic_order,
+        # Everything below is a fast database write; no provider call happens
+        # in this request.
+        try:
+            with transaction.atomic():
+                course = Course.objects.create(
+                    user=request.user,
+                    title=custom_title or "Untitled Course",
+                    description="",
+                    status="processing",
+                    generation_stage=CourseGenerationJob.STAGE_QUEUED,
+                    generation_started_at=timezone.now(),
                 )
-                course_topics_by_key[clean_k] = topic
-                topic_order += 1
+                enqueue_course_generation(
+                    course,
+                    source_bundle=bundle,
+                    generation_profile=preferences.model_dump(),
+                    custom_title=custom_title,
+                    study_focus=study_focus,
+                    plan_name=profile.plan,
+                )
+                # Preserve main's focus linkage, deferred until the course is
+                # active. The worker cannot depend on request-scoped focus.
+                if focus_id:
+                    target_focus = LearningFocus.objects.filter(
+                        pk=focus_id, user=request.user,
+                    ).first()
+                    if target_focus:
+                        link_focus_to_course(target_focus, course)
+                        activate_learning_focus(target_focus)
+        except Exception as error:
+            logger.error(f"[Course Creation Failed]: {repr(error)}")
+            return render(request, "courses/course_form.html", {
+                "eligibility": eligibility,
+                "profile": profile,
+                "generation_failed": True,
+                "generation_error": (
+                    "Your course could not be queued for preparation. "
+                    "No generation credit was used. Please try again."
+                ),
+                "custom_title": custom_title,
+                "study_focus": study_focus,
+                "focus_id": focus_id,
+                "learning_focus": learning_focus,
+            })
 
-    for chapter_data in data["chapters"]:
-        chapter = Chapter.objects.create(
-            course=course,
-            order=chapter_data["order"],
-            title=chapter_data["title"],
-            review_content=chapter_data.get("overview", ""),
-            source_data=chapter_data,
+        # Return immediately. The Course Forge page polls for progress.
+        return redirect("courses:course_generating", pk=course.pk)
+
+
+# NOTE: journey persistence now lives in ``courses.services.persist_journey``
+# so the background worker shares one implementation with the request path.
+# The topic pipeline (CourseTopic + QuestionTopic) is preserved there verbatim.
+
+
+# --------------------------------------------------
+# 3b. ASYNC COURSE GENERATION (COURSE FORGE)
+# --------------------------------------------------
+
+def forge_sandbox(request):
+    """Developer sandbox for the StudyQuest Camp Course Forge minigame.
+
+    Deliberately NOT wrapped in @login_required: that decorator redirects
+    anonymous users to the login page before this body runs, which would
+    announce the URL's existence. Instead the availability check happens first
+    and an unavailable sandbox is indistinguishable from a missing page (404).
+
+    Strictly isolated: creates no Course rows and awards no academic XP.
+    """
+    feature_allowed = (
+        settings.DEBUG
+        or (request.user.is_authenticated and request.user.is_staff)
+        or getattr(settings, "STUDYQUEST_FORGE_SANDBOX_ENABLED", False)
+    )
+    if not feature_allowed:
+        raise Http404("Camp sandbox is not available.")
+
+    if not request.user.is_authenticated:
+        return redirect(f"{reverse('login')}?next={request.path}")
+
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    return render(request, "courses/forge_sandbox.html", {
+        "profile": profile,
+        "mode": "sandbox",
+        "course_id": "sandbox",
+        "generation_status": "testing",
+    })
+
+
+@login_required
+def course_generating(request, pk):
+    """Course Forge: the immediate destination after submitting Course Creation.
+
+    Renders as a plain status page without JavaScript and upgrades to live
+    polling when JS is available. The minigame mounts here and is optional by
+    design -- this page must never depend on it.
+    """
+    course = get_object_or_404(Course, pk=pk, user=request.user)
+
+    if course.status == "active":
+        return redirect("courses:course_detail", pk=course.pk)
+
+    job = course.generation_jobs.order_by("-queued_at").first()
+
+    return render(request, "courses/course_generating.html", {
+        "course": course,
+        "job": job,
+        "status_url": reverse("courses:generation_status", args=[course.pk]),
+        "ready_url": reverse("courses:course_detail", args=[course.pk]),
+        "retry_url": reverse("courses:course_retry", args=[course.pk]),
+    })
+
+
+@login_required
+@require_GET
+def generation_status(request, pk):
+    """Ownership-safe JSON status for the Course Forge polling loop.
+
+    Returns learner-facing stage text only -- never provider prompts, raw API
+    errors, or structured course content before the course is active.
+    """
+    course = get_object_or_404(Course, pk=pk, user=request.user)
+    job = course.generation_jobs.order_by("-queued_at").first()
+
+    payload = {
+        "status": course.status,
+        "stage": course.generation_stage or (job.stage if job else "queued"),
+        "failed": course.status == "failed",
+        "ready_url": None,
+        "retry_url": None,
+    }
+
+    if course.status == "active":
+        payload["message"] = "Your course is ready."
+        payload["ready_url"] = reverse("courses:course_detail", args=[course.pk])
+        return JsonResponse(payload)
+
+    if course.status == "failed":
+        payload["message"] = (
+            course.generation_error
+            or "StudyQuest could not finish this course. You can try again."
+        )
+        payload["retry_url"] = reverse("courses:course_retry", args=[course.pk])
+        return JsonResponse(payload)
+
+    if job:
+        payload["message"] = job.learner_stage_message()
+    else:
+        payload["message"] = "Preparing your course"
+
+    # Tell the learner when nobody is picking the job up, rather than letting
+    # them watch a spinner that will never resolve.
+    if job and job.status == CourseGenerationJob.STATUS_QUEUED:
+        waited = (timezone.now() - job.queued_at).total_seconds()
+        if waited > 30:
+            payload["worker_waiting"] = True
+            payload["message"] = (
+                "Waiting for the background worker to start. "
+                "You can leave this page and come back later."
+            )
+
+    return JsonResponse(payload)
+
+
+@login_required
+@require_POST
+def course_retry(request, pk):
+    """Re-queue a failed course using its already-persisted source bundle."""
+    course = get_object_or_404(Course, pk=pk, user=request.user)
+
+    if course.status == "active":
+        return redirect("courses:course_detail", pk=course.pk)
+
+    if has_open_job(course):
+        messages.info(request, "This course is already being prepared.")
+        return redirect("courses:course_generating", pk=course.pk)
+
+    previous = course.generation_jobs.order_by("-queued_at").first()
+    if not previous or not previous.source_bundle:
+        messages.error(
+            request,
+            "The original study material is no longer available. Please create the course again.",
+        )
+        return redirect("courses:course_create")
+
+    # Re-use the persisted bundle: the learner does not have to re-upload.
+    with transaction.atomic():
+        Course.objects.filter(pk=course.pk).update(
+            status="processing",
+            generation_stage=CourseGenerationJob.STAGE_QUEUED,
+            generation_error="",
+            generation_started_at=timezone.now(),
+            generation_completed_at=None,
+        )
+        job = enqueue_course_generation(
+            course,
+            source_bundle=previous.source_bundle,
+            generation_profile=previous.generation_profile,
+            custom_title=previous.custom_title,
+            study_focus=previous.study_focus,
+            plan_name=previous.plan_name,
+        )
+        CourseGenerationJob.objects.filter(pk=job.pk).update(
+            retry_count=previous.retry_count + 1,
         )
 
-        quiz_data = chapter_data["quiz"]
-        quiz = Quiz.objects.create(chapter=chapter, title=quiz_data["title"])
-
-        for question_data in quiz_data["questions"]:
-            question_type = (
-                question_data.get("type")
-                or question_data.get("question_type", "multiple_choice")
-            )
-
-            answer_data = {}
-            if question_type == "identification":
-                answer_data = {"accepted_answers": question_data.get("accepted_answers", [])}
-            elif question_type == "enumeration":
-                answer_data = {
-                    "expected_items": question_data.get("expected_items", []),
-                    "order_matters": question_data.get("order_matters", False),
-                }
-
-            question = Question.objects.create(
-                quiz=quiz,
-                order=question_data["order"],
-                question_type=question_type,
-                text=question_data["text"],
-                explanation=question_data.get("explanation", ""),
-                answer_data=answer_data,
-            )
-
-            if question_type in {"multiple_choice", "true_false"}:
-                for choice_data in question_data.get("choices", []):
-                    Choice.objects.create(
-                        question=question,
-                        text=choice_data["text"],
-                        is_correct=choice_data["is_correct"],
-                    )
-
-            # Link question to valid declared topics for its course
-            for raw_key in question_data.get("topic_keys", []):
-                clean_key = (raw_key or "").strip().lower()
-                topic = course_topics_by_key.get(clean_key)
-                if topic is not None:
-                    try:
-                        link_question_to_topic(question=question, topic=topic)
-                    except ValidationError as err:
-                        logger.warning(
-                            f"Validation failed linking question {question.id} to topic '{clean_key}': {err}"
-                        )
-                else:
-                    logger.debug(
-                        f"Skipping unknown topic key '{clean_key}' on question {question.order} in chapter '{chapter.title}'"
-                    )
-
-    return course
+    messages.success(request, "Trying again. StudyQuest is preparing your course.")
+    return redirect("courses:course_generating", pk=course.pk)
 
 
 # --------------------------------------------------
