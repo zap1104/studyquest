@@ -487,6 +487,10 @@ class StartingKnowledgeCheck(models.Model):
         default=dict,
         blank=True,
     )
+    graded_items = models.JSONField(
+        default=list,
+        blank=True,
+    )
     score = models.FloatField(
         default=0.0,
     )

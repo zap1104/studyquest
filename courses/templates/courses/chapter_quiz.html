@@ -1301,7 +1301,7 @@
             "checkUrl": "{% url 'courses:check_quiz_answer' chapter.pk %}",
             "submitUrl": "{% url 'courses:submit_quiz' chapter.pk %}",
             "questions": [
-                {% for q in quiz.questions.all %}
+                {% for q in quiz_questions|default:quiz.questions.all %}
                 {
                     "id": {{ q.id }},
                     "type": "{{ q.question_type|default:'multiple_choice' }}",

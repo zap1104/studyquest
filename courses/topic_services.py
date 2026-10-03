@@ -190,6 +190,7 @@ def _build_topic_evidence_dict(
     unresolved_count: int,
     accuracy: float,
     latest_activity_at,
+    source_counts: dict = None,
 ) -> dict:
     evidence_state, explanation = determine_evidence_state(
         unique_questions_assessed=unique_questions_assessed,
@@ -197,6 +198,8 @@ def _build_topic_evidence_dict(
         unresolved_count=unresolved_count,
         correct_count=correct_count,
     )
+    sc = source_counts or {"baseline": 0, "quiz": 0, "review_run": 0}
+    evidence_sources = [k for k, v in sc.items() if v > 0]
     return {
         "topic_id": topic.id,
         "topic_key": topic.key,
@@ -212,6 +215,8 @@ def _build_topic_evidence_dict(
         "latest_activity_at": latest_activity_at,
         "evidence_state": evidence_state,
         "explanation": explanation,
+        "source_counts": sc,
+        "evidence_sources": evidence_sources,
     }
 
 
@@ -257,10 +262,60 @@ def get_course_topics_evidence_map(user, course: Course) -> dict[int, dict]:
 
     topic_events_count = {t.id: 0 for t in topics}
     topic_question_outcomes = {t.id: {} for t in topics}
+    topic_source_counts = {t.id: {"baseline": 0, "quiz": 0, "review_run": 0} for t in topics}
+
+    # 1. Inspect completed StartingKnowledgeCheck (baseline evidence)
+    try:
+        from courses.models import StartingKnowledgeCheck
+        checks = StartingKnowledgeCheck.objects.filter(
+            user=user,
+            course=course,
+            status=StartingKnowledgeCheck.STATUS_COMPLETED,
+        ).order_by("completed_at", "pk")
+        for check in checks:
+            ts = check.completed_at
+            items = check.graded_items or []
+            for item in items:
+                qid = item.get("question_id")
+                if qid not in question_to_topics_map:
+                    continue
+
+                earned_raw = item.get("earned_points")
+                max_raw = item.get("maximum_points")
+                if earned_raw is not None and max_raw is not None:
+                    try:
+                        earned = float(earned_raw)
+                        maximum = float(max_raw)
+                        ratio = min(max(earned / maximum, 0.0), 1.0) if maximum > 0 else (1.0 if item.get("is_correct") else 0.0)
+                    except (TypeError, ValueError, ZeroDivisionError):
+                        ratio = 1.0 if item.get("is_correct") else 0.0
+                else:
+                    ratio = 1.0 if item.get("is_correct") else 0.0
+
+                if ratio >= 1.0:
+                    outcome = "correct"
+                elif ratio > 0.0:
+                    outcome = "partial"
+                else:
+                    outcome = "incorrect"
+
+                for tid in question_to_topics_map[qid]:
+                    topic_events_count[tid] += 1
+                    topic_source_counts[tid]["baseline"] += 1
+                    curr = topic_question_outcomes[tid].get(qid)
+                    if curr is None or (curr.get("source") == "starting_knowledge_check" and (ts and curr["timestamp"] and ts >= curr["timestamp"])):
+                        topic_question_outcomes[tid][qid] = {
+                            "timestamp": ts,
+                            "ratio": ratio,
+                            "outcome": outcome,
+                            "source": "starting_knowledge_check",
+                        }
+    except Exception:
+        pass
 
     quizzes = Quiz.objects.filter(chapter__course=course)
 
-    # 1. Inspect standard QuizAttempt history
+    # 2. Inspect standard QuizAttempt history (ordinary learning evidence)
     from courses.models import QuizAttempt
     attempts = QuizAttempt.objects.filter(
         user=user,
@@ -298,15 +353,18 @@ def get_course_topics_evidence_map(user, course: Course) -> dict[int, dict]:
 
             for tid in question_to_topics_map[qid]:
                 topic_events_count[tid] += 1
+                topic_source_counts[tid]["quiz"] += 1
                 curr = topic_question_outcomes[tid].get(qid)
-                if curr is None or ts >= curr["timestamp"]:
+                # Supersedes baseline or earlier quiz attempts
+                if curr is None or curr.get("source") == "starting_knowledge_check" or (ts and curr["timestamp"] and ts >= curr["timestamp"]):
                     topic_question_outcomes[tid][qid] = {
                         "timestamp": ts,
                         "ratio": ratio,
                         "outcome": outcome,
+                        "source": "chapter_quiz",
                     }
 
-    # 2. Inspect completed Dungeon Review Runs (Classic Dungeon strictly excluded)
+    # 3. Inspect completed Dungeon Review Runs (resolution evidence; Classic Dungeon strictly excluded)
     try:
         from dungeon.models import DungeonRun
         review_runs = DungeonRun.objects.filter(
@@ -329,22 +387,26 @@ def get_course_topics_evidence_map(user, course: Course) -> dict[int, dict]:
 
                 for tid in question_to_topics_map[qid]:
                     topic_events_count[tid] += 1
+                    topic_source_counts[tid]["review_run"] += 1
                     curr = topic_question_outcomes[tid].get(qid)
-                    if curr is None or ts >= curr["timestamp"]:
+                    # Supersedes baseline or earlier quiz/review run attempts
+                    if curr is None or curr.get("source") == "starting_knowledge_check" or (ts and curr["timestamp"] and ts >= curr["timestamp"]):
                         topic_question_outcomes[tid][qid] = {
                             "timestamp": ts,
                             "ratio": ratio,
                             "outcome": outcome,
+                            "source": "review_run",
                         }
     except ImportError:
         pass
 
-    # 3. Assemble final topic evidence dicts
+    # 4. Assemble final topic evidence dicts
     for t in topics:
         tid = t.id
         q_outcomes = topic_question_outcomes[tid]
         unique_assessed = len(q_outcomes)
         total_events = topic_events_count[tid]
+        sc = topic_source_counts[tid]
 
         if unique_assessed == 0:
             evidence_by_topic_id[tid] = _build_topic_evidence_dict(
@@ -357,6 +419,7 @@ def get_course_topics_evidence_map(user, course: Course) -> dict[int, dict]:
                 unresolved_count=0,
                 accuracy=0.0,
                 latest_activity_at=None,
+                source_counts=sc,
             )
         else:
             correct_cnt = sum(1 for o in q_outcomes.values() if o["outcome"] == "correct")
@@ -365,7 +428,7 @@ def get_course_topics_evidence_map(user, course: Course) -> dict[int, dict]:
             unresolved_cnt = partial_cnt + incorrect_cnt
             total_ratio = sum(o["ratio"] for o in q_outcomes.values())
             accuracy = round((total_ratio / unique_assessed) * 100, 1)
-            latest_ts = max(o["timestamp"] for o in q_outcomes.values())
+            latest_ts = max((o["timestamp"] for o in q_outcomes.values() if o["timestamp"]), default=None)
 
             evidence_by_topic_id[tid] = _build_topic_evidence_dict(
                 topic=t,
@@ -377,6 +440,7 @@ def get_course_topics_evidence_map(user, course: Course) -> dict[int, dict]:
                 unresolved_count=unresolved_cnt,
                 accuracy=accuracy,
                 latest_activity_at=latest_ts,
+                source_counts=sc,
             )
 
     return evidence_by_topic_id

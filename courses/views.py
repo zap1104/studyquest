@@ -961,9 +961,32 @@ def chapter_quiz(request, pk):
         .first()
     ) if quiz else None
 
+    quiz_questions = None
+    if quiz:
+        all_questions = list(quiz.questions.prefetch_related("choices").order_by("order"))
+        if latest_attempt is None:
+            from courses.models import StartingKnowledgeCheck
+            check = StartingKnowledgeCheck.objects.filter(
+                user=request.user,
+                course=chapter.course,
+                status=StartingKnowledgeCheck.STATUS_COMPLETED,
+            ).first()
+            if check and check.question_ids:
+                seen_qids = set(check.question_ids)
+                unseen = [q for q in all_questions if q.id not in seen_qids]
+                if len(unseen) >= 3:
+                    quiz_questions = unseen
+                else:
+                    quiz_questions = all_questions
+            else:
+                quiz_questions = all_questions
+        else:
+            quiz_questions = all_questions
+
     return render(request, "courses/chapter_quiz.html", {
         "chapter": chapter,
         "quiz": quiz,
+        "quiz_questions": quiz_questions,
         "latest_attempt": latest_attempt,
     })
 
@@ -1027,7 +1050,25 @@ def submit_quiz(request, pk=None, chapter_id=None):
     except (json.JSONDecodeError, AttributeError):
         return JsonResponse({"error": "Invalid JSON payload."}, status=400)
 
-    questions = quiz.questions.prefetch_related("choices").all().order_by("order")
+    questions = list(quiz.questions.prefetch_related("choices").all().order_by("order"))
+    latest_attempt = (
+        QuizAttempt.objects.filter(user=request.user, quiz=quiz)
+        .order_by("-completed_at")
+        .first()
+    )
+    if latest_attempt is None:
+        from courses.models import StartingKnowledgeCheck
+        check = StartingKnowledgeCheck.objects.filter(
+            user=request.user,
+            course=chapter.course,
+            status=StartingKnowledgeCheck.STATUS_COMPLETED,
+        ).first()
+        if check and check.question_ids:
+            seen_qids = set(check.question_ids)
+            unseen = [q for q in questions if q.id not in seen_qids]
+            if len(unseen) >= 3:
+                questions = unseen
+
     total_earned = Decimal("0.0")
     total_max = Decimal("0.0")
     review_items = []
@@ -1508,4 +1549,4 @@ def knowledge_check_dismiss(request, course_id):
         check.save(update_fields=["status"])
 
     messages.info(request, "Starting Knowledge Check skipped. You can always review course materials directly.")
-    return redirect("courses:course_detail", pk=course.pk)
+    return redirect("courses:course_detail", pk=course.pk)

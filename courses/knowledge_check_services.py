@@ -103,7 +103,7 @@ def get_or_create_knowledge_check(
     if not user or not user.is_authenticated or not course:
         return None
 
-    existing = StartingKnowledgeCheck.objects.filter(course=course).first()
+    existing = StartingKnowledgeCheck.objects.filter(course=course, user=user).first()
     if existing:
         return existing
 
@@ -240,6 +240,7 @@ def grade_knowledge_check(
 
     # Persist on check record
     check.answers = submitted_answers
+    check.graded_items = graded_items
     check.score = overall_score
     check.total_questions = len(ordered_questions)
     check.topic_evidence = topic_evidence_data
@@ -290,7 +291,7 @@ def adopt_knowledge_check_focus(
             user=user,
             subject_name=course.title,
             topic_names=topic_names,
-            reason="Starting Knowledge Check Diagnostic",
+            reason="Starting Knowledge Check",
             activate=True,
         )
         focus.initial_score = check.score
