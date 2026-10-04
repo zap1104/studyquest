@@ -1005,6 +1005,30 @@ def course_delete(request, pk):
     messages.success(request, f'Course "{title}" was permanently deleted.')
     return redirect(f"{redirect('courses:course_list').url}?tab=archived")
 
+
+@login_required
+@require_POST
+def course_remove_draft(request, pk):
+    """Safely remove a processing or failed draft course.
+
+    Active courses cannot be removed through this endpoint. All related
+    generation jobs and persisted source bundles are cleaned up when the course is deleted.
+    """
+    course = get_object_or_404(Course, pk=pk, user=request.user)
+    if course.status == "active":
+        messages.error(request, "Active courses cannot be removed as drafts.")
+        return redirect("courses:course_detail", pk=course.pk)
+
+    title = course.title or "Untitled Course"
+    course.delete()
+    messages.success(request, f'Draft course "{title}" was removed.')
+
+    next_url = request.POST.get("next") or request.META.get("HTTP_REFERER")
+    if next_url and ("dashboard" in next_url or "courses" in next_url):
+        return redirect(next_url)
+    return redirect("courses:dashboard")
+
+
 @login_required
 @require_POST
 def course_archive(request, pk):

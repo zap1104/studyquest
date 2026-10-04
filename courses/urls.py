@@ -14,6 +14,7 @@ urlpatterns = [
     path("courses/<int:pk>/", views.course_detail, name="course_detail"),
     path("<int:pk>/edit/", views.course_edit, name="course_edit"),
     path("<int:pk>/delete/", views.course_delete, name="course_delete"),
+    path("<int:pk>/remove-draft/", views.course_remove_draft, name="course_remove_draft"),
     path("<int:pk>/archive/", views.course_archive, name="course_archive"),
     path("<int:pk>/restore/", views.course_restore, name="course_restore"),
     path("chapters/<int:pk>/review/", views.chapter_review, name="chapter_review"),
