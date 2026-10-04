@@ -13,6 +13,18 @@ what the current architecture does and does not guarantee.
 Course generation cannot happen without the worker. The web server only
 *queues* work; the worker *performs* it.
 
+**One-click startup (Windows):**
+
+```powershell
+.\start_studyquest.bat
+```
+
+This opens both processes in their own titled terminal windows automatically:
+Terminal 1 for the web application (`http://127.0.0.1:8000/`) and Terminal 2
+for the course generation worker.
+
+**Manual startup — two terminals:**
+
 **Terminal 1 — web application**
 
 ```powershell
@@ -27,10 +39,13 @@ Course generation cannot happen without the worker. The web server only
 
 Keep both running. The scripts print the URL and the worker id respectively.
 
-Equivalent manual commands:
+Equivalent commands (or macOS / Linux):
 
 ```bash
-python manage.py runserver
+# Terminal 1:
+./run.sh  # or python manage.py runserver
+
+# Terminal 2:
 python manage.py run_course_generation_worker
 ```
 
