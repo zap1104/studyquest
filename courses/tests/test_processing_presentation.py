@@ -9,7 +9,7 @@ Covers the state problems found in manual testing:
 Presentation only -- no generation, topic, or Starting Knowledge Check logic.
 """
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
@@ -73,7 +73,8 @@ class DashboardProcessingPresentationTests(TestCase):
         self._processing("Naming Probe")
         resp = self.client.get(reverse("courses:dashboard"))
         body = resp.content.decode()
-        self.assertIn("View Progress", body)
+        self.assertIn("View Preparation", body)
+        self.assertIn("Play Course Forge", body)
         self.assertNotIn("Open Course Forge", body)
         self.assertNotIn("Course Forge: Preparing", body)
 
@@ -269,3 +270,115 @@ class StaleQueuedJobRecoveryTests(TestCase):
         self.assertEqual(recover_stale_jobs(), 1)
         job.refresh_from_db()
         self.assertEqual(job.error_code, "worker_interrupted")
+
+
+class CourseRemoveDraftTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="draftowner", password="pw12345678")
+        self.other_user = User.objects.create_user(username="draftother", password="pw12345678")
+        UserProfile.objects.get_or_create(user=self.user)
+        UserProfile.objects.get_or_create(user=self.other_user)
+        self.client.login(username="draftowner", password="pw12345678")
+
+    def test_remove_draft_requires_login(self):
+        self.client.logout()
+        course = Course.objects.create(user=self.user, title="Processing", status="processing")
+        resp = self.client.post(reverse("courses:course_remove_draft", args=[course.pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn("/login/", resp.url)
+
+    def test_remove_draft_requires_post(self):
+        course = Course.objects.create(user=self.user, title="Processing", status="processing")
+        resp = self.client.get(reverse("courses:course_remove_draft", args=[course.pk]))
+        self.assertEqual(resp.status_code, 405)
+
+    def test_remove_draft_owner_only(self):
+        course = Course.objects.create(user=self.other_user, title="Other Draft", status="processing")
+        resp = self.client.post(reverse("courses:course_remove_draft", args=[course.pk]))
+        self.assertEqual(resp.status_code, 404)
+        self.assertTrue(Course.objects.filter(pk=course.pk).exists())
+
+    def test_remove_draft_cannot_delete_active_course(self):
+        course = Course.objects.create(user=self.user, title="Active Course", status="active")
+        resp = self.client.post(reverse("courses:course_remove_draft", args=[course.pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(Course.objects.filter(pk=course.pk).exists())
+
+    def test_remove_draft_success_cascades_jobs(self):
+        from courses.course_generation_queue import enqueue_course_generation
+        course = Course.objects.create(user=self.user, title="Stuck Draft", status="processing")
+        job = enqueue_course_generation(course, source_bundle={})
+        resp = self.client.post(reverse("courses:course_remove_draft", args=[course.pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(Course.objects.filter(pk=course.pk).exists())
+        self.assertFalse(CourseGenerationJob.objects.filter(pk=job.pk).exists())
+
+    def test_remove_failed_draft_success(self):
+        course = Course.objects.create(user=self.user, title="Failed Draft", status="failed")
+        resp = self.client.post(reverse("courses:course_remove_draft", args=[course.pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertFalse(Course.objects.filter(pk=course.pk).exists())
+
+
+class DashboardStateAwarePresentationTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="statelearner", password="pw12345678")
+        UserProfile.objects.get_or_create(user=self.user)
+        self.client.login(username="statelearner", password="pw12345678")
+
+    def test_brand_new_learner_sees_welcome_prologue(self):
+        resp = self.client.get(reverse("courses:dashboard"))
+        body = resp.content.decode()
+        self.assertIn("prologue-card", body)
+        self.assertIn("Welcome to StudyQuest", body)
+        self.assertNotIn("prep-panel", body)
+
+    def test_processing_learner_does_not_see_welcome_prologue(self):
+        Course.objects.create(user=self.user, title="Draft Beta", status="processing")
+        resp = self.client.get(reverse("courses:dashboard"))
+        body = resp.content.decode()
+        self.assertIn("prep-panel", body)
+        self.assertIn("Draft Beta", body)
+        self.assertNotIn("prologue-card", body)
+        self.assertIn("Preparing Your Course", body)
+        self.assertIn("View Preparation", body)
+        self.assertIn("Play Course Forge", body)
+
+
+class CourseLibraryTabAndEmptyStateTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="tabtester", password="pw12345678")
+        UserProfile.objects.get_or_create(user=self.user)
+        self.client.login(username="tabtester", password="pw12345678")
+
+    def test_archived_tab_when_empty_shows_archived_specific_message(self):
+        resp = self.client.get(reverse("courses:course_list") + "?tab=archived")
+        self.assertContains(resp, "No archived courses")
+        self.assertNotContains(resp, "Your library is empty")
+
+    def test_active_tab_when_only_archived_exist_shows_archived_guidance(self):
+        Course.objects.create(user=self.user, title="Archived One", status="archived")
+        resp = self.client.get(reverse("courses:course_list") + "?tab=active")
+        self.assertContains(resp, "No active courses")
+        self.assertNotContains(resp, "Your library is empty")
+
+    def test_preparing_tab_renders_preparing_courses(self):
+        Course.objects.create(user=self.user, title="Prep One", status="processing")
+        resp = self.client.get(reverse("courses:course_list") + "?tab=preparing")
+        self.assertContains(resp, "Prep One")
+        self.assertContains(resp, "View Preparation")
+        self.assertContains(resp, "Remove Draft")
+
+
+class LocalLauncherHygieneTests(SimpleTestCase):
+    def test_start_studyquest_bat_exists_and_references_run_scripts(self):
+        import os
+        from django.conf import settings
+        path = os.path.join(settings.BASE_DIR, "start_studyquest.bat")
+        self.assertTrue(os.path.exists(path), "start_studyquest.bat should exist in repo root")
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn("run.bat", content)
+        self.assertIn("run_worker.bat", content)
+        self.assertNotIn("call setup.bat", content.lower())
+        self.assertNotIn("call \"%~dp0setup.bat\"", content.lower())
