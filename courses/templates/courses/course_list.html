@@ -89,6 +89,9 @@
 
 <div class="course-library-tabs">
     <a href="?tab=active" class="btn btn-ghost {% if active_tab == 'active' %}active{% endif %}">Active Courses ({{ active_courses.count }})</a>
+    {% if processing_courses or failed_courses %}
+        <span class="btn btn-ghost" style="cursor:default;">Preparing ({{ preparing_count }})</span>
+    {% endif %}
     <a href="?tab=archived" class="btn btn-ghost {% if active_tab == 'archived' %}active{% endif %}">Archived ({{ archived_courses.count }})</a>
 </div>
 
@@ -215,16 +218,40 @@
         {% endfor %}
     </div>
 {% else %}
-    <div class="card empty-dashboard" style="margin-top: 24px;">
-        <div class="empty-icon-wrap" style="font-size: 3rem; margin-bottom: 12px;">📚</div>
-        <h2>Your library is empty</h2>
-        <p class="empty-subtext">
-            You haven't created any courses yet. Once you upload your study materials, they will be organized here.
-        </p>
-        <a href="{% url 'courses:course_create' %}" class="btn btn-primary btn-chunky" style="margin-top: 16px;">
-            Create Your First Course &rarr;
-        </a>
-    </div>
+    {% if processing_courses or failed_courses %}
+        {# Not truly empty: drafts are being prepared. Never say "empty". #}
+        <div class="card empty-dashboard" style="margin-top: 24px;">
+            <div class="empty-icon-wrap" style="font-size: 3rem; margin-bottom: 12px;">⏳</div>
+            <h2>Your courses are being prepared</h2>
+            <p class="empty-subtext">
+                StudyQuest is building your first course{{ processing_courses|length|pluralize }}.
+                You can leave this page and come back when they are ready.
+            </p>
+            {% if processing_courses %}
+                <a href="{% url 'courses:course_generating' processing_courses.0.pk %}"
+                   class="btn btn-primary btn-chunky" style="margin-top: 16px;">
+                    Open Course Forge &rarr;
+                </a>
+            {% elif failed_courses %}
+                <form method="post" action="{% url 'courses:course_retry' failed_courses.0.pk %}"
+                      style="margin: 16px 0 0;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary btn-chunky">Try Again</button>
+                </form>
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="card empty-dashboard" style="margin-top: 24px;">
+            <div class="empty-icon-wrap" style="font-size: 3rem; margin-bottom: 12px;">📚</div>
+            <h2>Your library is empty</h2>
+            <p class="empty-subtext">
+                You haven't created any courses yet. Once you upload your study materials, they will be organized here.
+            </p>
+            <a href="{% url 'courses:course_create' %}" class="btn btn-primary btn-chunky" style="margin-top: 16px;">
+                Create Your First Course &rarr;
+            </a>
+        </div>
+    {% endif %}
 {% endif %}
 </div>
 {% include 'courses/components/plan_comparison_modal.html' %}

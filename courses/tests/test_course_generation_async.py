@@ -612,5 +612,8 @@ class CourseForgeCampTemplateTests(TestCase):
     def test_dashboard_renders_processing_course_banner(self):
         resp = self.client.get(reverse("courses:dashboard"))
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "Course Forge: Preparing SIA Architecture")
+        # The processing section is grouped under one heading, with the course
+        # title in a compact row rather than its own full-width card.
+        self.assertContains(resp, "Courses Being Prepared")
+        self.assertContains(resp, "SIA Architecture")
         self.assertContains(resp, reverse("courses:course_generating", args=[self.course.pk]))

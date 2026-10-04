@@ -369,8 +369,9 @@ def dashboard(request):
     # Read the catalogue once; reuse it for the embedded JSON and the template.
     academic_catalogue = get_academic_catalogue()
 
-    # Surface in-flight generation so the learner can return to Course Forge.
+    # Surface in-flight and abandoned generation so the learner can act on it.
     processing_courses = Course.objects.filter(user=request.user, status="processing")
+    failed_courses = Course.objects.filter(user=request.user, status="failed")
 
     return render(request, "courses/dashboard.html", {
         "profile": profile,
@@ -391,6 +392,8 @@ def dashboard(request):
         "academic_catalogue": academic_catalogue,
         "academic_catalogue_json": json.dumps(academic_catalogue),
         "processing_courses": processing_courses,
+        "failed_courses": failed_courses,
+        "preparing_count": processing_courses.count() + failed_courses.count(),
     })
 
 
@@ -412,6 +415,7 @@ def course_list(request):
         "archived_courses": archived_courses,
         "processing_courses": processing_courses,
         "failed_courses": failed_courses,
+        "preparing_count": processing_courses.count() + failed_courses.count(),
         "active_count": active_courses.count(),
         "active_limit": get_generation_eligibility(profile).active_limit,
         "eligibility": get_generation_eligibility(profile),

@@ -5250,3 +5250,130 @@ main.page.forge-page {
         justify-content: center;
     }
 }
+/* =========================================================
+   COURSES BEING PREPARED (compact dashboard section)
+   Sits inside the shared .dashboard-page-shell so its width matches
+   the Study Focus card and Welcome panel.
+   ========================================================= */
+.prep-panel {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.prep-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.prep-panel-head h2 {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+}
+
+.prep-count {
+    flex-shrink: 0;
+    min-width: 22px;
+    padding: 2px 8px;
+    text-align: center;
+    font-size: 0.74rem;
+    font-weight: 800;
+    color: var(--primary);
+    background: rgba(108, 92, 231, 0.14);
+    border-radius: 999px;
+}
+
+.prep-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.prep-row:last-child {
+    border-bottom: none;
+}
+
+.prep-row--failed {
+    background: rgba(255, 84, 112, 0.04);
+}
+
+.prep-row-main {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.prep-row-title {
+    font-size: 0.95rem;
+    font-weight: 750;
+    color: var(--ink);
+}
+
+.prep-row-note {
+    flex-basis: 100%;
+    margin: 0;
+    font-size: 0.80rem;
+    color: var(--muted);
+    line-height: 1.4;
+}
+
+.prep-state {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-radius: 999px;
+}
+
+.prep-state--queued {
+    color: var(--primary);
+    background: rgba(108, 92, 231, 0.14);
+}
+
+.prep-state--failed {
+    color: var(--danger);
+    background: rgba(255, 84, 112, 0.14);
+}
+
+.prep-row-actions {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+@media (max-width: 720px) {
+    .prep-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .prep-row-actions {
+        width: 100%;
+    }
+    .prep-row-actions .btn,
+    .prep-row-actions form {
+        flex: 1;
+    }
+    .prep-row-actions form .btn {
+        width: 100%;
+    }
+}
