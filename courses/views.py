@@ -641,16 +641,33 @@ def forge_sandbox(request):
 
 @login_required
 def course_generating(request, pk):
-    """Course Forge: the immediate destination after submitting Course Creation.
+    """Course Forge: the live progress page while a course is being generated.
 
     Renders as a plain status page without JavaScript and upgrades to live
     polling when JS is available. The minigame mounts here and is optional by
     design -- this page must never depend on it.
+
+    Only reachable while generation is actually in flight. A finished or
+    abandoned course has nothing to wait for, so it is sent somewhere useful
+    instead of being shown a game screen for a course that will never appear.
     """
     course = get_object_or_404(Course, pk=pk, user=request.user)
 
     if course.status == "active":
         return redirect("courses:course_detail", pk=course.pk)
+
+    if course.status == "failed":
+        # A failed course has no generation to watch. Send the learner to the
+        # library, where the failed card offers Try Again and Remove Draft.
+        messages.info(
+            request,
+            f"\u201c{course.title}\u201d did not finish preparing. "
+            "You can try again from your library.",
+        )
+        return redirect("courses:course_list")
+
+    if course.status == "archived":
+        return redirect("courses:course_list")
 
     job = course.generation_jobs.order_by("-queued_at").first()
 
@@ -701,14 +718,16 @@ def generation_status(request, pk):
         payload["message"] = "Preparing your course"
 
     # Tell the learner when nobody is picking the job up, rather than letting
-    # them watch a spinner that will never resolve.
+    # them watch a spinner that will never resolve. The job is left queued:
+    # starting the worker is the fix, not discarding their work.
     if job and job.status == CourseGenerationJob.STATUS_QUEUED:
         waited = (timezone.now() - job.queued_at).total_seconds()
         if waited > 30:
             payload["worker_waiting"] = True
             payload["message"] = (
                 "Waiting for the background worker to start. "
-                "You can leave this page and come back later."
+                "Course generation needs a second process running "
+                "(run_worker.bat). You can leave this page and come back later."
             )
 
     return JsonResponse(payload)

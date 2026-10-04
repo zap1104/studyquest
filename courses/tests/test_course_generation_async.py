@@ -477,6 +477,43 @@ class CourseGeneratingPageTests(TestCase):
         resp = self.client.get(reverse("courses:course_generating", args=[self.course.pk]))
         self.assertEqual(resp.status_code, 404)
 
+    def test_failed_course_redirects_to_library_not_the_game(self):
+        """A failed course has nothing to wait for, so the game screen is wrong.
+
+        The learner is sent to the library, where the failed card offers
+        Try Again and Remove Draft.
+        """
+        self.course.status = "failed"
+        self.course.generation_error = "Generation did not finish."
+        self.course.save(update_fields=["status", "generation_error"])
+
+        resp = self.client.get(reverse("courses:course_generating", args=[self.course.pk]))
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.url, reverse("courses:course_list"))
+
+    def test_failed_redirect_does_not_render_the_minigame(self):
+        self.course.status = "failed"
+        self.course.save(update_fields=["status"])
+        resp = self.client.get(
+            reverse("courses:course_generating", args=[self.course.pk]), follow=True
+        )
+        body = resp.content.decode()
+        self.assertNotIn("data-camp-root", body)
+        self.assertNotIn("data-forge-status", body)
+
+    def test_processing_course_still_renders_the_game(self):
+        """The Forge remains the destination while generation is in flight."""
+        resp = self.client.get(reverse("courses:course_generating", args=[self.course.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "data-camp-root")
+        self.assertContains(resp, "data-forge-status")
+
+    def test_archived_course_redirects_to_library(self):
+        self.course.status = "archived"
+        self.course.save(update_fields=["status"])
+        resp = self.client.get(reverse("courses:course_generating", args=[self.course.pk]))
+        self.assertEqual(resp.status_code, 302)
+
 
 class CourseRetryTests(TestCase):
     def setUp(self):
@@ -610,7 +647,12 @@ class CourseForgeCampTemplateTests(TestCase):
         self.assertContains(resp, reverse("courses:course_generating", args=[self.course.pk]))
         self.assertContains(resp, "Calculus Failure")
         self.assertContains(resp, "Generation Incomplete")
-        self.assertContains(resp, reverse("courses:course_generating", args=[failed_course.pk]))
+        # The failed card must NOT link to the game screen: there is nothing to
+        # watch, so it offers Try Again and Remove Draft instead.
+        self.assertNotContains(
+            resp, reverse("courses:course_generating", args=[failed_course.pk])
+        )
+        self.assertContains(resp, reverse("courses:course_retry", args=[failed_course.pk]))
 
     def test_dashboard_renders_processing_course_banner(self):
         resp = self.client.get(reverse("courses:dashboard"))

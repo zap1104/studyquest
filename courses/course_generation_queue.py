@@ -149,63 +149,45 @@ def mark_job_failed(job, *, error_code="generation_failed", error_message=""):
 
 
 def recover_stale_jobs(threshold=STALE_JOB_THRESHOLD):
-    """Reclaim jobs that were abandoned, so a course never reads "Preparing" forever.
+    """Reclaim jobs whose worker died mid-generation.
 
-    Two distinct failure modes are handled:
+    Handles exactly one case: a job in ``running`` whose heartbeat has gone
+    stale. That means a worker claimed it and then crashed, was killed, or the
+    host slept.
 
-    1. A worker crashed mid-generation (job ``running``, heartbeat gone).
-    2. No worker ever picked the job up (job ``queued`` past a short window).
-       This is the common development case -- the learner submits a course with
-       the worker not running.
+    Deliberately does NOT touch ``queued`` jobs. An earlier version did, and it
+    was wrong: the worker calls this at startup, before it claims work, so it
+    would kill the very job it was about to process. A job that has been
+    sitting queued is not necessarily abandoned -- it may simply be waiting for
+    a worker that is starting right now.
 
-    Without this, a stranded course also keeps occupying one of the learner's
-    active-course slots, because ``get_active_course_count`` counts
-    ``processing`` courses. Recovery is a correctness requirement.
+    The "no worker ever ran" case is handled by ``reconcile_abandoned_queued``,
+    which is called from a place that knows a worker is not coming.
 
-    Deliberately does *not* re-queue automatically: one silent retry loop is
-    how you get runaway AI spend. The learner (or an admin) retries explicitly.
+    Never re-queues automatically: one silent retry loop is how you get runaway
+    AI spend. The learner retries explicitly.
     """
-    # Two distinct ways a job gets abandoned:
-    #
-    # 1. RUNNING with a dead heartbeat -- the worker crashed mid-generation.
-    # 2. QUEUED and untouched past a short window -- no worker was ever
-    #    running when the learner submitted the course.
     stale = CourseGenerationJob.objects.filter(
-        models.Q(
-            status=CourseGenerationJob.STATUS_RUNNING,
-            heartbeat_at__lt=timezone.now() - threshold,
-        )
-        | models.Q(
-            status=CourseGenerationJob.STATUS_QUEUED,
-            queued_at__lt=timezone.now() - STALE_QUEUED_THRESHOLD,
-        )
+        status=CourseGenerationJob.STATUS_RUNNING,
+        heartbeat_at__lt=timezone.now() - threshold,
     )
 
     recovered = 0
     for job in stale.select_related("course"):
-        was_running = job.status == CourseGenerationJob.STATUS_RUNNING
         CourseGenerationJob.objects.filter(
             pk=job.pk,
-            status__in=[
-                CourseGenerationJob.STATUS_RUNNING,
-                CourseGenerationJob.STATUS_QUEUED,
-            ],
+            status=CourseGenerationJob.STATUS_RUNNING,
         ).update(
             status=CourseGenerationJob.STATUS_INTERRUPTED,
             stage=CourseGenerationJob.STAGE_FAILED,
             completed_at=timezone.now(),
-            error_code=(
-                "worker_interrupted" if was_running else "worker_never_started"
-            ),
+            error_code="worker_interrupted",
             error_message=(
                 "Course preparation was interrupted before it finished. "
                 "You can try again."
-                if was_running
-                else "Course preparation never started because the background "
-                     "worker was not running. You can try again."
             ),
         )
-        _fail_course_for_job(job, interrupted=was_running, never_started=not was_running)
+        _fail_course_for_job(job, interrupted=True)
         recovered += 1
 
     if recovered:
@@ -250,3 +232,27 @@ def has_open_job(course):
             CourseGenerationJob.STATUS_RUNNING,
         ],
     ).exists()
+
+
+def reconcile_abandoned_queued(threshold=STALE_QUEUED_THRESHOLD):
+    """Report queued jobs that no worker has touched, without killing them.
+
+    Called from the learner-facing status endpoint, which is the right place:
+    it runs only when someone is actually looking at a waiting course, and it
+    can safely ask "has a worker been seen at all?" rather than "is this job
+    old?".
+
+    Returns the number of courses that appear to have no worker running, so the
+    UI can tell the learner the honest reason. It does NOT change job state --
+    a queued job stays queued, because the correct resolution is to start the
+    worker, not to discard the learner's work.
+
+    Why this is separate from ``recover_stale_jobs``: the worker calls recovery
+    at startup, before claiming work. Reclaiming queued jobs there would kill
+    the very job the worker was about to process. This was a real bug.
+    """
+    cutoff = timezone.now() - threshold
+    return CourseGenerationJob.objects.filter(
+        status=CourseGenerationJob.STATUS_QUEUED,
+        queued_at__lt=cutoff,
+    ).count()

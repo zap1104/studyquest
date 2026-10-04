@@ -164,6 +164,29 @@ class CourseLibraryProcessingTests(TestCase):
         resp = self.client.get(reverse("courses:course_list"))
         self.assertContains(resp, "Preparing (2)")
 
+    def test_failed_card_offers_only_retry_and_remove(self):
+        """No link to the game screen for a course that will never generate."""
+        course = Course.objects.create(
+            user=self.user, title="Dead Course", status="failed",
+            generation_error="Generation did not finish.",
+        )
+        resp = self.client.get(reverse("courses:course_list"))
+        body = resp.content.decode()
+        self.assertIn("Try Again", body)
+        self.assertIn("Remove Draft", body)
+        self.assertNotIn(
+            reverse("courses:course_generating", args=[course.pk]), body
+        )
+
+    def test_processing_card_still_links_to_the_game(self):
+        course = Course.objects.create(
+            user=self.user, title="Live Course", status="processing",
+        )
+        resp = self.client.get(reverse("courses:course_list"))
+        self.assertContains(
+            resp, reverse("courses:course_generating", args=[course.pk])
+        )
+
     def test_library_ownership_is_preserved(self):
         """Another learner's drafts must never appear."""
         other = User.objects.create_user(username="otherlearner", password="pw12345678")
@@ -182,36 +205,56 @@ class StaleQueuedJobRecoveryTests(TestCase):
             generation_started_at=timezone.now(),
         )
 
-    def test_never_claimed_job_is_recovered(self):
+    def test_never_claimed_job_is_left_queued(self):
+        """A queued job must NOT be reclaimed by the worker's recovery pass.
+
+        The worker runs recovery at startup, before claiming work. An earlier
+        version reclaimed queued jobs there and destroyed the very job the
+        worker was about to process.
+        """
         from courses.course_generation_queue import (
             enqueue_course_generation, recover_stale_jobs,
         )
         job = enqueue_course_generation(self.course, source_bundle={})
+        CourseGenerationJob.objects.filter(pk=job.pk).update(
+            queued_at=timezone.now() - timedelta(minutes=30),
+        )
 
-        # Simulate the learner submitting with no worker running, 10 min ago.
+        # Recovery must leave it alone...
+        self.assertEqual(recover_stale_jobs(), 0)
+        job.refresh_from_db()
+        self.assertEqual(job.status, CourseGenerationJob.STATUS_QUEUED)
+
+        # ...and the worker must still be able to claim it afterwards.
+        from courses.course_generation_queue import claim_next_job
+        claimed = claim_next_job("worker-a")
+        self.assertIsNotNone(claimed)
+        self.assertEqual(claimed.pk, job.pk)
+
+    def test_abandoned_queued_jobs_are_reported_not_killed(self):
+        """A job waiting for a worker is reported, never discarded."""
+        from courses.course_generation_queue import (
+            enqueue_course_generation, reconcile_abandoned_queued,
+        )
+        job = enqueue_course_generation(self.course, source_bundle={})
         CourseGenerationJob.objects.filter(pk=job.pk).update(
             queued_at=timezone.now() - timedelta(minutes=10),
         )
 
-        recovered = recover_stale_jobs()
-        self.assertEqual(recovered, 1)
-
+        self.assertEqual(reconcile_abandoned_queued(), 1)
         job.refresh_from_db()
-        self.course.refresh_from_db()
-        self.assertEqual(job.status, CourseGenerationJob.STATUS_INTERRUPTED)
-        self.assertEqual(job.error_code, "worker_never_started")
-        self.assertEqual(self.course.status, "failed")
-        self.assertIn("worker", self.course.generation_error.lower())
-
-    def test_recently_queued_job_is_left_alone(self):
-        """A job queued moments ago is legitimately waiting, not abandoned."""
-        from courses.course_generation_queue import (
-            enqueue_course_generation, recover_stale_jobs,
-        )
-        job = enqueue_course_generation(self.course, source_bundle={})
-        self.assertEqual(recover_stale_jobs(), 0)
-        job.refresh_from_db()
+        # Still queued: the learner's work is preserved.
         self.assertEqual(job.status, CourseGenerationJob.STATUS_QUEUED)
+        self.course.refresh_from_db()
+        self.assertEqual(self.course.status, "processing")
+
+    def test_recently_queued_job_is_not_reported(self):
+        """A job queued moments ago is legitimately waiting."""
+        from courses.course_generation_queue import (
+            enqueue_course_generation, reconcile_abandoned_queued,
+        )
+        enqueue_course_generation(self.course, source_bundle={})
+        self.assertEqual(reconcile_abandoned_queued(), 0)
 
     def test_running_job_with_dead_heartbeat_still_recovered(self):
         """The original case must keep working."""

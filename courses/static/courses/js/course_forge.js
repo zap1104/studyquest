@@ -49,6 +49,22 @@
             }
         }
 
+        /**
+         * Remove the minigame from the page.
+         *
+         * Used when generation ends in failure: there is no course coming, so
+         * an interactive game above a failure message is a distraction, and it
+         * would let the learner keep playing something that no longer leads
+         * anywhere. The game module is destroyed, not merely paused.
+         */
+        function hideGame() {
+            if (window.CourseForgeCamp && typeof window.CourseForgeCamp.destroy === 'function') {
+                try { window.CourseForgeCamp.destroy(); } catch (e) { /* never block the failure UI */ }
+            }
+            var gameSection = document.querySelector('.forge-game-panel');
+            if (gameSection) gameSection.remove();
+        }
+
         function updateTimeline(message, isTerminalReady) {
             var timeline = panel.querySelector('[data-forge-timeline]');
             if (!timeline) return;
@@ -171,6 +187,12 @@
             if (dotEl) dotEl.classList.add('is-failed');
             setMessage(payload.message || 'StudyQuest could not finish this course.');
 
+            // The game is pointless now -- there is no course coming. Hide it
+            // rather than leaving an interactive distraction above a failure.
+            // The learner stays on this page (they were watching it happen),
+            // but the only action offered is Try Again.
+            hideGame();
+
             var actionsEl = panel.querySelector('[data-forge-processing-actions]');
             if (actionsEl) actionsEl.remove();
 
@@ -207,12 +229,6 @@
                 form.appendChild(retry);
                 failActions.appendChild(form);
             }
-
-            var back = document.createElement('a');
-            back.className = 'btn btn-ghost';
-            back.href = '/';
-            back.textContent = 'Back to Dashboard';
-            failActions.appendChild(back);
 
             panel.appendChild(failActions);
         }

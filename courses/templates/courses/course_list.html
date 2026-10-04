@@ -142,17 +142,23 @@
                     <p>{{ course.generation_error|default:"StudyQuest could not finish this course."|truncatechars:160 }}</p>
                 </div>
                 <div class="library-course-actions">
-                    <a href="{% url 'courses:course_generating' course.pk %}" class="btn btn-secondary btn-sm">
-                        View Details
-                    </a>
+                    {# No link to the game screen: a failed course has nothing to
+                       watch, so the only useful actions are retry or discard. #}
                     <form method="post" action="{% url 'courses:course_retry' course.pk %}">
                         {% csrf_token %}
                         <button class="btn btn-primary btn-sm" type="submit">Try Again</button>
                     </form>
-                    <form method="post" action="{% url 'courses:course_delete' course.pk %}">
-                        {% csrf_token %}
-                        <button class="btn btn-ghost btn-sm" type="submit">Remove Draft</button>
-                    </form>
+                    <span data-confirm-group style="display:inline-flex; gap:8px; align-items:center;">
+                        <button type="button" class="btn btn-ghost btn-sm" data-confirm-trigger>Remove Draft</button>
+                        <span data-confirm-panel hidden class="prep-confirm">
+                            <span class="prep-confirm-text">Remove this draft?</span>
+                            <form method="post" action="{% url 'courses:course_delete' course.pk %}" style="margin:0;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                            </form>
+                            <button type="button" class="btn btn-ghost btn-sm" data-confirm-cancel>Cancel</button>
+                        </span>
+                    </span>
                 </div>
             </article>
         {% endfor %}
