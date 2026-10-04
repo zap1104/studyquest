@@ -100,6 +100,87 @@ class CourseTitleFromGenerationTests(TestCase):
         course.refresh_from_db()
         self.assertEqual(course.description, "Learner wrote this.")
 
+    def test_worker_never_feeds_the_placeholder_title_to_the_generator(self):
+        """The worker must pass only a learner-supplied title.
+
+        Passing the course's current title fed the creation-time placeholder
+        ("Untitled Course") into the prompt, and the generated journey echoed
+        that placeholder straight back as the final course title. Fixing
+        persist_journey alone did not help; the placeholder had to stop being
+        sent to the generator in the first place.
+        """
+        from unittest.mock import patch
+        from django.test import override_settings
+        from courses.course_generation_queue import (
+            enqueue_course_generation, claim_next_job,
+        )
+        from courses.course_generation_service import execute_course_generation
+
+        course = Course.objects.create(
+            user=self.user, title="Untitled Course", status="processing",
+        )
+        job = enqueue_course_generation(
+            course,
+            source_bundle={"bundled_text": "x" * 200, "filenames": ["a.txt"]},
+        )
+        claim_next_job("worker-a")
+
+        captured = {}
+
+        def fake_generate(course_title, *args, **kwargs):
+            captured["title"] = course_title
+            return {
+                "course": {"title": "Real Generated Title", "description": "d"},
+                "chapters": [],
+            }
+
+        with override_settings(USE_MOCK_COURSE_GENERATION=True):
+            with patch(
+                "courses.course_generation_service.generate_course_journey_from_bundle",
+                side_effect=fake_generate,
+            ):
+                execute_course_generation(job.pk)
+
+        self.assertEqual(
+            captured.get("title"), "",
+            "The worker must not pass the placeholder course title to the "
+            "generator, or the generated journey echoes it back.",
+        )
+        course.refresh_from_db()
+        self.assertEqual(course.title, "Real Generated Title")
+
+    def test_worker_passes_a_learner_supplied_title_through(self):
+        """A real learner title IS passed to the generator and preserved."""
+        from unittest.mock import patch
+        from django.test import override_settings
+        from courses.course_generation_queue import (
+            enqueue_course_generation, claim_next_job,
+        )
+        from courses.course_generation_service import execute_course_generation
+
+        course = Course.objects.create(
+            user=self.user, title="My Chosen Title", status="processing",
+        )
+        job = enqueue_course_generation(
+            course,
+            source_bundle={"bundled_text": "x" * 200, "filenames": ["a.txt"]},
+            custom_title="My Chosen Title",
+        )
+        claim_next_job("worker-a")
+
+        with override_settings(USE_MOCK_COURSE_GENERATION=True):
+            with patch(
+                "courses.course_generation_service.generate_course_journey_from_bundle",
+                return_value={
+                    "course": {"title": "AI Suggestion", "description": "d"},
+                    "chapters": [],
+                },
+            ):
+                execute_course_generation(job.pk)
+
+        course.refresh_from_db()
+        self.assertEqual(course.title, "My Chosen Title")
+
 
 class FocusCoursePickerTests(TestCase):
     """'Select From My Courses' must list the learner's real courses.

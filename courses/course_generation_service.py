@@ -110,7 +110,11 @@ def execute_course_generation(job_id):
         touch_heartbeat(job)
 
         journey_data = generate_course_journey_from_bundle(
-            job.custom_title or course.title,
+            # Pass ONLY a learner-supplied title. Falling back to the course's
+            # current title would feed the creation-time placeholder
+            # ("Untitled Course") into the prompt, and the generated journey
+            # would echo that placeholder straight back as the course title.
+            job.custom_title or "",
             job.source_bundle,
             study_goal=(job.generation_profile or {}).get("study_goal", "balanced_review"),
             assessment_formats=(job.generation_profile or {}).get("assessment_formats"),

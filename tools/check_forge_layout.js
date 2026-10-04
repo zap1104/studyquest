@@ -96,7 +96,7 @@ CDP.prototype.evaluate = async function (expr) {
     for (var i = 0; i < 40; i++) {
         await sleep(250);
         try { version = JSON.parse((await get('http://127.0.0.1:9223/json/version')).body); break; }
-        catch (e) {}
+        catch (e) { }
     }
     if (!version) { console.error('Chrome never came up.'); chrome.kill(); process.exit(1); }
 
@@ -191,8 +191,8 @@ CDP.prototype.evaluate = async function (expr) {
         ? 'Control guide visible at every tested viewport.'
         : failures + ' viewport(s) still hide the control guide.');
 
-    try { cdp.ws.close(); } catch (e) {}
+    try { cdp.ws.close(); } catch (e) { }
     chrome.kill();
-    try { fs.rmSync(userDataDir, { recursive: true, force: true }); } catch (e) {}
+    try { fs.rmSync(userDataDir, { recursive: true, force: true }); } catch (e) { }
     process.exit(failures === 0 ? 0 : 1);
 })();
