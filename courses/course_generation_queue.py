@@ -17,7 +17,7 @@ import logging
 import uuid
 from datetime import timedelta
 
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from .models import Course, CourseGenerationJob
@@ -27,6 +27,12 @@ logger = logging.getLogger(__name__)
 # A job that has been "running" with no heartbeat for longer than this is
 # assumed dead (dev-server reload, worker crash, host sleep).
 STALE_JOB_THRESHOLD = timedelta(minutes=15)
+
+# A job that was never claimed at all. Much shorter, because there is no
+# legitimate reason for a queued job to sit untouched -- it almost always means
+# the learner submitted a course with the worker not running, and they should
+# be told so quickly rather than watching "Preparing" indefinitely.
+STALE_QUEUED_THRESHOLD = timedelta(minutes=3)
 
 
 class QueueError(Exception):
@@ -143,38 +149,63 @@ def mark_job_failed(job, *, error_code="generation_failed", error_message=""):
 
 
 def recover_stale_jobs(threshold=STALE_JOB_THRESHOLD):
-    """Return jobs whose worker died to ``interrupted``.
+    """Reclaim jobs that were abandoned, so a course never reads "Preparing" forever.
 
-    Without this, a crashed worker leaves a course stuck in ``processing``
-    forever -- and because ``get_active_course_count`` counts ``processing``
-    courses, that permanently consumes one of the learner's active-course
-    slots. Recovery is a correctness requirement, not a nicety.
+    Two distinct failure modes are handled:
+
+    1. A worker crashed mid-generation (job ``running``, heartbeat gone).
+    2. No worker ever picked the job up (job ``queued`` past a short window).
+       This is the common development case -- the learner submits a course with
+       the worker not running.
+
+    Without this, a stranded course also keeps occupying one of the learner's
+    active-course slots, because ``get_active_course_count`` counts
+    ``processing`` courses. Recovery is a correctness requirement.
 
     Deliberately does *not* re-queue automatically: one silent retry loop is
     how you get runaway AI spend. The learner (or an admin) retries explicitly.
     """
-    cutoff = timezone.now() - threshold
+    # Two distinct ways a job gets abandoned:
+    #
+    # 1. RUNNING with a dead heartbeat -- the worker crashed mid-generation.
+    # 2. QUEUED and untouched past a short window -- no worker was ever
+    #    running when the learner submitted the course.
     stale = CourseGenerationJob.objects.filter(
-        status=CourseGenerationJob.STATUS_RUNNING,
-    ).filter(
-        heartbeat_at__lt=cutoff,
+        models.Q(
+            status=CourseGenerationJob.STATUS_RUNNING,
+            heartbeat_at__lt=timezone.now() - threshold,
+        )
+        | models.Q(
+            status=CourseGenerationJob.STATUS_QUEUED,
+            queued_at__lt=timezone.now() - STALE_QUEUED_THRESHOLD,
+        )
     )
 
     recovered = 0
     for job in stale.select_related("course"):
+        was_running = job.status == CourseGenerationJob.STATUS_RUNNING
         CourseGenerationJob.objects.filter(
-            pk=job.pk, status=CourseGenerationJob.STATUS_RUNNING,
+            pk=job.pk,
+            status__in=[
+                CourseGenerationJob.STATUS_RUNNING,
+                CourseGenerationJob.STATUS_QUEUED,
+            ],
         ).update(
             status=CourseGenerationJob.STATUS_INTERRUPTED,
             stage=CourseGenerationJob.STAGE_FAILED,
             completed_at=timezone.now(),
-            error_code="worker_interrupted",
+            error_code=(
+                "worker_interrupted" if was_running else "worker_never_started"
+            ),
             error_message=(
                 "Course preparation was interrupted before it finished. "
                 "You can try again."
+                if was_running
+                else "Course preparation never started because the background "
+                     "worker was not running. You can try again."
             ),
         )
-        _fail_course_for_job(job, interrupted=True)
+        _fail_course_for_job(job, interrupted=was_running, never_started=not was_running)
         recovered += 1
 
     if recovered:
@@ -182,13 +213,21 @@ def recover_stale_jobs(threshold=STALE_JOB_THRESHOLD):
     return recovered
 
 
-def _fail_course_for_job(job, *, interrupted=False):
+def _fail_course_for_job(job, *, interrupted=False, never_started=False):
     """Move the owning course out of ``processing`` so it stops holding a slot."""
-    message = (
-        "Course preparation was interrupted before it finished. You can try again."
-        if interrupted
-        else "StudyQuest could not finish this course. You can try again."
-    )
+    if never_started:
+        message = (
+            "Course preparation never started because the background worker "
+            "was not running. You can try again."
+        )
+    elif interrupted:
+        message = (
+            "Course preparation was interrupted before it finished. "
+            "You can try again."
+        )
+    else:
+        message = "StudyQuest could not finish this course. You can try again."
+
     Course.objects.filter(
         pk=job.course_id, status="processing",
     ).update(
