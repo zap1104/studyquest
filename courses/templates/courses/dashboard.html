@@ -1060,14 +1060,9 @@ it matches the width of the rest of the dashboard.
                     </div>
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-ghost btn-sm js-open-focus-modal" style="display: inline-flex; align-items: center; gap: 6px; border: 1px dashed var(--border); font-size: 0.8rem; padding: 6px 12px; border-radius: 999px;">
-                        🎯 {% if active_focus %}Focus: {{ active_focus.subject_name|truncatechars:18 }}{% else %}Set Study Focus{% endif %}
-                    </button>
-                    <div class="streak-status-pill streak-{{ streak_status.status }}">
-                        <span class="streak-icon">{{ streak_status.icon }}</span>
-                        <span class="streak-message">{{ streak_status.message }}</span>
-                    </div>
+                <div class="streak-status-pill streak-{{ streak_status.status }}">
+                    <span class="streak-icon">{{ streak_status.icon }}</span>
+                    <span class="streak-message">{{ streak_status.message }}</span>
                 </div>
             </section>
 
@@ -1076,19 +1071,16 @@ it matches the width of the rest of the dashboard.
                 <div class="dashboard-primary">
 
                     {% comment %}
-                    The greeting row above already offers the Study Focus action, so
-                    the "SET A STUDY FOCUS" suggestion banner would be a second
-                    identical invitation on one screen.
+                    The Study Focus invitation is rendered here by focus_card.html.
+                    It states what a Study Focus is, why it helps, and offers a
+                    real call to action -- unlike a bare "Set Study Focus" pill
+                    tucked into the status-chip row above, which reads as a label.
 
-                    The card is still rendered whenever it carries information the
-                    greeting pill does not: an ACTIVE focus (the pill shows only a
-                    truncated subject name; the card lists the priority topics), a
-                    pending school result awaiting review, or a completed focus to
-                    report on. Only the bare "no focus yet" suggestion is dropped.
+                    The card carries different content per learner state: an
+                    invitation, an active focus with its priority topics, a
+                    pending school result, or a completed focus to report on.
                     {% endcomment %}
-                    {% if active_focus or pending_focus or completed_focus %}
-                        {% include 'courses/includes/focus_card.html' %}
-                    {% endif %}
+                    {% include 'courses/includes/focus_card.html' %}
 
                     <!-- Next in Your Course Card -->
                     <div class="next-action-card state-{{ next_action.state }}">

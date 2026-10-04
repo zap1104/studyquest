@@ -229,14 +229,33 @@ class DuplicateFocusInvitationTests(TestCase):
         UserProfile.objects.get_or_create(user=self.user)
         self.client.login(username="focused", password="pw12345678")
 
-    def test_returning_learner_without_a_focus_sees_one_invitation(self):
-        """The bare 'set a focus' suggestion must not appear twice."""
+    def test_returning_learner_without_a_focus_sees_one_explanatory_invitation(self):
+        """Exactly one invitation -- and it must be the explanatory one.
+
+        A bare "Set Study Focus" pill in the status-chip row reads as a label,
+        not an action, and explains nothing. The focus card states what a Study
+        Focus is and why it helps, so the card is what survives.
+        """
         Course.objects.create(user=self.user, title="Existing Course", status="active")
         resp = self.client.get(reverse("courses:dashboard"))
         body = resp.content.decode()
-        # The greeting pill offers the action...
-        self.assertIn("Set Study Focus", body)
-        # ...and the redundant suggestion panel is not also rendered.
+
+        # The explanatory invitation is present, exactly once.
+        self.assertIn("SET A STUDY FOCUS", body)
+        self.assertEqual(body.count("SET A STUDY FOCUS"), 1)
+        self.assertIn("Find My Study Focus", body)
+        self.assertIn("tailor practice runs", body)
+
+        # The bare status-row pill is gone.
+        self.assertNotIn("Set Study Focus", body)
+
+    def test_new_learner_onboarding_has_one_invitation(self):
+        """The Welcome panel already explains Study Focus; no banner on top."""
+        resp = self.client.get(reverse("courses:dashboard"))
+        body = resp.content.decode()
+        self.assertIn("Welcome to StudyQuest", body)
+        self.assertIn("Find My Study Focus", body)
+        # No duplicate panel stacked above the Welcome card.
         self.assertNotIn("SET A STUDY FOCUS", body)
 
     def test_active_focus_card_is_still_shown(self):
