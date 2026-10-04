@@ -57,6 +57,26 @@ class DashboardProcessingPresentationTests(TestCase):
         self.assertContains(resp, "Courses Being Prepared")
         self.assertContains(resp, "First Ever Course")
 
+    def test_no_native_confirm_dialogs(self):
+        """Destructive actions use the inline confirm, never window.confirm."""
+        self._processing("Confirm Probe")
+        resp = self.client.get(reverse("courses:dashboard"))
+        body = resp.content.decode()
+        self.assertNotIn("onsubmit=\"return confirm", body)
+        self.assertNotIn("window.confirm", body)
+        # The inline confirm is present instead.
+        self.assertIn("data-confirm-trigger", body)
+        self.assertIn("data-confirm-panel", body)
+
+    def test_processing_row_uses_progress_wording_not_game_name(self):
+        """'Course Forge' names the game; the process is 'Preparing Your Course'."""
+        self._processing("Naming Probe")
+        resp = self.client.get(reverse("courses:dashboard"))
+        body = resp.content.decode()
+        self.assertIn("View Progress", body)
+        self.assertNotIn("Open Course Forge", body)
+        self.assertNotIn("Course Forge: Preparing", body)
+
     def test_multiple_processing_courses_are_grouped_with_a_count(self):
         self._processing("Alpha")
         self._processing("Beta")

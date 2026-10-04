@@ -5376,4 +5376,73 @@ main.page.forge-page {
     .prep-row-actions form .btn {
         width: 100%;
     }
+}/* =========================================================
+   INLINE CONFIRM (replaces window.confirm)
+   ========================================================= */
+.prep-confirm {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    background: rgba(255, 84, 112, 0.08);
+    border: 1px solid rgba(255, 84, 112, 0.30);
+    border-radius: 999px;
+}
+
+.prep-confirm[hidden] {
+    display: none;
+}
+
+.prep-confirm-text {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--danger);
+    white-space: nowrap;
+}
+
+.prep-confirm form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: #fff;
+    border: none;
+}
+
+.btn-danger:hover {
+    background: #e63e59;
+    color: #fff;
+}
+
+@media (max-width: 720px) {
+    .prep-confirm {
+        flex-wrap: wrap;
+        border-radius: 12px;
+        width: 100%;
+    }
+}
+
+/* The floating theme toggle overlaps the Course Forge controls on mobile,
+   so it is hidden on the Forge page. Theme still follows the saved
+   preference; the toggle remains available everywhere else. */
+.forge-page .theme-toggle-fab {
+    display: none;
+}/* Naming clarity: the page is about preparing the course; Course Forge is the
+   optional game. The intro line names the game so the two are not conflated. */
+.forge-game-intro {
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    font-size: 0.84rem;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    line-height: 1.45;
+}
+
+.forge-game-intro strong {
+    color: var(--ink);
+    font-weight: 800;
 }

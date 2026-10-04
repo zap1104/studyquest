@@ -377,6 +377,7 @@
 
     </script>
     {% include 'courses/components/quiz_launch_modal.html' %}
+    {% include 'courses/components/inline_confirm.html' %}
     {% if user.is_authenticated %}
         <script src="{% static 'courses/js/studyquest_sandbox_unlock.js' %}"></script>
     {% endif %}

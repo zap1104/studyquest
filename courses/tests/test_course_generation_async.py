@@ -451,8 +451,11 @@ class CourseGeneratingPageTests(TestCase):
     def test_page_renders_for_owner(self):
         resp = self.client.get(reverse("courses:course_generating", args=[self.course.pk]))
         self.assertEqual(resp.status_code, 200)
-        self.assertContains(resp, "COURSE FORGE")
+        # The page is about preparing the course; "Course Forge" names the
+        # optional game and appears only as the game's own label.
+        self.assertContains(resp, "PREPARING YOUR COURSE")
         self.assertContains(resp, "data-forge-status")
+        self.assertContains(resp, "Course Forge")
 
     def test_page_works_without_javascript(self):
         """A status page, not an app: it must render meaningfully server-side."""

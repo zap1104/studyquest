@@ -992,13 +992,19 @@ it matches the width of the rest of the dashboard.
                     </div>
                     <div class="prep-row-actions">
                         <a href="{% url 'courses:course_generating' pc.pk %}" class="btn btn-primary btn-sm">
-                            Open Course Forge
+                            View Progress
                         </a>
-                        <form method="post" action="{% url 'courses:course_delete' pc.pk %}" style="margin:0;"
-                              onsubmit="return confirm('Remove this draft course?');">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-ghost btn-sm">Remove Draft</button>
-                        </form>
+                        <span data-confirm-group style="display:inline-flex; gap:8px; align-items:center;">
+                            <button type="button" class="btn btn-ghost btn-sm" data-confirm-trigger>Remove Draft</button>
+                            <span data-confirm-panel hidden class="prep-confirm">
+                                <span class="prep-confirm-text">Remove this draft?</span>
+                                <form method="post" action="{% url 'courses:course_delete' pc.pk %}" style="margin:0;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                                </form>
+                                <button type="button" class="btn btn-ghost btn-sm" data-confirm-cancel>Cancel</button>
+                            </span>
+                        </span>
                     </div>
                 </article>
             {% endfor %}
@@ -1017,11 +1023,17 @@ it matches the width of the rest of the dashboard.
                             {% csrf_token %}
                             <button type="submit" class="btn btn-primary btn-sm">Try Again</button>
                         </form>
-                        <form method="post" action="{% url 'courses:course_delete' fc.pk %}" style="margin:0;"
-                              onsubmit="return confirm('Remove this draft course?');">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-ghost btn-sm">Remove Draft</button>
-                        </form>
+                        <span data-confirm-group style="display:inline-flex; gap:8px; align-items:center;">
+                            <button type="button" class="btn btn-ghost btn-sm" data-confirm-trigger>Remove Draft</button>
+                            <span data-confirm-panel hidden class="prep-confirm">
+                                <span class="prep-confirm-text">Remove this draft?</span>
+                                <form method="post" action="{% url 'courses:course_delete' fc.pk %}" style="margin:0;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                                </form>
+                                <button type="button" class="btn btn-ghost btn-sm" data-confirm-cancel>Cancel</button>
+                            </span>
+                        </span>
                     </div>
                 </article>
             {% endfor %}

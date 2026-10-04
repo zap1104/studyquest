@@ -115,13 +115,13 @@
                 <div class="library-course-content">
                     <h2>{{ course.title }}</h2>
                     <p>
-                        Course Forge is generating this course. You can leave this page;
+                        StudyQuest is building this course. You can leave this page;
                         generation continues in the background.
                     </p>
                 </div>
                 <div class="library-course-actions">
                     <a href="{% url 'courses:course_generating' course.pk %}" class="btn btn-primary btn-sm">
-                        Open Course Forge
+                        View Progress
                     </a>
                 </div>
             </article>
@@ -209,10 +209,17 @@
                         {% csrf_token %}
                         <button class="btn btn-secondary btn-sm" type="submit" {% if active_count >= active_limit %}disabled title="Active course limit reached"{% endif %}>Restore</button>
                     </form>
-                    <form method="post" action="{% url 'courses:course_delete' course.pk %}" onsubmit="return confirm('Permanently delete &quot;{{ course.title|escapejs }}&quot;? All associated chapters and quiz attempts will be removed.');">
-                        {% csrf_token %}
-                        <button class="btn btn-ghost btn-sm btn-delete-course" type="submit">Delete</button>
-                    </form>
+                    <span data-confirm-group style="display:inline-flex; gap:8px; align-items:center;">
+                        <button type="button" class="btn btn-ghost btn-sm btn-delete-course" data-confirm-trigger>Delete</button>
+                        <span data-confirm-panel hidden class="prep-confirm">
+                            <span class="prep-confirm-text">Delete permanently?</span>
+                            <form method="post" action="{% url 'courses:course_delete' course.pk %}" style="margin:0;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
+                            <button type="button" class="btn btn-ghost btn-sm" data-confirm-cancel>Cancel</button>
+                        </span>
+                    </span>
                 </div>
             </article>
         {% endfor %}
@@ -230,7 +237,7 @@
             {% if processing_courses %}
                 <a href="{% url 'courses:course_generating' processing_courses.0.pk %}"
                    class="btn btn-primary btn-chunky" style="margin-top: 16px;">
-                    Open Course Forge &rarr;
+                    View Progress &rarr;
                 </a>
             {% elif failed_courses %}
                 <form method="post" action="{% url 'courses:course_retry' failed_courses.0.pk %}"

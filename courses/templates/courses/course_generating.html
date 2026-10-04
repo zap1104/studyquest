@@ -26,7 +26,7 @@
                 <div class="forge-panel-section forge-course-meta">
                     <div class="forge-badge forge-badge-generating">
                         <span class="forge-badge-dot" aria-hidden="true"></span>
-                        <span>COURSE FORGE</span>
+                        <span>PREPARING YOUR COURSE</span>
                     </div>
                     <div class="forge-prep-block">
                         <span class="forge-prep-label">PREPARING COURSE</span>
@@ -111,7 +111,7 @@
             {# Actions Footer #}
             <div class="forge-panel-footer">
                 {% if course.status == 'failed' %}
-                    <div class="forge-actions">
+                    <div class="forge-actions" data-forge-fail-actions>
                         <form method="post" action="{{ retry_url }}" style="margin:0; width: 100%;">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-primary" style="width: 100%;">Try Again</button>
@@ -139,9 +139,13 @@
 
         </section>
 
-        {# Right Column: StudyQuest Camp Minigame Workspace #}
-        <section class="forge-game-panel" aria-label="StudyQuest Camp">
-            <div class="forge-game-slot" data-camp-root data-course-id="{{ course.id }}" hidden aria-label="StudyQuest Camp minigame"></div>
+        {# Right Column: Course Forge minigame workspace #}
+        <section class="forge-game-panel" aria-label="Course Forge">
+            <p class="forge-game-intro">
+                While your course is prepared, you can play <strong>Course Forge</strong>.
+                It is optional &mdash; you can leave this page at any time.
+            </p>
+            <div class="forge-game-slot" data-camp-root data-course-id="{{ course.id }}" hidden aria-label="Course Forge minigame"></div>
         </section>
 
     </div>

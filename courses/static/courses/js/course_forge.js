@@ -174,8 +174,18 @@
             var actionsEl = panel.querySelector('[data-forge-processing-actions]');
             if (actionsEl) actionsEl.remove();
 
+            // The server already renders the failure actions when the page is
+            // loaded for an already-failed course. Only build them here for the
+            // case where polling discovered the failure, otherwise the learner
+            // sees two "Try Again" buttons.
+            var existingFailActions = panel.querySelector('[data-forge-fail-actions]');
+            if (existingFailActions) {
+                return;
+            }
+
             var failActions = document.createElement('div');
             failActions.className = 'forge-actions';
+            failActions.setAttribute('data-forge-fail-actions', '');
 
             if (payload.retry_url) {
                 var form = document.createElement('form');

@@ -1,0 +1,72 @@
+{% comment %}
+INLINE CONFIRM -- a non-blocking confirmation for destructive actions.
+
+Replaces the native browser confirm dialog, which is unstyled, inconsistent
+across browsers, and blocked in some embedded contexts.
+
+Usage:
+  <span data-confirm-group>
+    <button type="button" data-confirm-trigger>Remove Draft</button>
+    <span data-confirm-panel hidden>
+      <span>Remove this draft?</span>
+      <form method="post" action="...">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+      </form>
+      <button type="button" data-confirm-cancel class="btn btn-ghost btn-sm">Cancel</button>
+    </span>
+  </span>
+
+The panel is revealed by [data-confirm-trigger] and hidden by
+[data-confirm-cancel]. Escape also cancels. Without JS the panel stays hidden,
+so the destructive action is simply not reachable.
+
+This block uses {% comment %} rather than {# #} deliberately: Django's {# #}
+is single-line only, and a multi-line one is NOT recognised -- it leaks into
+the rendered page as visible text. That bug shipped once already.
+{% endcomment %}
+<script>
+(function () {
+    'use strict';
+
+    function initConfirm(root) {
+        var trigger = root.querySelector('[data-confirm-trigger]');
+        var panel = root.querySelector('[data-confirm-panel]');
+        var cancel = root.querySelector('[data-confirm-cancel]');
+        if (!trigger || !panel) return;
+
+        function open() {
+            panel.hidden = false;
+            trigger.hidden = true;
+            var first = panel.querySelector('button, [href]');
+            if (first) first.focus();
+        }
+
+        function close() {
+            panel.hidden = true;
+            trigger.hidden = false;
+            trigger.focus();
+        }
+
+        trigger.addEventListener('click', open);
+        if (cancel) cancel.addEventListener('click', close);
+
+        panel.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                close();
+            }
+        });
+    }
+
+    function init() {
+        document.querySelectorAll('[data-confirm-group]').forEach(initConfirm);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+</script>
