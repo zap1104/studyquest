@@ -4611,7 +4611,22 @@ main.page.forge-page {
 .forge-camp-canvas-wrap {
     position: relative;
     width: 100%;
+    /*
+      The canvas previously used a bare 16/9 aspect ratio. On a wide desktop
+      that made it ~790px tall, which pushed the control-guide bar below the
+      fold -- the hint bar existed but could not be seen.
+
+      Constrain by BOTH axes: keep 16/9 as the preferred shape, but never let
+      the canvas exceed the space left over after the topbar, the hint bar and
+      the surrounding chrome. `max-height` on the wrap makes the browser shrink
+      it; the canvas fills whatever box results.
+    */
     aspect-ratio: 16 / 9;
+    max-height: min(
+        calc(100dvh - 260px),
+        calc((100vw - 420px) * 9 / 16)
+    );
+    min-height: 260px;
     background: #08110b;
     overflow: hidden;
     display: block;
@@ -4622,6 +4637,114 @@ main.page.forge-page {
     width: 100%;
     height: 100%;
     outline: none;
+}
+
+/* Below the wide-desktop breakpoint the workspace stacks, so the canvas can
+   use more of the viewport without a side rail competing for width. */
+@media (max-width: 1100px) {
+    .forge-camp-canvas-wrap {
+        max-height: min(calc(100dvh - 220px), calc(100vw * 9 / 16));
+        min-height: 200px;
+    }
+}
+
+/*
+  Landscape phones (short viewport, wide screen) are the worst case: the
+  status panel and the game stack vertically, so the page grows far beyond the
+  ~390px of height available and the control guide lands below the fold.
+
+  In landscape the two panels sit side by side and the whole Forge is capped
+  to the viewport height, so the control guide is always on screen.
+*/
+@media (max-height: 520px) and (orientation: landscape) {
+    .forge-page {
+        padding-top: 0;
+        padding-bottom: 0;
+        /*
+          `.page` is min-height:100vh and flex:1, which makes it a FULL
+          viewport tall BELOW the fixed topbar -- measured 390px starting at
+          y=70, ending at 460 in a 390px viewport. That 70px overhang pushed
+          the control guide off screen no matter how the inner panels were
+          capped.
+
+          Cap the page itself to the space actually available under the topbar.
+        */
+        min-height: 0;
+        height: calc(100dvh - var(--topbar-height, 70px));
+        max-height: calc(100dvh - var(--topbar-height, 70px));
+        overflow: hidden;
+    }
+
+    /* Hide the page-level chrome that eats the limited vertical space. */
+    .forge-page .page-header,
+    .forge-game-intro {
+        display: none;
+    }
+
+    .course-forge-workspace {
+        grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+        gap: 12px;
+        align-items: stretch;
+        /*
+          Cap to the viewport MINUS the fixed topbar and wrapper padding.
+
+          Measured: the page body starts at y=70 (the fixed topbar) and the
+          wrapper adds padding, so the usable box is innerHeight - 70 - padding.
+          `--topbar-height` is the project token for that 70px, so this tracks
+          the topbar if it ever changes.
+        */
+        height: calc(100dvh - var(--topbar-height, 70px) - 20px);
+        max-height: calc(100dvh - var(--topbar-height, 70px) - 20px);
+        overflow: hidden;
+    }
+
+    .forge-page-wrap {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    .forge-status-panel {
+        padding: 12px;
+        gap: 8px;
+        height: 100%;
+        max-height: 100%;
+        overflow-y: auto;
+    }
+
+    .forge-game-panel,
+    .forge-game-slot,
+    .forge-camp-container {
+        height: 100%;
+        max-height: 100%;
+        min-height: 0;
+    }
+
+    /* The canvas takes whatever is left after the topbar and hint bar. */
+    .forge-camp-canvas-wrap {
+        flex: 1 1 auto;
+        min-height: 90px;
+        max-height: none;
+        aspect-ratio: auto;
+    }
+
+    .forge-camp-topbar {
+        min-height: 30px;
+        padding: 3px 10px;
+        font-size: 0.76rem;
+    }
+
+    .forge-camp-hintbar {
+        min-height: 26px;
+        padding: 3px 10px;
+        font-size: 0.68rem;
+    }
+}
+
+/* Keep the control guide visible even when vertical space is very tight. */
+.forge-camp-hintbar {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
 }
 
 /* Virtual Touch Overlay (Touchscreens & Mobile) */
@@ -5036,6 +5159,91 @@ main.page.forge-page {
     .forge-camp-container {
         max-width: 100%;
         width: 100%;
+    }
+}
+
+/* =========================================================
+   LANDSCAPE PHONE OVERRIDE (must come after the max-width:899px block)
+   ---------------------------------------------------------
+   A landscape phone (e.g. 844x390) matches BOTH max-width:899px and
+   orientation:landscape. The 899px block above sets overflow:visible and
+   min-height:100dvh on the page, which makes it a full viewport tall BELOW
+   the fixed topbar -- measured 390px starting at y=70, ending at 460 in a
+   390px viewport. That 70px overhang pushed the control guide off screen.
+
+   This block must stay AFTER that one to win the cascade.
+   ========================================================= */
+@media (max-height: 520px) and (orientation: landscape) {
+    main.page.forge-page {
+        min-height: 0 !important;
+        height: calc(100dvh - var(--topbar-height, 70px));
+        max-height: calc(100dvh - var(--topbar-height, 70px));
+        overflow: hidden !important;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    .forge-page-wrap {
+        height: 100%;
+        min-height: 0;
+        overflow: hidden;
+        padding: 8px 12px;
+        box-sizing: border-box;
+    }
+
+    /* Hide page chrome that costs vertical space we do not have. */
+    .forge-page .page-header,
+    .forge-game-intro {
+        display: none;
+    }
+
+    /* Side-by-side instead of stacked, capped to the viewport. */
+    .course-forge-workspace {
+        display: grid;
+        grid-template-columns: minmax(190px, 230px) minmax(0, 1fr);
+        gap: 12px;
+        align-items: stretch;
+        height: 100%;
+        max-height: 100%;
+        overflow: hidden;
+    }
+
+    .forge-status-panel {
+        height: 100%;
+        max-height: 100%;
+        overflow-y: auto;
+        padding: 12px;
+        gap: 8px;
+    }
+
+    .forge-game-panel,
+    .forge-game-slot,
+    .forge-camp-container {
+        height: 100%;
+        max-height: 100%;
+        min-height: 0;
+    }
+
+    /* Canvas takes whatever remains above the control guide. */
+    .forge-camp-canvas-wrap {
+        flex: 1 1 auto;
+        min-height: 80px;
+        max-height: none;
+        aspect-ratio: auto;
+    }
+
+    .forge-camp-topbar {
+        min-height: 28px;
+        padding: 3px 10px;
+        font-size: 0.74rem;
+    }
+
+    /* The control guide must always be on screen. */
+    .forge-camp-hintbar {
+        flex-shrink: 0;
+        min-height: 24px;
+        padding: 3px 10px;
+        font-size: 0.66rem;
     }
 }
 
