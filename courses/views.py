@@ -373,6 +373,14 @@ def dashboard(request):
     processing_courses = Course.objects.filter(user=request.user, status="processing")
     failed_courses = Course.objects.filter(user=request.user, status="failed")
 
+    # The Study Focus modal's "Select From My Courses" step needs the learner's
+    # real, complete list. `recent_courses` is deliberately trimmed -- it is
+    # capped at 3 and excludes the featured course -- so reusing it made the
+    # modal claim "No courses yet" to a learner who plainly had one.
+    focus_selectable_courses = Course.objects.filter(
+        user=request.user, status="active",
+    ).order_by("-updated_at")
+
     return render(request, "courses/dashboard.html", {
         "profile": profile,
         "tier_info": tier_info,
@@ -382,6 +390,7 @@ def dashboard(request):
         "courses": recent_courses,
         "owned_course_count": owned_course_count,
         "has_courses": has_courses,
+        "focus_selectable_courses": focus_selectable_courses,
         "weekly_momentum": weekly_momentum,
         "achievement_preview": achievement_preview,
         "eligibility": eligibility,

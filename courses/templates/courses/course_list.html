@@ -142,8 +142,7 @@
                     <p>{{ course.generation_error|default:"StudyQuest could not finish this course."|truncatechars:160 }}</p>
                 </div>
                 <div class="library-course-actions">
-                    {# No link to the game screen: a failed course has nothing to
-                       watch, so the only useful actions are retry or discard. #}
+                    {% comment %}No link to the game screen: a failed course has nothing to watch, so the only useful actions are retry or discard.{% endcomment %}
                     <form method="post" action="{% url 'courses:course_retry' course.pk %}">
                         {% csrf_token %}
                         <button class="btn btn-primary btn-sm" type="submit">Try Again</button>

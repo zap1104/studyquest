@@ -188,7 +188,10 @@ def _persist_and_activate(job, course, journey_data):
     persist_journey(
         locked,
         journey_override=journey_data,
-        custom_title=job.custom_title or locked.title,
+        # Pass ONLY a learner-supplied title. Falling back to the course's
+        # current title would pin it to the placeholder set at creation time
+        # ("Untitled Course") and block the generated title from ever applying.
+        custom_title=job.custom_title or "",
     )
 
     locked.status = "active"

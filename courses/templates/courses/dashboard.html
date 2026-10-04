@@ -1075,7 +1075,20 @@ it matches the width of the rest of the dashboard.
             <div class="dashboard-grid">
                 <div class="dashboard-primary">
 
-                    {% include 'courses/includes/focus_card.html' %}
+                    {% comment %}
+                    The greeting row above already offers the Study Focus action, so
+                    the "SET A STUDY FOCUS" suggestion banner would be a second
+                    identical invitation on one screen.
+
+                    The card is still rendered whenever it carries information the
+                    greeting pill does not: an ACTIVE focus (the pill shows only a
+                    truncated subject name; the card lists the priority topics), a
+                    pending school result awaiting review, or a completed focus to
+                    report on. Only the bare "no focus yet" suggestion is dropped.
+                    {% endcomment %}
+                    {% if active_focus or pending_focus or completed_focus %}
+                        {% include 'courses/includes/focus_card.html' %}
+                    {% endif %}
 
                     <!-- Next in Your Course Card -->
                     <div class="next-action-card state-{{ next_action.state }}">

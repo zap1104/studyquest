@@ -1308,8 +1308,24 @@ def persist_journey(course_or_user, journey_data=None, journey_override=None, cu
         if journey_override is None:
             from .services import _generate_mock_journey
             data = _generate_mock_journey(course)
+
+        # Apply the generated title and description. The worker creates the
+        # course before generation starts, so at that point there is nothing to
+        # name it with -- without this, every async course kept its placeholder
+        # title ("Untitled Course") even after the AI supplied a real one.
+        # A learner-supplied title always wins over the generated one.
+        course_meta = data.get("course", {})
+        update_fields = ["structured_content"]
+
+        if not custom_title and course_meta.get("title"):
+            course.title = course_meta["title"]
+            update_fields.append("title")
+        if course_meta.get("description") and not course.description:
+            course.description = course_meta["description"]
+            update_fields.append("description")
+
         course.structured_content = data
-        course.save(update_fields=["structured_content"])
+        course.save(update_fields=update_fields)
     else:
         if data is None:
             raise ValueError("Journey data is required.")
