@@ -88,7 +88,10 @@
 </div>
 
 <div class="course-library-tabs">
-    <a href="?tab=active" class="btn btn-ghost {% if active_tab == 'active' %}active{% endif %}">Active Courses ({{ active_courses.count }})</a>
+    <a href="?tab=active" class="btn btn-ghost {% if active_tab == 'active' %}active{% endif %}">Active ({{ active_count }})</a>
+    {% if preparing_count > 0 %}
+        <a href="?tab=preparing" class="btn btn-ghost {% if active_tab == 'preparing' %}active{% endif %}">Preparing ({{ preparing_count }})</a>
+    {% endif %}
     <a href="?tab=archived" class="btn btn-ghost {% if active_tab == 'archived' %}active{% endif %}">Archived ({{ archived_courses.count }})</a>
 </div>
 
@@ -100,75 +103,280 @@
     <button type="button" class="btn btn-secondary btn-sm" id="library-compare-plans">Compare Plans</button>
 </div>
 
-{% if active_tab == 'active' and active_courses %}
-    <div class="course-library-grid">
-        {% for course in active_courses %}
-            <article class="library-course-card">
-                <div class="library-course-top">
-                    <span class="course-status-badge">Active</span>
-                    <span class="chip">{{ course.chapters.count }} chapter{{ course.chapters.count|pluralize }}</span>
-                </div>
-                <div class="library-course-content">
-                    <h2><a href="{% url 'courses:course_detail' course.pk %}">{{ course.title }}</a></h2>
-                    <!-- Increased truncation limit from 100 to 160 characters -->
-                    <p>{{ course.description|default:"AI-generated study path based on your materials."|truncatechars:160 }}</p>
-                </div>
-                <div class="library-course-progress">
-                    <div class="course-progress-labels">
-                        <span>Course progress</span>
-                        <strong>{{ course.progress_pct|default:0 }}%</strong>
+{% if active_tab == 'active' %}
+    {% if processing_courses or failed_courses %}
+        <div style="margin-bottom: 24px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <h2 style="font-size: 0.82rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0;">
+                    Courses Being Prepared ({{ preparing_count }})
+                </h2>
+            </div>
+            <div class="course-library-grid">
+                {% for course in processing_courses %}
+                    <article class="library-course-card" style="border-left-color:var(--primary);">
+                        <div class="library-course-top">
+                            <span class="course-status-badge">Preparing</span>
+                            <span class="chip">{% if course.generation_stage %}{{ course.generation_stage|cut:"_"|title }}{% else %}Queued{% endif %}</span>
+                        </div>
+                        <div class="library-course-content">
+                            <h2>{{ course.title }}</h2>
+                            <p>
+                                StudyQuest is building your chapters and assessments. You can leave this page;
+                                generation continues in the background.
+                            </p>
+                        </div>
+                        <div class="library-course-actions">
+                            <a href="{% url 'courses:course_generating' course.pk %}" class="btn btn-primary btn-sm">
+                                View Preparation
+                            </a>
+                            <span data-confirm-group style="display:inline-flex; gap:8px; align-items:center;">
+                                <button type="button" class="btn btn-ghost btn-sm" data-confirm-trigger>Remove Draft</button>
+                                <span data-confirm-panel hidden class="prep-confirm">
+                                    <span class="prep-confirm-text">Remove this draft?</span>
+                                    <form method="post" action="{% url 'courses:course_remove_draft' course.pk %}" style="margin:0;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{% url 'courses:course_list' %}?tab=active">
+                                        <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                                    </form>
+                                    <button type="button" class="btn btn-ghost btn-sm" data-confirm-cancel>Cancel</button>
+                                </span>
+                            </span>
+                        </div>
+                    </article>
+                {% endfor %}
+                {% for course in failed_courses %}
+                    <article class="library-course-card" style="border-left-color:var(--danger);">
+                        <div class="library-course-top">
+                            <span class="course-status-badge" style="background:rgba(255,84,112,0.12); color:var(--danger);">Generation Incomplete</span>
+                            <span class="chip">Interrupted</span>
+                        </div>
+                        <div class="library-course-content">
+                            <h2>{{ course.title }}</h2>
+                            <p>{{ course.generation_error|default:"Course preparation did not finish."|truncatechars:160 }}</p>
+                        </div>
+                        <div class="library-course-actions">
+                            <form method="post" action="{% url 'courses:course_retry' course.pk %}">
+                                {% csrf_token %}
+                                <button class="btn btn-primary btn-sm" type="submit">Try Again</button>
+                            </form>
+                            <span data-confirm-group style="display:inline-flex; gap:8px; align-items:center;">
+                                <button type="button" class="btn btn-ghost btn-sm" data-confirm-trigger>Remove Draft</button>
+                                <span data-confirm-panel hidden class="prep-confirm">
+                                    <span class="prep-confirm-text">Remove this draft?</span>
+                                    <form method="post" action="{% url 'courses:course_remove_draft' course.pk %}" style="margin:0;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{% url 'courses:course_list' %}?tab=active">
+                                        <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                                    </form>
+                                    <button type="button" class="btn btn-ghost btn-sm" data-confirm-cancel>Cancel</button>
+                                </span>
+                            </span>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if active_courses %}
+        <div class="course-library-grid">
+            {% for course in active_courses %}
+                <article class="library-course-card">
+                    <div class="library-course-top">
+                        <span class="course-status-badge">Active</span>
+                        <span class="chip">{{ course.chapters.count }} chapter{{ course.chapters.count|pluralize }}</span>
                     </div>
-                    <div class="course-progress-track">
-                        <div class="course-progress-fill" style="width:{{ course.progress_pct|default:0 }}%;"></div>
+                    <div class="library-course-content">
+                        <h2><a href="{% url 'courses:course_detail' course.pk %}">{{ course.title }}</a></h2>
+                        <p>{{ course.description|default:"AI-generated study path based on your materials."|truncatechars:160 }}</p>
                     </div>
-                </div>
-                <div class="library-course-actions">
-                    <a href="{% url 'courses:course_detail' course.pk %}" class="btn btn-primary btn-sm">Open course</a>
-                    <form method="post" action="{% url 'courses:course_archive' course.pk %}">
-                        {% csrf_token %}
-                        <button class="btn btn-ghost btn-sm" type="submit">Archive</button>
-                    </form>
-                </div>
-            </article>
-        {% endfor %}
-    </div>
-{% elif active_tab == 'archived' and archived_courses %}
-    <div class="course-library-grid">
-        {% for course in archived_courses %}
-            <article class="library-course-card" style="border-left-color:var(--muted);">
-                <div class="library-course-top">
-                    <span class="course-status-badge" style="background:rgba(148,163,184,.12); color:var(--muted);">Archived</span>
-                    <span class="chip">{{ course.chapters.count }} chapter{{ course.chapters.count|pluralize }}</span>
-                </div>
-                <div class="library-course-content">
-                    <h2>{{ course.title }}</h2>
-                    <p>{{ course.description|default:"Archived study material remains available for restoration."|truncatechars:150 }}</p>
-                </div>
-                <!-- Anchored at the bottom via margin-top: auto -->
-                <div class="library-course-actions">
-                    <form method="post" action="{% url 'courses:course_restore' course.pk %}">
-                        {% csrf_token %}
-                        <button class="btn btn-secondary btn-sm" type="submit" {% if active_count >= active_limit %}disabled title="Active course limit reached"{% endif %}>Restore</button>
-                    </form>
-                    <form method="post" action="{% url 'courses:course_delete' course.pk %}" onsubmit="return confirm('Permanently delete &quot;{{ course.title|escapejs }}&quot;? All associated chapters and quiz attempts will be removed.');">
-                        {% csrf_token %}
-                        <button class="btn btn-ghost btn-sm btn-delete-course" type="submit">Delete</button>
-                    </form>
-                </div>
-            </article>
-        {% endfor %}
-    </div>
-{% else %}
-    <div class="card empty-dashboard" style="margin-top: 24px;">
-        <div class="empty-icon-wrap" style="font-size: 3rem; margin-bottom: 12px;">📚</div>
-        <h2>Your library is empty</h2>
-        <p class="empty-subtext">
-            You haven't created any courses yet. Once you upload your study materials, they will be organized here.
-        </p>
-        <a href="{% url 'courses:course_create' %}" class="btn btn-primary btn-chunky" style="margin-top: 16px;">
-            Create Your First Course &rarr;
-        </a>
-    </div>
+                    <div class="library-course-progress">
+                        <div class="course-progress-labels">
+                            <span>Course progress</span>
+                            <strong>{{ course.progress_pct|default:0 }}%</strong>
+                        </div>
+                        <div class="course-progress-track">
+                            <div class="course-progress-fill" style="width:{{ course.progress_pct|default:0 }}%;"></div>
+                        </div>
+                    </div>
+                    <div class="library-course-actions">
+                        <a href="{% url 'courses:course_detail' course.pk %}" class="btn btn-primary btn-sm">Open course</a>
+                        <form method="post" action="{% url 'courses:course_archive' course.pk %}">
+                            {% csrf_token %}
+                            <button class="btn btn-ghost btn-sm" type="submit">Archive</button>
+                        </form>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% elif processing_courses or failed_courses %}
+        <div class="card empty-dashboard" style="margin-top: 24px;">
+            <div class="empty-icon-wrap" style="font-size: 3rem; margin-bottom: 12px;">⏳</div>
+            <h2>Your courses are being prepared</h2>
+            <p class="empty-subtext">
+                StudyQuest is building your first course{{ processing_courses|length|pluralize }}.
+                You can leave this page and come back when they are ready.
+            </p>
+            {% if processing_courses %}
+                <a href="{% url 'courses:course_generating' processing_courses.0.pk %}"
+                   class="btn btn-primary btn-chunky" style="margin-top: 16px;">
+                    View Preparation &rarr;
+                </a>
+            {% elif failed_courses %}
+                <form method="post" action="{% url 'courses:course_retry' failed_courses.0.pk %}"
+                      style="margin: 16px 0 0;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary btn-chunky">Try Again</button>
+                </form>
+            {% endif %}
+        </div>
+    {% elif not processing_courses and not failed_courses %}
+        {% if archived_courses %}
+            <div class="card empty-dashboard" style="margin-top: 24px;">
+                <div class="empty-icon-wrap" style="font-size: 3rem; margin-bottom: 12px;">📦</div>
+                <h2>No active courses</h2>
+                <p class="empty-subtext">
+                    All your courses are archived. You can restore them from the Archived tab.
+                </p>
+                <a href="?tab=archived" class="btn btn-secondary btn-sm" style="margin-top: 14px;">
+                    View Archived Courses ({{ archived_courses.count }}) &rarr;
+                </a>
+            </div>
+        {% else %}
+            <div class="card empty-dashboard" style="margin-top: 24px;">
+                <div class="empty-icon-wrap" style="font-size: 3rem; margin-bottom: 12px;">📚</div>
+                <h2>Your library is empty</h2>
+                <p class="empty-subtext">
+                    You haven't created any courses yet. Once you upload your study materials, they will be organized here.
+                </p>
+                <a href="{% url 'courses:course_create' %}" class="btn btn-primary btn-chunky" style="margin-top: 16px;">
+                    Create Your First Course &rarr;
+                </a>
+            </div>
+        {% endif %}
+    {% endif %}
+
+{% elif active_tab == 'preparing' %}
+    {% if processing_courses or failed_courses %}
+        <div class="course-library-grid">
+            {% for course in processing_courses %}
+                <article class="library-course-card" style="border-left-color:var(--primary);">
+                    <div class="library-course-top">
+                        <span class="course-status-badge">Preparing</span>
+                        <span class="chip">{% if course.generation_stage %}{{ course.generation_stage|cut:"_"|title }}{% else %}Queued{% endif %}</span>
+                    </div>
+                    <div class="library-course-content">
+                        <h2>{{ course.title }}</h2>
+                        <p>
+                            StudyQuest is building your chapters and assessments. You can leave this page;
+                            generation continues in the background.
+                        </p>
+                    </div>
+                    <div class="library-course-actions">
+                        <a href="{% url 'courses:course_generating' course.pk %}" class="btn btn-primary btn-sm">
+                            View Preparation
+                        </a>
+                        <span data-confirm-group style="display:inline-flex; gap:8px; align-items:center;">
+                            <button type="button" class="btn btn-ghost btn-sm" data-confirm-trigger>Remove Draft</button>
+                            <span data-confirm-panel hidden class="prep-confirm">
+                                <span class="prep-confirm-text">Remove this draft?</span>
+                                <form method="post" action="{% url 'courses:course_remove_draft' course.pk %}" style="margin:0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{% url 'courses:course_list' %}?tab=preparing">
+                                    <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                                </form>
+                                <button type="button" class="btn btn-ghost btn-sm" data-confirm-cancel>Cancel</button>
+                            </span>
+                        </span>
+                    </div>
+                </article>
+            {% endfor %}
+            {% for course in failed_courses %}
+                <article class="library-course-card" style="border-left-color:var(--danger);">
+                    <div class="library-course-top">
+                        <span class="course-status-badge" style="background:rgba(255,84,112,0.12); color:var(--danger);">Generation Incomplete</span>
+                        <span class="chip">Interrupted</span>
+                    </div>
+                    <div class="library-course-content">
+                        <h2>{{ course.title }}</h2>
+                        <p>{{ course.generation_error|default:"Course preparation did not finish."|truncatechars:160 }}</p>
+                    </div>
+                    <div class="library-course-actions">
+                        <form method="post" action="{% url 'courses:course_retry' course.pk %}">
+                            {% csrf_token %}
+                            <button class="btn btn-primary btn-sm" type="submit">Try Again</button>
+                        </form>
+                        <span data-confirm-group style="display:inline-flex; gap:8px; align-items:center;">
+                            <button type="button" class="btn btn-ghost btn-sm" data-confirm-trigger>Remove Draft</button>
+                            <span data-confirm-panel hidden class="prep-confirm">
+                                <span class="prep-confirm-text">Remove this draft?</span>
+                                <form method="post" action="{% url 'courses:course_remove_draft' course.pk %}" style="margin:0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{% url 'courses:course_list' %}?tab=preparing">
+                                    <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                                </form>
+                                <button type="button" class="btn btn-ghost btn-sm" data-confirm-cancel>Cancel</button>
+                            </span>
+                        </span>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card empty-dashboard" style="margin-top: 24px;">
+            <div class="empty-icon-wrap" style="font-size: 3rem; margin-bottom: 12px;">✨</div>
+            <h2>No courses currently being prepared</h2>
+            <p class="empty-subtext">
+                All your courses have finished generation or you haven't started preparing a new one yet.
+            </p>
+            <a href="{% url 'courses:course_create' %}" class="btn btn-primary btn-sm" style="margin-top: 14px;">
+                + Create Course
+            </a>
+        </div>
+    {% endif %}
+
+{% elif active_tab == 'archived' %}
+    {% if archived_courses %}
+        <div class="course-library-grid">
+            {% for course in archived_courses %}
+                <article class="library-course-card" style="border-left-color:var(--muted);">
+                    <div class="library-course-top">
+                        <span class="course-status-badge" style="background:rgba(148,163,184,.12); color:var(--muted);">Archived</span>
+                        <span class="chip">{{ course.chapters.count }} chapter{{ course.chapters.count|pluralize }}</span>
+                    </div>
+                    <div class="library-course-content">
+                        <h2>{{ course.title }}</h2>
+                        <p>{{ course.description|default:"Archived study material remains available for restoration."|truncatechars:150 }}</p>
+                    </div>
+                    <div class="library-course-actions">
+                        <form method="post" action="{% url 'courses:course_restore' course.pk %}">
+                            {% csrf_token %}
+                            <button class="btn btn-secondary btn-sm" type="submit" {% if active_count >= active_limit %}disabled title="Active course limit reached"{% endif %}>Restore</button>
+                        </form>
+                        <span data-confirm-group style="display:inline-flex; gap:8px; align-items:center;">
+                            <button type="button" class="btn btn-ghost btn-sm btn-delete-course" data-confirm-trigger>Delete</button>
+                            <span data-confirm-panel hidden class="prep-confirm">
+                                <span class="prep-confirm-text">Delete permanently?</span>
+                                <form method="post" action="{% url 'courses:course_delete' course.pk %}" style="margin:0;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                </form>
+                                <button type="button" class="btn btn-ghost btn-sm" data-confirm-cancel>Cancel</button>
+                            </span>
+                        </span>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card empty-dashboard" style="margin-top: 24px;">
+            <div class="empty-icon-wrap" style="font-size: 3rem; margin-bottom: 12px;">📦</div>
+            <h2>No archived courses</h2>
+            <p class="empty-subtext">
+                When you archive a course, it will appear here so you can review or restore it at any time.
+            </p>
+        </div>
+    {% endif %}
 {% endif %}
 </div>
 {% include 'courses/components/plan_comparison_modal.html' %}

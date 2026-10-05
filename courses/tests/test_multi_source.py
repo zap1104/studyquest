@@ -28,6 +28,24 @@ from courses.services import (
     generate_course_journey,
     sanitize_filename,
 )
+from courses.course_generation_queue import claim_next_job
+from courses.course_generation_service import execute_course_generation
+
+
+def run_queued_jobs(worker_id="test-worker"):
+    """Drain the generation queue synchronously.
+
+    Course Creation is asynchronous now, so tests that assert on the finished
+    course must run the worker themselves. This mirrors exactly what
+    ``manage.py run_course_generation_worker`` does.
+    """
+    processed = 0
+    while True:
+        job = claim_next_job(worker_id)
+        if job is None:
+            return processed
+        execute_course_generation(job.pk)
+        processed += 1
 
 
 class FilenameSanitizationTests(TestCase):
@@ -281,8 +299,15 @@ class MultiSourceCourseCreationIntegrationTests(TestCase):
             follow=True,
         )
         self.assertEqual(response.status_code, 200)
+
+        # Course Creation is now async: the POST creates a processing course
+        # and a queued job, then returns. Run the worker to complete it.
         course = Course.objects.filter(user=self.user, title='Data Structures 101').first()
         self.assertIsNotNone(course)
+        self.assertEqual(course.status, 'processing')
+        run_queued_jobs()
+        course.refresh_from_db()
+        self.assertEqual(course.status, 'active')
         self.assertTrue(course.chapters.exists())
 
         # Proves exactly 1 credit was consumed
@@ -310,6 +335,10 @@ class MultiSourceCourseCreationIntegrationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         course = Course.objects.filter(user=self.user, title='Complete Data Structures').first()
         self.assertIsNotNone(course)
+
+        run_queued_jobs()
+        course.refresh_from_db()
+        self.assertEqual(course.status, 'active')
         self.assertGreaterEqual(course.chapters.count(), 1)
 
         # Proves exactly 1 credit was consumed for the entire bundle
@@ -367,7 +396,7 @@ class MultiSourceCourseCreationIntegrationTests(TestCase):
     def test_gemini_failure_no_credits_consumed(self):
         f = SimpleUploadedFile('notes.txt', b'Normal valid text', content_type='text/plain')
 
-        with patch('courses.views.generate_course_journey', side_effect=RuntimeError('Gemini API 503 Overloaded')):
+        with patch('courses.services.call_gemini_with_retry', side_effect=RuntimeError('Gemini API 503 Overloaded')):
             response = self.client.post(
                 reverse('courses:course_create'),
                 {
@@ -376,9 +405,17 @@ class MultiSourceCourseCreationIntegrationTests(TestCase):
                 },
                 follow=True,
             )
+            # The POST succeeds: it only queues work now.
             self.assertEqual(response.status_code, 200)
-            self.assertFalse(Course.objects.filter(title='Failed AI Course').exists())
-            self.assertEqual(CourseCreditTransaction.objects.filter(user=self.user).count(), 0)
+            run_queued_jobs()
+
+        course = Course.objects.filter(title='Failed AI Course').first()
+        self.assertIsNotNone(course)
+        # The failure is recorded on the course, not lost with the request.
+        self.assertEqual(course.status, 'failed')
+        self.assertTrue(course.generation_error)
+        # No credit is consumed when generation fails.
+        self.assertEqual(CourseCreditTransaction.objects.filter(user=self.user).count(), 0)
 
     @override_settings(USE_MOCK_COURSE_GENERATION=False)
     @patch('courses.services.time.sleep', return_value=None)
@@ -396,16 +433,18 @@ class MultiSourceCourseCreationIntegrationTests(TestCase):
                 },
                 follow=True,
             )
-            # Exactly 3 attempts executed
+            self.assertEqual(response.status_code, 200)
+            run_queued_jobs()
+
+            # Exactly 3 attempts executed, with 2 sleeps between them.
             self.assertEqual(mock_client.models.generate_content.call_count, 3)
-            # Sleep called twice between attempts
             self.assertEqual(mock_sleep.call_count, 2)
 
-            self.assertEqual(response.status_code, 200)
-            self.assertTrue(response.context.get('generation_failed'))
-            self.assertIn("503", response.context.get('generation_error', ''))
-            self.assertFalse(Course.objects.filter(title='TECHNO PRELIMS').exists())
-            self.assertEqual(CourseCreditTransaction.objects.filter(user=self.user).count(), 0)
+        course = Course.objects.filter(title='TECHNO PRELIMS').first()
+        self.assertIsNotNone(course)
+        self.assertEqual(course.status, 'failed')
+        self.assertFalse(course.chapters.exists())
+        self.assertEqual(CourseCreditTransaction.objects.filter(user=self.user).count(), 0)
 
     @override_settings(USE_MOCK_COURSE_GENERATION=False)
     @patch('courses.services.time.sleep', return_value=None)
@@ -425,14 +464,18 @@ class MultiSourceCourseCreationIntegrationTests(TestCase):
                 },
                 follow=True,
             )
+            self.assertEqual(response.status_code, 200)
+            run_queued_jobs()
+
             # Attempt 1 failed, attempt 2 succeeded
             self.assertEqual(mock_client.models.generate_content.call_count, 2)
             self.assertEqual(mock_sleep.call_count, 1)
 
-            self.assertEqual(response.status_code, 200)
-            course = Course.objects.filter(user=self.user, title='Recovered TECHNO Course').first()
-            self.assertIsNotNone(course)
-            self.assertEqual(CourseCreditTransaction.objects.filter(user=self.user, related_course=course).count(), 1)
+        course = Course.objects.filter(title='Recovered TECHNO Course').first()
+        self.assertIsNotNone(course)
+        self.assertEqual(course.status, 'active')
+        self.assertTrue(course.chapters.exists())
+        self.assertEqual(CourseCreditTransaction.objects.filter(user=self.user, related_course=course).count(), 1)
 
     @override_settings(USE_MOCK_COURSE_GENERATION=False)
     @patch('courses.services.client', None)
@@ -447,7 +490,12 @@ class MultiSourceCourseCreationIntegrationTests(TestCase):
             follow=True,
         )
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.context.get('generation_failed'))
-        self.assertIn("not configured", response.context.get('generation_error', '').lower())
-        self.assertFalse(Course.objects.filter(title='No Client Course').exists())
+        run_queued_jobs()
+
+        course = Course.objects.filter(title='No Client Course').first()
+        self.assertIsNotNone(course)
+        self.assertEqual(course.status, 'failed')
+        # The learner-facing message must not leak provider internals.
+        self.assertNotIn('traceback', course.generation_error.lower())
+        self.assertFalse(course.chapters.exists())
         self.assertEqual(CourseCreditTransaction.objects.filter(user=self.user).count(), 0)

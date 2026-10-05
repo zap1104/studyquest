@@ -68,7 +68,7 @@
                 </button>
 
                 {# Choice 3: Conditional route #}
-                {% if owned_course_count > 0 or courses|length > 0 %}
+                {% if focus_selectable_courses %}
                     <button type="button" class="study-focus-choice-card js-select-focus-route" data-route="courses" style="
                         display: flex;
                         align-items: center;
@@ -300,39 +300,26 @@
                 </form>
             </div>
 
-            {% if owned_course_count > 0 or courses|length > 0 %}
+            {% if focus_selectable_courses %}
             {# STEP 2C: EXISTING COURSES #}
             <div id="view-step-courses" class="study-focus-step" style="display: none;">
                 <p style="font-size: 0.88rem; color: var(--muted); margin: 0 0 16px; line-height: 1.45;">
                     Pick an existing course in your library to set as your primary focus for reviews and Dungeon Quest practice.
                 </p>
 
-                {% if courses or recent_courses %}
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        {% for course in courses|default:recent_courses %}
-                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-radius: 14px; background: var(--bg); border: 1px solid var(--border);">
-                                <div style="min-width: 0; flex: 1; padding-right: 12px;">
-                                    <strong style="display: block; font-size: 0.94rem; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ course.title }}</strong>
-                                    <span style="font-size: 0.78rem; color: var(--muted);">{{ course.chapters.count }} chapters</span>
-                                </div>
-                                <button type="button" class="btn btn-primary btn-sm js-pick-course-as-focus" data-title="{{ course.title }}" style="font-size: 0.80rem; padding: 8px 14px; white-space: nowrap;">
-                                    Focus Here &rarr;
-                                </button>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    {% for course in focus_selectable_courses %}
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-radius: 14px; background: var(--bg); border: 1px solid var(--border);">
+                            <div style="min-width: 0; flex: 1; padding-right: 12px;">
+                                <strong style="display: block; font-size: 0.94rem; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ course.title }}</strong>
+                                <span style="font-size: 0.78rem; color: var(--muted);">{{ course.chapters.count }} chapters</span>
                             </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <div style="padding: 28px 20px; text-align: center; background: var(--bg); border: 1px dashed var(--border); border-radius: 14px;">
-                        <span style="font-size: 1.8rem; display: block; margin-bottom: 8px;">📚</span>
-                        <strong style="display: block; font-size: 0.96rem; color: var(--ink); margin-bottom: 4px;">No courses yet</strong>
-                        <p style="font-size: 0.84rem; color: var(--muted); margin: 0 0 16px;">
-                            You don't have any active courses yet. Start by uploading your study materials to create your first course!
-                        </p>
-                        <a href="{% url 'courses:course_create' %}" class="btn btn-primary btn-sm">
-                            Create a Course &rarr;
-                        </a>
-                    </div>
-                {% endif %}
+                            <button type="button" class="btn btn-primary btn-sm js-pick-course-as-focus" data-title="{{ course.title }}" style="font-size: 0.80rem; padding: 8px 14px; white-space: nowrap;">
+                                Focus Here &rarr;
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
             </div>
             {% endif %}
 
@@ -487,7 +474,7 @@
                 title: 'Use a School Result',
                 subtitle: 'Upload a result or recommendation from your school.'
             },
-            {% if owned_course_count > 0 or courses|length > 0 %}
+            {% if focus_selectable_courses %}
             'courses': {
                 badge: 'SELECT FROM MY COURSES',
                 title: 'Select From My Courses',

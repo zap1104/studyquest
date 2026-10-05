@@ -9,7 +9,7 @@ from courses.models import Course, Chapter, Quiz, Question, Choice, CourseTopic,
 from courses.schemas import GeneratedJourney, GeneratedChapter, GeneratedTopic, GeneratedQuestion, GeneratedQuiz
 from courses.services import _generate_mock_journey
 from courses.topic_services import create_course_topic, link_question_to_topic
-from courses.views import _build_journey
+from courses.services import persist_journey as _build_journey
 from courses.grading import _grade_question
 
 
@@ -339,8 +339,8 @@ class GenerationTopicTests(TestCase):
         """If question topic linking triggers a ValidationError, the question still persists."""
         data = self._sample_journey_dict()
 
-        with patch("courses.views.link_question_to_topic", side_effect=ValidationError("Link invalid")):
-            with self.assertLogs("courses.views", level="WARNING") as log_cm:
+        with patch("courses.services.link_question_to_topic", side_effect=ValidationError("Link invalid")):
+            with self.assertLogs("courses.services", level="WARNING") as log_cm:
                 _build_journey(self.course, journey_override=data)
 
         # Question was still created and saved
@@ -364,7 +364,7 @@ class GenerationTopicTests(TestCase):
         """Unexpected database errors during topic creation roll back the entire transaction."""
         data = self._sample_journey_dict()
 
-        with patch("courses.views.create_course_topic", side_effect=OperationalError("Disk full or lock timeout")):
+        with patch("courses.services.create_course_topic", side_effect=OperationalError("Disk full or lock timeout")):
             with self.assertRaises(OperationalError):
                 _build_journey(self.course, journey_override=data)
 

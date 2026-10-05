@@ -36,7 +36,9 @@
                     <span aria-hidden="true">☰</span>
                 </button>
             {% endif %}
-            <a class="brand" href="{% url 'courses:dashboard' %}">🎮 StudyQuest</a>
+            <a class="brand" href="{% url 'courses:dashboard' %}" data-brand-link data-sandbox-url="{% url 'courses:forge_sandbox' %}">🎮 StudyQuest</a>
+            <div id="sandbox-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+            <div id="sandbox-toast" class="sandbox-toast" hidden role="status" aria-live="polite">Developer camp unlocked.</div>
         </div>
 
         {% if user.is_authenticated %}
@@ -46,6 +48,9 @@
                 <a href="{% url 'courses:course_create' %}" class="topbar-link">Create Course</a>
                 <a href="{% url 'courses:leaderboard' %}" class="topbar-link">Rank &amp; Tiers</a>
                 <a href="{% url 'dungeon:launch' %}" class="topbar-link topbar-dungeon-link" {% block nav_dungeon_aria %}{% endblock %}><span aria-hidden="true">🔑</span> Dungeon Quest</a>
+                {% if user.is_staff %}
+                    <a href="{% url 'courses:forge_sandbox' %}" class="topbar-link dev-sandbox-link" title="StudyQuest Camp Developer Sandbox" style="opacity:0.75; font-size:0.78rem;">⛺ Sandbox</a>
+                {% endif %}
             </nav>
 
             <div class="stats topbar-desktop-stats">
@@ -199,6 +204,9 @@
                 <a href="{% url 'courses:leaderboard' %}">🏆 Rank &amp; Tiers</a>
                 <a href="{% url 'dungeon:launch' %}" class="topbar-dungeon-link" {% block nav_dungeon_aria_mobile %}{% endblock %}>🗝️ Dungeon Quest</a>
                 <a href="{% url 'courses:profile' %}">👤 My Profile</a>
+                {% if user.is_staff %}
+                    <a href="{% url 'courses:forge_sandbox' %}" style="opacity: 0.75; font-size: 0.84rem;">⛺ Camp Sandbox (Dev)</a>
+                {% endif %}
             </div>
 
             <div class="mobile-nav-stats">
@@ -369,6 +377,10 @@
 
     </script>
     {% include 'courses/components/quiz_launch_modal.html' %}
+    {% include 'courses/components/inline_confirm.html' %}
+    {% if user.is_authenticated %}
+        <script src="{% static 'courses/js/studyquest_sandbox_unlock.js' %}"></script>
+    {% endif %}
     {% block extra_js %}{% endblock %}
 </body>
 </html>

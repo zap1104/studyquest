@@ -220,17 +220,31 @@ chmod +x setup.sh run.sh
 ./setup.sh
 ```
 
-After setup, start the application with:
+After setup, start the application:
+
+**Normal daily startup (Windows one-click):**
 
 ```powershell
-.\run.bat
+.\start_studyquest.bat
 ```
 
-or:
+This opens both the web application terminal (`run.bat` at http://127.0.0.1:8000/) and the background generation worker terminal (`run_worker.bat`) automatically.
+
+**Manual startup (separate terminals):**
+
+```powershell
+.\run.bat          # Terminal 1: web application
+.\run_worker.bat   # Terminal 2: course generation worker
+```
+
+**macOS or Linux:**
 
 ```bash
-./run.sh
+./run.sh                                       # Terminal 1: web application
+python manage.py run_course_generation_worker  # Terminal 2: course worker
 ```
+
+Course generation is **asynchronous**. The web server queues the work; the separate worker process performs it. Without the worker running, submitted courses remain safely queued until the worker is started. See [docs/COURSE_FORGE.md](docs/COURSE_FORGE.md) for worker details, failure recovery, and retry behavior.
 
 ### Manual setup
 

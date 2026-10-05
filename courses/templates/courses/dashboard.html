@@ -33,6 +33,8 @@
 
     .dashboard-page .dashboard-page-shell.no-ad-rail {
         grid-template-columns: 1fr;
+        max-width: 1040px;
+        margin: 0 auto;
     }
 
     .dashboard-page .dashboard-hub {
@@ -960,10 +962,95 @@
     }
 </style>
 
+{% comment %}
+Courses being prepared by the background worker.
+
+Rendered outside the no_courses branch, because a learner whose only course is
+still processing has no ACTIVE course -- next_action.state would be
+'no_courses' and this section would otherwise never appear.
+
+Grouped into one compact panel rather than one full-width card per course, so
+it matches the width of the rest of the dashboard.
+{% endcomment %}
+
+<div class="dashboard-page-shell {% if profile.plan != 'free' or next_action.state == 'no_courses' %}no-ad-rail{% endif %}">
+    <div class="dashboard-hub">
+
+{% if processing_courses or failed_courses %}
+        <section class="prep-panel" aria-labelledby="prep-panel-title">
+            <header class="prep-panel-head">
+                <h2 id="prep-panel-title">Courses Being Prepared</h2>
+                <span class="prep-count">{{ preparing_count }}</span>
+            </header>
+
+            {% for pc in processing_courses %}
+                <article class="prep-row">
+                    <div class="prep-row-main">
+                        <strong class="prep-row-title">{{ pc.title }}</strong>
+                        <span class="prep-state prep-state--queued">
+                            {% if pc.generation_stage %}{{ pc.generation_stage|cut:"_"|title }}{% else %}Queued{% endif %}
+                        </span>
+                        <p class="prep-row-note">
+                            StudyQuest is building your chapters and assessments.
+                        </p>
+                    </div>
+                    <div class="prep-row-actions">
+                        <a href="{% url 'courses:course_generating' pc.pk %}" class="btn btn-primary btn-sm">
+                            View Preparation
+                        </a>
+                        <a href="{% url 'courses:course_generating' pc.pk %}" class="btn btn-ghost btn-sm">
+                            Play Course Forge
+                        </a>
+                        <span data-confirm-group style="display:inline-flex; gap:8px; align-items:center;">
+                            <button type="button" class="btn btn-ghost btn-sm" data-confirm-trigger>Remove Draft</button>
+                            <span data-confirm-panel hidden class="prep-confirm">
+                                <span class="prep-confirm-text">Remove this draft?</span>
+                                <form method="post" action="{% url 'courses:course_remove_draft' pc.pk %}" style="margin:0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{% url 'courses:dashboard' %}">
+                                    <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                                </form>
+                                <button type="button" class="btn btn-ghost btn-sm" data-confirm-cancel>Cancel</button>
+                            </span>
+                        </span>
+                    </div>
+                </article>
+            {% endfor %}
+
+            {% for fc in failed_courses %}
+                <article class="prep-row prep-row--failed">
+                    <div class="prep-row-main">
+                        <strong class="prep-row-title">{{ fc.title }}</strong>
+                        <span class="prep-state prep-state--failed">Interrupted</span>
+                        <p class="prep-row-note">
+                            {{ fc.generation_error|default:"Course preparation did not finish." }}
+                        </p>
+                    </div>
+                    <div class="prep-row-actions">
+                        <form method="post" action="{% url 'courses:course_retry' fc.pk %}" style="margin:0;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary btn-sm">Try Again</button>
+                        </form>
+                        <span data-confirm-group style="display:inline-flex; gap:8px; align-items:center;">
+                            <button type="button" class="btn btn-ghost btn-sm" data-confirm-trigger>Remove Draft</button>
+                            <span data-confirm-panel hidden class="prep-confirm">
+                                <span class="prep-confirm-text">Remove this draft?</span>
+                                <form method="post" action="{% url 'courses:course_remove_draft' fc.pk %}" style="margin:0;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="next" value="{% url 'courses:dashboard' %}">
+                                    <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                                </form>
+                                <button type="button" class="btn btn-ghost btn-sm" data-confirm-cancel>Cancel</button>
+                            </span>
+                        </span>
+                    </div>
+                </article>
+            {% endfor %}
+        </section>
+{% endif %}
+
 {% if next_action.state != 'no_courses' %}
     <!-- ================= 3-ZONE ACTION DASHBOARD ================= -->
-    <div class="dashboard-page-shell {% if profile.plan != 'free' %}no-ad-rail{% endif %}">
-        <div class="dashboard-hub">
 
             <!-- ZONE 1: GREETING & STREAK STATUS -->
             <section class="dashboard-greeting-row" aria-label="Dashboard Overview">
@@ -978,14 +1065,9 @@
                     </div>
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                    <button type="button" class="btn btn-ghost btn-sm js-open-focus-modal" style="display: inline-flex; align-items: center; gap: 6px; border: 1px dashed var(--border); font-size: 0.8rem; padding: 6px 12px; border-radius: 999px;">
-                        🎯 {% if active_focus %}Focus: {{ active_focus.subject_name|truncatechars:18 }}{% else %}Set Study Focus{% endif %}
-                    </button>
-                    <div class="streak-status-pill streak-{{ streak_status.status }}">
-                        <span class="streak-icon">{{ streak_status.icon }}</span>
-                        <span class="streak-message">{{ streak_status.message }}</span>
-                    </div>
+                <div class="streak-status-pill streak-{{ streak_status.status }}">
+                    <span class="streak-icon">{{ streak_status.icon }}</span>
+                    <span class="streak-message">{{ streak_status.message }}</span>
                 </div>
             </section>
 
@@ -993,6 +1075,16 @@
             <div class="dashboard-grid">
                 <div class="dashboard-primary">
 
+                    {% comment %}
+                    The Study Focus invitation is rendered here by focus_card.html.
+                    It states what a Study Focus is, why it helps, and offers a
+                    real call to action -- unlike a bare "Set Study Focus" pill
+                    tucked into the status-chip row above, which reads as a label.
+
+                    The card carries different content per learner state: an
+                    invitation, an active focus with its priority topics, a
+                    pending school result, or a completed focus to report on.
+                    {% endcomment %}
                     {% include 'courses/includes/focus_card.html' %}
 
                     <!-- Next in Your Course Card -->
@@ -1175,22 +1267,53 @@
                     {% endif %}
                 </aside>
             </div>
+{% elif processing_courses or failed_courses %}
+    <!-- State: Processing or Failed Courses (No Active Courses) -->
+    {% include 'courses/includes/focus_card.html' %}
+
+    <div class="next-action-card state-preparing" style="border-left: 3px solid var(--primary);">
+        <div class="next-action-eyebrow">
+            <span>PREPARATION IN PROGRESS</span>
         </div>
-
-        {% if profile.plan == 'free' %}
-            <!-- External Right Sponsor Rail (Desktop Only) -->
-            <aside class="dashboard-ad-rail">
-                {% include 'courses/components/mock_sponsor_card.html' %}
-            </aside>
-        {% endif %}
+        <div class="next-action-content">
+            <div class="next-action-header">
+                <h2 class="next-course-title">Preparing Your Course</h2>
+                <div class="next-chapter-subtitle">StudyQuest AI is generating your chapters, topics, and quiz questions in the background.</div>
+            </div>
+            <div class="next-status-callout">
+                <span class="callout-icon">⚔️</span>
+                <span class="callout-text">You can play Course Forge while you wait, or leave and return when your course is ready.</span>
+            </div>
+            <div class="next-action-buttons">
+                {% if processing_courses %}
+                    <a href="{% url 'courses:course_generating' processing_courses.0.pk %}" class="btn btn-primary btn-chunky">
+                        View Preparation &rarr;
+                    </a>
+                    <a href="{% url 'courses:course_generating' processing_courses.0.pk %}" class="btn btn-ghost">
+                        Play Course Forge
+                    </a>
+                {% endif %}
+                <a href="{% url 'courses:course_create' %}" class="btn btn-ghost">
+                    Create Another Course
+                </a>
+            </div>
+        </div>
     </div>
-
 {% else %}
     <!-- Zero Courses Onboarding State -->
     <div class="prologue-stage" style="flex-direction: column; gap: 20px;">
-        <div style="width: 100%; max-width: 960px;">
-            {% include 'courses/includes/focus_card.html' %}
-        </div>
+        {% comment %}
+        The Welcome panel below already offers "Find My Study Focus", so the
+        plain suggestion banner would be a duplicate invitation for a brand-new
+        learner. The card is still shown whenever it carries real information
+        the Welcome panel does not: an active focus, a pending school result,
+        or a completed focus awaiting review.
+        {% endcomment %}
+        {% if active_focus or pending_focus or completed_focus %}
+            <div style="width: 100%; max-width: 960px;">
+                {% include 'courses/includes/focus_card.html' %}
+            </div>
+        {% endif %}
         <div class="prologue-card">
             <div class="prologue-visual">
                 <img src="{% static 'courses/images/mascot_welcome.png' %}" alt="StudyQuest Student Mascot" class="prologue-mascot-img">
@@ -1234,6 +1357,16 @@
         </div>
     </div>
 {% endif %}
+
+    </div><!-- .dashboard-hub -->
+
+    {% if next_action.state != 'no_courses' and profile.plan == 'free' %}
+        <!-- External Right Sponsor Rail (Desktop Only) -->
+        <aside class="dashboard-ad-rail">
+            {% include 'courses/components/mock_sponsor_card.html' %}
+        </aside>
+    {% endif %}
+</div><!-- .dashboard-page-shell -->
 
 <!-- Root-Level Modals (Positioned outside sidebar & ad-rail) -->
 {% if profile.plan == 'free' %}

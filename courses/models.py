@@ -93,6 +93,13 @@ class Course(models.Model):
 
     structured_content = models.JSONField(blank=True, null=True)
 
+    # --- ASYNC GENERATION STATE (Course Forge) ---
+    # Learner-facing failure text. Never contains provider internals or secrets.
+    generation_error = models.TextField(blank=True, default="")
+    generation_stage = models.CharField(max_length=40, blank=True, default="")
+    generation_started_at = models.DateTimeField(null=True, blank=True)
+    generation_completed_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -519,3 +526,130 @@ class StartingKnowledgeCheck(models.Model):
     def __str__(self):
         return f"{self.user.username} Knowledge Check for {self.course.title} ({self.status})"
 
+# --- ASYNC COURSE GENERATION (COURSE FORGE) ---
+
+class CourseGenerationJob(models.Model):
+    """A durable unit of course-generation work.
+
+    Two state machines are deliberately kept separate:
+
+    * This job tracks *worker execution* (queued -> running -> succeeded/failed).
+    * ``Course.status`` tracks *course availability* (processing -> active/failed).
+
+    A job row is what makes generation survive a refresh, a tab close, or a
+    process restart. ``source_bundle`` holds the already-extracted study text,
+    so a worker never needs the original ``UploadedFile`` objects -- those are
+    destroyed when the originating request ends.
+    """
+
+    STATUS_QUEUED = "queued"
+    STATUS_RUNNING = "running"
+    STATUS_SUCCEEDED = "succeeded"
+    STATUS_FAILED = "failed"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_INTERRUPTED = "interrupted"
+
+    STATUS_CHOICES = [
+        (STATUS_QUEUED, "Queued"),
+        (STATUS_RUNNING, "Running"),
+        (STATUS_SUCCEEDED, "Succeeded"),
+        (STATUS_FAILED, "Failed"),
+        (STATUS_CANCELLED, "Cancelled"),
+        (STATUS_INTERRUPTED, "Interrupted"),
+    ]
+
+    # Honest stages only. No fabricated percentages.
+    STAGE_QUEUED = "queued"
+    STAGE_READING_SOURCES = "reading_sources"
+    STAGE_PREPARING_CONTENT = "preparing_content"
+    STAGE_GENERATING_COURSE = "generating_course"
+    STAGE_VALIDATING_COURSE = "validating_course"
+    STAGE_SAVING_COURSE = "saving_course"
+    STAGE_COMPLETE = "complete"
+    STAGE_FAILED = "failed"
+
+    STAGE_CHOICES = [
+        (STAGE_QUEUED, "Queued"),
+        (STAGE_READING_SOURCES, "Reading source materials"),
+        (STAGE_PREPARING_CONTENT, "Preparing the course structure"),
+        (STAGE_GENERATING_COURSE, "Generating lessons and assessments"),
+        (STAGE_VALIDATING_COURSE, "Checking the generated content"),
+        (STAGE_SAVING_COURSE, "Saving your course"),
+        (STAGE_COMPLETE, "Course ready"),
+        (STAGE_FAILED, "Generation failed"),
+    ]
+
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.CASCADE,
+        related_name="generation_jobs",
+    )
+    attempt_id = models.UUIDField(unique=True, editable=False)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_QUEUED,
+        db_index=True,
+    )
+    stage = models.CharField(
+        max_length=40,
+        choices=STAGE_CHOICES,
+        default=STAGE_QUEUED,
+    )
+
+    # Extracted, self-contained study text. The worker never touches uploads.
+    source_bundle = models.JSONField(default=dict, blank=True)
+
+    # Inputs the worker needs that are not derivable from the course row.
+    generation_profile = models.JSONField(default=dict, blank=True)
+    custom_title = models.CharField(max_length=200, blank=True, default="")
+    study_focus = models.CharField(max_length=100, blank=True, default="")
+    plan_name = models.CharField(max_length=20, blank=True, default="free")
+
+    queued_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    heartbeat_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    claimed_by = models.CharField(max_length=120, blank=True, default="")
+
+    retry_count = models.PositiveIntegerField(default=0)
+    error_code = models.CharField(max_length=60, blank=True, default="")
+    # Learner-safe text only. Never provider prompts or raw API errors.
+    error_message = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["queued_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["course", "attempt_id"],
+                name="unique_course_generation_attempt",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["status", "queued_at"]),
+        ]
+
+    def __str__(self):
+        return f"Job {self.attempt_id} for {self.course_id} ({self.status})"
+
+    @property
+    def is_finished(self):
+        return self.status in {
+            self.STATUS_SUCCEEDED,
+            self.STATUS_FAILED,
+            self.STATUS_CANCELLED,
+            self.STATUS_INTERRUPTED,
+        }
+
+    def learner_stage_message(self):
+        """Learner-facing stage text. Never exposes internal implementation."""
+        return {
+            self.STAGE_QUEUED: "Waiting to start",
+            self.STAGE_READING_SOURCES: "Reading your materials",
+            self.STAGE_PREPARING_CONTENT: "Preparing the course structure",
+            self.STAGE_GENERATING_COURSE: "Generating lessons and assessments",
+            self.STAGE_VALIDATING_COURSE: "Checking the generated content",
+            self.STAGE_SAVING_COURSE: "Saving your course",
+            self.STAGE_COMPLETE: "Your course is ready",
+            self.STAGE_FAILED: "StudyQuest could not finish this course",
+        }.get(self.stage, "Preparing your course")
