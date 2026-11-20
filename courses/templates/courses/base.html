@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}StudyQuest{% endblock %}</title>
 
     <script>
@@ -11,6 +11,7 @@
     </script>
 
     <link rel="stylesheet" href="{% static 'courses/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'courses/css/mobile-study.css' %}">
     <style>
         .topbar-plan { position:relative; }
         .topbar-plan-chip { min-height:32px; padding:0 12px; display:inline-flex; align-items:center; gap:7px; border:1px solid rgba(0,194,168,.28); border-radius:999px; background:linear-gradient(135deg,rgba(0,194,168,.12),rgba(108,92,231,.08)); color:var(--accent); font:inherit; font-size:.72rem; font-weight:900; letter-spacing:.05em; text-transform:uppercase; cursor:pointer; }
@@ -227,6 +228,10 @@
     <footer class="footer">
         <p>StudyQuest &copy; 2026 — AI-Powered Gamified Learning Platform</p>
     </footer>
+
+    {% if user.is_authenticated %}
+        {% include 'courses/components/mobile_study_nav.html' %}
+    {% endif %}
 
     <button id="theme-toggle" class="theme-toggle-fab" aria-label="Toggle dark mode" title="Changes your theme outside Dungeon Quest" aria-describedby="dq-theme-note">
         <svg id="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

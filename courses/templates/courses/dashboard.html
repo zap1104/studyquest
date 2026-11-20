@@ -1075,18 +1075,6 @@ it matches the width of the rest of the dashboard.
             <div class="dashboard-grid">
                 <div class="dashboard-primary">
 
-                    {% comment %}
-                    The Study Focus invitation is rendered here by focus_card.html.
-                    It states what a Study Focus is, why it helps, and offers a
-                    real call to action -- unlike a bare "Set Study Focus" pill
-                    tucked into the status-chip row above, which reads as a label.
-
-                    The card carries different content per learner state: an
-                    invitation, an active focus with its priority topics, a
-                    pending school result, or a completed focus to report on.
-                    {% endcomment %}
-                    {% include 'courses/includes/focus_card.html' %}
-
                     <!-- Next in Your Course Card -->
                     <div class="next-action-card state-{{ next_action.state }}">
                         <div class="next-action-eyebrow">
@@ -1161,6 +1149,8 @@ it matches the width of the rest of the dashboard.
                             {% endif %}
                         </div>
                     </div>
+
+                    {% include 'courses/includes/focus_card.html' %}
 
                     <!-- ZONE 3: RECENT COURSES (Excluding Featured Course) -->
                     {% if recent_courses %}

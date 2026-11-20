@@ -1088,8 +1088,8 @@
                     <div class="drop-zone" id="drop-zone">
                         <div id="drop-empty-state">
                             <div class="upload-icon-wrap">📄</div>
-                            <h3 class="drop-title" id="drop-title-text">Drop up to 3 study files here</h3>
-                            <p class="drop-subtitle">or <label for="file-upload" class="browse-link">Browse Files</label></p>
+                            <h3 class="drop-title" id="drop-title-text">Add up to 3 study files</h3>
+                            <p class="drop-subtitle"><button type="button" id="browse-study-files" class="btn btn-secondary browse-link">Choose Files</button></p>
                             <span class="drop-formats">Supports PDF, DOCX, PPTX, TXT (Max 10 MB each, 20 MB total)</span>
                         </div>
                         <input type="file" id="file-upload" name="content_files" class="hidden-file-input" accept=".pdf,.docx,.pptx,.txt" multiple>
@@ -1306,7 +1306,7 @@
             dropTitleText.textContent = `+ Add file (${remaining} slot${remaining === 1 ? '' : 's'} remaining)`;
         } else {
             dropZone.classList.remove('is-full', 'compact');
-            dropTitleText.textContent = 'Drop up to 3 study files here';
+            dropTitleText.textContent = 'Add up to 3 study files';
         }
 
         // Render cards with drag handle and reordering support
@@ -1497,6 +1497,9 @@
         }
     });
 
+    document.getElementById('browse-study-files').addEventListener('click', () => {
+        if (stagedFiles.length < MAX_FILES) fileInput.click();
+    });
     dropZone.addEventListener('click', function(e) {
         if (stagedFiles.length >= MAX_FILES) {
             e.preventDefault();

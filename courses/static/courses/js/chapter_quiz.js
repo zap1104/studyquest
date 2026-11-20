@@ -659,6 +659,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             showFeedbackState(data, q);
+            if (window.matchMedia('(max-width: 640px)').matches) {
+                inlineFeedback.scrollIntoView({block: 'start'});
+            }
 
         } catch (err) {
             console.error('Answer check error:', err);
@@ -674,6 +677,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentIndex < quiz.questions.length - 1) {
                 currentIndex++;
                 renderQuestion();
+                if (window.matchMedia('(max-width: 640px)').matches) {
+                    const heading = document.getElementById('quiz-question-text');
+                    heading?.focus({preventScroll: true});
+                    heading?.scrollIntoView({block: 'start'});
+                }
             } else {
                 finalizeQuiz();
             }

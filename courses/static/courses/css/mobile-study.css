@@ -1,0 +1,240 @@
+.study-dock {
+    display: none;
+}
+
+.reader-meter {
+    display: block;
+    width: 100%;
+    height: 4px;
+    flex-shrink: 0;
+    appearance: none;
+    border: 0;
+    background: var(--border);
+    color: var(--primary);
+}
+
+.reader-meter::-webkit-progress-bar { background: var(--border); }
+.reader-meter::-webkit-progress-value { background: var(--primary); }
+.reader-meter::-moz-progress-bar { background: var(--primary); }
+
+.reader-finish {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-shrink: 0;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    padding: 10px 18px;
+}
+
+.reader-finish [hidden] { display: none; }
+
+.reader-finish p {
+    margin: 0;
+    color: var(--muted);
+    font-size: .84rem;
+    line-height: 1.3;
+}
+
+.reader-finish .btn {
+    min-height: 44px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 767px) and (orientation: portrait) {
+    body {
+        --topbar-height: calc(60px + env(safe-area-inset-top));
+    }
+
+    .topbar {
+        padding-block-start: env(safe-area-inset-top);
+    }
+
+    body:has(.study-dock) {
+        --study-dock-space: calc(74px + env(safe-area-inset-bottom));
+    }
+
+    .study-dock {
+        position: fixed;
+        inset: auto 0 0;
+        z-index: 70;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 5px;
+        padding: 6px max(10px, env(safe-area-inset-right)) calc(7px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+        border-top: 1px solid var(--border);
+        background: var(--surface);
+        box-shadow: 0 -8px 28px rgb(16 13 42 / .09);
+    }
+
+    .study-dock a {
+        display: grid;
+        min-height: 51px;
+        align-content: center;
+        justify-items: center;
+        gap: 4px;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        color: var(--muted);
+        font-size: .73rem;
+        font-weight: 700;
+        line-height: 1.05;
+        text-decoration: none;
+        touch-action: manipulation;
+    }
+
+    .study-dock svg {
+        width: 21px;
+        height: 21px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.75;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .study-dock a[aria-current] {
+        color: var(--ink);
+        border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+        background: color-mix(in srgb, var(--primary) 14%, var(--surface));
+    }
+
+    .study-dock a[aria-current] svg { color: var(--primary); }
+    .study-dock a:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+
+    body:has(.study-dock) > .footer {
+        padding-bottom: var(--study-dock-space);
+    }
+
+    .study-dock ~ .theme-toggle-fab {
+        bottom: calc(var(--study-dock-space) + 6px);
+        right: max(12px, env(safe-area-inset-right));
+    }
+
+    body:has(.study-dock) .mobile-nav-panel {
+        bottom: var(--study-dock-space);
+        max-height: calc(100dvh - var(--topbar-height, 64px) - var(--study-dock-space));
+        overflow: auto;
+        overscroll-behavior: contain;
+    }
+
+    body.modal-open .study-dock,
+    body:has(.mobile-nav-panel.open) .study-dock {
+        visibility: hidden;
+    }
+}
+
+@media (max-width: 640px) {
+    .topbar .mobile-menu-button,
+    .page .quiz-exit-btn,
+    .page .quiz-style-toggle-pill,
+    .page .review-close-btn {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .dashboard-page .dashboard-greeting-title,
+    .dashboard-page .prologue-heading,
+    .dashboard-page .next-course-title,
+    .course-library-page .library-course-title,
+    .reader-heading h2 {
+        overflow-wrap: anywhere;
+    }
+
+    .dashboard-page .prologue-card { gap: 12px; padding: 18px; }
+    .dashboard-page .prologue-mascot-img { max-height: 124px; }
+    .dashboard-page .prologue-cta-wrap .btn { min-height: 46px; }
+
+    .dashboard-page .next-action-card {
+        border-top-color: var(--primary);
+        box-shadow: 0 9px 26px rgb(60 42 134 / .13);
+    }
+
+    .dashboard-page .next-action-buttons {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .dashboard-page .next-action-buttons .btn {
+        width: 100%;
+        min-height: 48px;
+        white-space: normal;
+    }
+
+    .dashboard-page .next-action-buttons .btn-primary {
+        min-height: 52px;
+        font-size: 1rem;
+    }
+
+    .course-library-page .course-library-tabs {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(0, 1fr);
+        gap: 4px;
+        overflow: visible;
+        padding: 4px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--surface);
+    }
+
+    .course-library-page .course-library-tabs .btn {
+        min-width: 0;
+        padding: 8px 4px;
+        justify-content: center;
+        text-align: center;
+        font-size: clamp(.71rem, 2.9vw, .87rem);
+        white-space: normal;
+    }
+
+    .lesson-reader-pane .reader-header {
+        align-items: center;
+        padding: calc(10px + env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 10px max(14px, env(safe-area-inset-left));
+    }
+
+    .lesson-reader-pane .reader-content {
+        padding: 20px max(16px, env(safe-area-inset-right)) 30px max(16px, env(safe-area-inset-left));
+        overscroll-behavior: contain;
+        line-height: 1.65;
+        overflow-wrap: anywhere;
+    }
+
+    .lesson-reader-pane .reader-section-nav .reader-nav-chip { min-height: 40px; }
+    .lesson-reader-pane .reader-finish {
+        padding: 8px max(12px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    }
+
+    .quiz-page #quiz-inline-feedback:has(#quiz-feedback-sheet[hidden]) {
+        display: none;
+    }
+
+    .quiz-page .quiz-question-stage,
+    .quiz-page #quiz-inline-feedback {
+        scroll-margin-top: calc(var(--topbar-height, 60px) + 12px);
+    }
+
+    .quiz-page .quiz-option,
+    .quiz-page .feedback-expl-text,
+    .quiz-page .review-item-qtext {
+        overflow-wrap: anywhere;
+    }
+
+    .quiz-page .quiz-option { touch-action: manipulation; }
+
+    .page .auth-form input,
+    .forge-page-wrap input[type="text"],
+    .forge-page-wrap textarea {
+        font-size: 16px;
+    }
+
+    .forge-page-wrap .drop-zone .browse-link {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        padding-inline: 10px;
+    }
+
+    .forge-page-wrap .btn-remove-source { min-width: 44px; min-height: 44px; }
+}

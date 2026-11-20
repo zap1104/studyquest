@@ -1137,7 +1137,7 @@
     <div class="quiz-page-container">
         <!-- Region 1: Focus Exit & Progress Track & Style Dropdown -->
         <div class="quiz-focus-header">
-            <a href="{% url 'courses:chapter_review' chapter.pk %}" class="quiz-exit-btn" id="quiz-exit-link" title="Exit Quiz">✕</a>
+            <a href="{% url 'courses:chapter_review' chapter.pk %}" class="quiz-exit-btn" id="quiz-exit-link" aria-label="Return to chapter" title="Exit Quiz">✕</a>
             <div class="quiz-progress-top">
                 <div id="quiz-progress-fill" class="quiz-progress-fill"></div>
             </div>
@@ -1176,7 +1176,7 @@
 
         <!-- Region 2 Center Stage: Pure Centered Question -->
         <div class="quiz-question-stage" id="quiz-question-stage">
-            <h2 class="quiz-question-text" id="quiz-question-text"></h2>
+            <h2 class="quiz-question-text" id="quiz-question-text" tabindex="-1"></h2>
         </div>
 
         <!-- Region 3: Reserved Inline Feedback Region (Stationary Slot between Question and Choices) -->

@@ -87,13 +87,13 @@
     <a href="{% url 'courses:course_create' %}" class="btn btn-primary">+ Create Course</a>
 </div>
 
-<div class="course-library-tabs">
-    <a href="?tab=active" class="btn btn-ghost {% if active_tab == 'active' %}active{% endif %}">Active ({{ active_count }})</a>
+<nav class="course-library-tabs" aria-label="Course status">
+    <a href="?tab=active" class="btn btn-ghost {% if active_tab == 'active' %}active{% endif %}" {% if active_tab == 'active' %}aria-current="page"{% endif %}>Active ({{ active_count }})</a>
     {% if preparing_count > 0 %}
-        <a href="?tab=preparing" class="btn btn-ghost {% if active_tab == 'preparing' %}active{% endif %}">Preparing ({{ preparing_count }})</a>
+        <a href="?tab=preparing" class="btn btn-ghost {% if active_tab == 'preparing' %}active{% endif %}" {% if active_tab == 'preparing' %}aria-current="page"{% endif %}>Preparing ({{ preparing_count }})</a>
     {% endif %}
-    <a href="?tab=archived" class="btn btn-ghost {% if active_tab == 'archived' %}active{% endif %}">Archived ({{ archived_courses.count }})</a>
-</div>
+    <a href="?tab=archived" class="btn btn-ghost {% if active_tab == 'archived' %}active{% endif %}" {% if active_tab == 'archived' %}aria-current="page"{% endif %}>Archived ({{ archived_courses.count }})</a>
+</nav>
 
 <div class="library-capacity-strip">
     <div>

@@ -496,6 +496,8 @@
             <button type="button" class="reader-close" id="close-reader-btn" aria-label="Close chapter review" title="Close chapter review">✕</button>
         </header>
 
+        <progress class="reader-meter" id="reader-meter" max="100" value="0" aria-label="Reading progress"></progress>
+
         <!-- SPRINT G3: STICKY CHIP NAVIGATION BAR -->
         <nav class="reader-section-nav" id="reader-section-nav" aria-label="Section navigation" hidden></nav>
 
@@ -694,6 +696,16 @@
                 {% endif %}
             </article>
         </div>
+        <div class="reader-finish">
+            <p id="reader-finish-status" role="status">{% if is_completed %}Lesson complete{% elif has_read_to_end %}Ready to mark complete{% else %}Read to the end to finish.{% endif %}</p>
+            <button type="button" id="reader-finish-btn" class="btn btn-primary" {% if not has_read_to_end or is_completed %}hidden{% endif %}>Mark complete</button>
+            {% if has_quiz and question_count > 0 %}
+                <a href="{% url 'courses:chapter_quiz' chapter.pk %}" class="btn btn-primary prequiz-trigger"
+                   id="reader-quiz-link" data-lesson-completed="true" {% if not is_completed %}hidden{% endif %}>Open quiz</a>
+            {% else %}
+                <button type="button" class="btn btn-ghost" id="reader-return-btn" {% if not is_completed %}hidden{% endif %}>Back to chapter</button>
+            {% endif %}
+        </div>
     </aside>
 </div>
 
@@ -708,8 +720,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const openReaderBtn = document.getElementById('read-full-lesson-btn');
     const closeReaderBtn = document.getElementById('close-reader-btn');
     const completeBtn = document.getElementById('mark-complete-btn');
-
-
+    const readerMeter = document.getElementById('reader-meter');
+    const finishStatus = document.getElementById('reader-finish-status');
+    const finishBtn = document.getElementById('reader-finish-btn');
+    const quizLink = document.getElementById('reader-quiz-link');
+    const returnBtn = document.getElementById('reader-return-btn');
+    let readingRequest;
 
     let hasReadToEnd = (completeBtn && completeBtn.dataset.hasRead === 'true') ||
                        (completeBtn && completeBtn.classList.contains('is-complete'));
@@ -723,27 +739,39 @@ document.addEventListener('DOMContentLoaded', () => {
         return parts.length === 2 ? parts.pop().split(';').shift() : '';
     }
 
-    async function recordReadingCompletion() {
-        if (!completeBtn || !completeBtn.dataset.readingUrl) return;
-        const response = await fetch(completeBtn.dataset.readingUrl, {
+    function recordReadingCompletion() {
+        if (hasReadToEnd) return Promise.resolve(true);
+        if (readingRequest) return readingRequest;
+
+        readingRequest = fetch(completeBtn.dataset.readingUrl, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken'),
                 'X-Requested-With': 'XMLHttpRequest'
             }
-        });
-        if (response.ok) {
+        }).then(response => {
+            if (!response.ok) throw new Error('Unable to save reading progress');
             hasReadToEnd = true;
             completeBtn.disabled = false;
             completeBtn.textContent = 'Mark Lesson Complete (+15 XP)';
-        }
+            finishStatus.textContent = 'Ready to mark complete';
+            return true;
+        }).catch(() => {
+            finishStatus.textContent = 'Could not save your progress. Tap to retry.';
+            return false;
+        }).finally(() => {
+            readingRequest = undefined;
+        });
+
+        return readingRequest;
     }
 
     function checkReadingProgress() {
-        if (hasReadToEnd || !readerContent) return;
-        const scrollBottom = readerContent.scrollTop + readerContent.clientHeight;
-        const scrollThreshold = readerContent.scrollHeight - 160;
-        if (scrollBottom >= scrollThreshold) {
+        if (!readerContent || !workspace.classList.contains('reader-open')) return;
+        const remaining = Math.max(0, readerContent.scrollHeight - readerContent.clientHeight);
+        readerMeter.value = remaining ? Math.max(0, Math.min(100, Math.round(readerContent.scrollTop / remaining * 100))) : 100;
+        if (!hasReadToEnd && remaining - readerContent.scrollTop <= 160) {
+            finishBtn.hidden = false;
             recordReadingCompletion();
         }
     }
@@ -776,15 +804,22 @@ document.addEventListener('DOMContentLoaded', () => {
         closeReaderBtn.addEventListener('click', closeReader);
     }
 
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (prequizModal && prequizModal.classList.contains('open')) {
-                setModalOpen(prequizModal, false);
-            } else if (workspace.classList.contains('reader-open')) {
-                closeReader();
-            }
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !event.defaultPrevented && workspace.classList.contains('reader-open')) {
+            closeReader();
         }
     });
+
+    finishBtn.addEventListener('click', async () => {
+        finishBtn.disabled = true;
+        if (await recordReadingCompletion()) {
+            completeBtn.click();
+        } else {
+            finishBtn.disabled = false;
+        }
+    });
+    returnBtn?.addEventListener('click', closeReader);
+    window.addEventListener('resize', checkReadingProgress);
 
     if (!completeBtn) return;
 
@@ -794,6 +829,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const originalText = completeBtn.textContent.trim();
         completeBtn.disabled = true;
         completeBtn.textContent = 'Saving...';
+        finishBtn.disabled = true;
 
         try {
             const completeUrl = completeBtn.dataset.completeUrl || `/chapters/${completeBtn.dataset.chapterId}/complete/`;
@@ -810,6 +846,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             completeBtn.textContent = 'Completed ✓';
             completeBtn.classList.add('is-complete');
+            finishBtn.hidden = true;
+            finishStatus.textContent = 'Lesson complete';
+            const nextControl = quizLink || returnBtn;
+            if (nextControl) {
+                nextControl.hidden = false;
+                if (workspace.classList.contains('reader-open')) nextControl.focus();
+            }
 
             if (!document.getElementById('lesson-completed-chip')) {
                 const completedChip = document.createElement('span');
@@ -822,6 +865,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             completeBtn.disabled = false;
             completeBtn.textContent = originalText;
+            finishBtn.disabled = false;
+            finishStatus.textContent = 'Could not mark this lesson complete. Try again.';
             console.error('Unable to mark lesson complete:', error);
         }
     });
