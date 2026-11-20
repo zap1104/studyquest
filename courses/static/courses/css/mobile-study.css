@@ -490,6 +490,40 @@
         max-inline-size: 100%;
     }
 
+    body[data-screen='course_create'] .forge-hero-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body[data-screen='course_create'] .quota-status-card {
+        inline-size: 100%;
+        min-inline-size: 0;
+        padding-inline: 12px;
+    }
+
+    body[data-screen='course_create'] :is(.quota-status-header, .quota-plan-meta) {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    body[data-screen='course_create'] :is(.quota-plan-name, .quota-ready-badge) {
+        max-inline-size: 100%;
+        white-space: normal;
+    }
+
+    body[data-screen='course_create'] .quota-stat-inline-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 5px;
+    }
+
+    body[data-screen='course_create'] .quota-stat-pill {
+        flex-direction: column;
+        gap: 2px;
+        padding: 5px 2px;
+        text-align: center;
+        white-space: normal;
+    }
+
     body[data-screen='course_generating'] .forge-game-slot,
     body[data-screen='forge_sandbox'] .forge-game-slot {
         inline-size: 100%;
