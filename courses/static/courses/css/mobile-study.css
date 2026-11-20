@@ -241,7 +241,7 @@
 
 /* Keep study screens inside the viewport even when course names, streak
    messages, and uploaded filenames have a large intrinsic width. */
-@media (max-width: 767px), (max-width: 950px) and (max-height: 500px) and (orientation: landscape) {
+@media (max-width: 900px), (max-width: 950px) and (max-height: 500px) and (orientation: landscape) {
     body[data-screen] { min-inline-size: 0; overflow-wrap: anywhere; }
 
     body[data-screen] > .topbar {
@@ -541,3 +541,141 @@
     }
 }
 
+/* Keep secondary states usable at the same widths as the compact navigation. */
+@media (max-width: 900px), (max-width: 950px) and (max-height: 500px) and (orientation: landscape) {
+    body[data-screen='dashboard'] .prep-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    body[data-screen='dashboard'] .prep-row-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+        align-items: start;
+    }
+
+    body[data-screen='dashboard'] .prep-row-actions > :is([data-confirm-group], form) {
+        grid-column: 1 / -1;
+        flex-wrap: wrap;
+        min-inline-size: 0;
+    }
+
+    body[data-screen='dashboard'] .prep-row-actions .btn {
+        min-block-size: 44px;
+        justify-content: center;
+        text-align: center;
+    }
+
+    body[data-screen='course_list'] .library-course-actions:has([data-confirm-panel]:not([hidden])) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body[data-screen='course_list'] .library-course-actions [data-confirm-group] {
+        min-inline-size: 0;
+        flex-wrap: wrap;
+    }
+
+    body[data-screen='course_detail'] .course-banner {
+        flex-flow: column nowrap;
+        align-items: stretch;
+    }
+
+    body[data-screen='course_detail'] .course-banner-copy {
+        flex: none;
+        max-inline-size: 100%;
+        overflow-wrap: anywhere;
+    }
+
+    body[data-screen='course_detail'] .course-banner-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
+        align-items: stretch;
+    }
+
+    body[data-screen='course_detail'] .course-banner-actions .btn {
+        inline-size: 100%;
+        min-block-size: 44px;
+        text-align: center;
+    }
+
+    body[data-screen='course_detail'] .course-banner-actions form {
+        display: flex;
+    }
+
+    body[data-screen='leaderboard'] :is(.leaderboard-container, .leaderboard-card, .leaderboard-momentum-card, .standings-table-wrap) {
+        min-inline-size: 0;
+        max-inline-size: 100%;
+    }
+
+    body[data-screen='leaderboard'] .tier-stepper {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    body[data-screen='leaderboard'] :is(.tier-status-text-row, .standings-user-names) {
+        flex-wrap: wrap;
+        min-inline-size: 0;
+    }
+
+    body[data-screen='leaderboard'] .tier-status-text-row {
+        gap: 4px 12px;
+    }
+
+    body[data-screen='leaderboard'] .standings-table {
+        min-inline-size: 36rem;
+    }
+
+    body[data-screen='leaderboard'] .standings-username {
+        overflow-wrap: anywhere;
+    }
+
+    body[data-screen='focus_summary'] .breakdown-table {
+        min-inline-size: 32rem;
+    }
+
+    body[data-screen='focus_summary'] .breakdown-table .btn {
+        white-space: nowrap;
+    }
+
+    body[data-screen='profile'] .achievement-name-row {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+    }
+
+    body[data-screen='launch'] .portal-atmosphere {
+        overflow: clip;
+    }
+
+    body[data-screen='launch'] :is(.dungeon-course-header, .dungeon-delver-summary) {
+        flex-wrap: wrap;
+    }
+
+    body[data-screen='launch'] :is(.dungeon-course-badge, .dungeon-delver-summary) {
+        min-inline-size: 0;
+        max-inline-size: 100%;
+        white-space: normal;
+    }
+}
+
+@media (max-width: 480px) {
+    body[data-screen] :is(.forge-camp-topbar, .forge-camp-title-row, .forge-camp-controls-row) {
+        flex-wrap: wrap;
+    }
+
+    body[data-screen] .forge-camp-controls-row {
+        flex: 1 1 100%;
+    }
+
+    body[data-screen] .forge-camp-controls-row .btn {
+        flex: 1 1 auto;
+        min-block-size: 44px;
+        padding-inline: 8px;
+        white-space: normal;
+        overflow-wrap: normal;
+    }
+}
+
+@media (max-width: 380px) {
+    body[data-screen] .quiz-launch-box .quiz-style-options {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
