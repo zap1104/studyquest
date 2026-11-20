@@ -1046,6 +1046,7 @@ body {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 .auth-title { font-size: 1.3rem; margin: 0 0 4px; font-weight: 800; }
+.auth-form .form-error, .auth-card > .form-error { color: var(--ink); border-inline-start: 3px solid #d64e65; padding-inline-start: 8px; margin: 4px 0; }
 .auth-hint { color: var(--muted); font-size: 0.85rem; margin: 0 0 14px; }
 
 /* =========================================================

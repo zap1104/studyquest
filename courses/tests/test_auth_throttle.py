@@ -240,3 +240,51 @@ class AuthThrottleTests(TestCase):
         with override_settings(TRUST_PROXY_HEADERS=True, TRUSTED_PROXY_IPS=["10.0.0.1"]):
             req3 = rf.get("/", HTTP_X_FORWARDED_FOR="203.0.113.195, 10.0.0.1", REMOTE_ADDR="10.0.0.1")
             self.assertEqual(_client_ip(req3), "203.0.113.195")
+
+    @override_settings(RENDER_EXTERNAL_HOSTNAME="studyquest.onrender.com", LOGIN_THROTTLE_MAX_ATTEMPTS=1)
+    def test_render_clients_have_separate_counters(self):
+        first_client = {"REMOTE_ADDR": "127.0.0.1", "HTTP_CF_CONNECTING_IP": "192.0.2.1"}
+        self.assertEqual(self._failed_login(**first_client).status_code, 200)
+        blocked = self._failed_login(**first_client, HTTP_X_FORWARDED_FOR="203.0.113.9")
+        self.assertContains(blocked, "Too many attempts from your network", status_code=429)
+
+        second_client = {"REMOTE_ADDR": "127.0.0.1", "HTTP_CF_CONNECTING_IP": "192.0.2.2"}
+        self.assertEqual(self._failed_login(**second_client).status_code, 200)
+        direct = RequestFactory().get("/", REMOTE_ADDR="10.0.0.3", HTTP_CF_CONNECTING_IP="192.0.2.2")
+        self.assertEqual(_client_ip(direct), "10.0.0.3")
+
+    def test_signup_shows_duplicate_username_and_password_mismatch(self):
+        response = self.client.post("/login/", {
+            "action": "signup",
+            "username": self.user.username,
+            "password1": "a-strong-passphrase-9",
+            "password2": "a-strong-passphrase-8",
+        })
+        self.assertContains(response, "A user with that username already exists.")
+        self.assertContains(response, "The two password fields")
+        self.assertContains(response, 'id="id_login_username"', count=1)
+        self.assertContains(response, 'id="id_signup_username"', count=1)
+        self.assertEqual(response.context["active_tab"], "signup")
+
+    def test_signup_starts_session_and_login_honors_a_safe_return_path(self):
+        response = self.client.post("/login/", {
+            "action": "signup",
+            "username": "new_learner",
+            "password1": "a-strong-passphrase-9",
+            "password2": "a-strong-passphrase-9",
+            "next": "/?from=signup",
+        }, follow=True)
+        self.assertEqual(response.redirect_chain, [("/?from=signup", 302)])
+        self.assertEqual(response.wsgi_request.user.username, "new_learner")
+        self.client.logout()
+        response = self.client.post("/login/", {
+            "action": "login",
+            "username": "new_learner",
+            "password": "a-strong-passphrase-9",
+            "next": "https://example.com/",
+        })
+        self.assertRedirects(response, "/")
+
+    def test_unknown_tab_displays_login(self):
+        response = self.client.get("/login/?tab=unknown")
+        self.assertEqual(response.context["active_tab"], "login")

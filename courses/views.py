@@ -3,20 +3,22 @@ import logging
 import re
 import unicodedata
 from decimal import Decimal
+from ipaddress import ip_address
 
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login
+from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Max
-from django.http import Http404, JsonResponse
+from django.http import Http404, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST
 
 from .topic_services import create_course_topic, link_question_to_topic
@@ -249,11 +251,21 @@ def calculate_course_progress(user, course):
 def _client_ip(request):
     """Authoritative client IP for rate-limiting.
 
-    Defaults strictly to REMOTE_ADDR. Forwarded headers (e.g. HTTP_X_FORWARDED_FOR)
+    Render's loopback ingress supplies CF-Connecting-IP. Other deployments
+    default to REMOTE_ADDR. Forwarded headers (e.g. HTTP_X_FORWARDED_FOR)
     are untrusted and ignored unless TRUST_PROXY_HEADERS is explicitly True AND
     REMOTE_ADDR matches a configured trusted proxy in TRUSTED_PROXY_IPS.
     """
     remote_addr = request.META.get("REMOTE_ADDR", "").strip() or "unknown"
+
+    # Render's public edge overwrites CF-Connecting-IP. Gunicorn is reached
+    # through a loopback proxy in this deployment.
+    if settings.RENDER_EXTERNAL_HOSTNAME and remote_addr in {"127.0.0.1", "::1"}:
+        forwarded = request.META.get("HTTP_CF_CONNECTING_IP", "").strip()
+        try:
+            return str(ip_address(forwarded))
+        except ValueError:
+            return remote_addr
 
     trust_proxy = getattr(settings, "TRUST_PROXY_HEADERS", False)
     trusted_proxies = getattr(settings, "TRUSTED_PROXY_IPS", None) or []
@@ -282,15 +294,17 @@ def _is_throttled(scope, request):
 
 
 def _register_attempt(scope, request):
-    """Count one failed attempt, with a rolling expiry window."""
+    """Count a failed attempt inside the current rate-limit window."""
     window = getattr(settings, "LOGIN_THROTTLE_WINDOW_SECONDS", 300)
     key = _throttle_key(scope, request)
+    if cache.add(key, 1, window):
+        return 1
     try:
-        attempts = cache.incr(key)
+        return cache.incr(key)
     except ValueError:
-        cache.set(key, 1, window)
-        attempts = 1
-    return attempts
+        # The previous counter expired between add and increment.
+        cache.add(key, 1, window)
+        return 1
 
 
 def _clear_attempts(scope, request):
@@ -298,54 +312,60 @@ def _clear_attempts(scope, request):
 
 
 def auth_portal(request):
+    next_url = request.POST.get("next") or request.GET.get("next", "")
+    if not url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        next_url = ""
+    destination = next_url or reverse("courses:dashboard")
     if request.user.is_authenticated:
-        return redirect("courses:dashboard")
+        return HttpResponseRedirect(destination)
 
-    active_tab = request.GET.get("tab", "login")
-    login_form = AuthenticationForm()
-    signup_form = UserCreationForm()
+    active_tab = "signup" if request.GET.get("tab") == "signup" else "login"
+    context = {
+        "login_form": AuthenticationForm(auto_id="id_login_%s"),
+        "signup_form": UserCreationForm(auto_id="id_signup_%s"),
+        "active_tab": active_tab,
+        "next_url": next_url,
+    }
 
     if request.method == "POST":
         action = request.POST.get("action")
-        scope = "login" if action == "login" else "signup"
+        if action not in {"login", "signup"}:
+            return render(request, "courses/login.html", context, status=400)
 
-        # Unauthenticated brute-force protection. The plan-based course
-        # generation quota is a separate concern and is untouched by this.
-        if _is_throttled(scope, request):
-            messages.error(
-                request,
-                "Too many attempts from this device. "
-                "Please wait a few minutes and try again.",
-            )
-            return render(request, "courses/login.html", {
-                "login_form": login_form,
-                "signup_form": signup_form,
-                "active_tab": scope,
-            }, status=429)
+        context["active_tab"] = action
+        if _is_throttled(action, request):
+            context["throttle_error"] = "Too many attempts from your network. Please wait a few minutes and try again."
+            return render(request, "courses/login.html", context, status=429)
 
         if action == "login":
-            login_form = AuthenticationForm(request, data=request.POST)
-            if login_form.is_valid():
-                _clear_attempts(scope, request)
-                login(request, login_form.get_user())
-                return redirect("courses:dashboard")
-            _register_attempt(scope, request)
-            active_tab = "login"
-        elif action == "signup":
-            signup_form = UserCreationForm(request.POST)
-            if signup_form.is_valid():
-                _clear_attempts(scope, request)
-                user = signup_form.save()
-                login(request, user)
-                return redirect("courses:dashboard")
-            _register_attempt(scope, request)
-            active_tab = "signup"
+            form = AuthenticationForm(request, data=request.POST, auto_id="id_login_%s")
+            context["login_form"] = form
+            if form.is_valid():
+                login(request, form.get_user())
+                _clear_attempts(action, request)
+                return HttpResponseRedirect(destination)
+        else:
+            form = UserCreationForm(request.POST, auto_id="id_signup_%s")
+            context["signup_form"] = form
+            if form.is_valid():
+                username = form.cleaned_data["username"]
+                try:
+                    with transaction.atomic():
+                        user = form.save()
+                except IntegrityError:
+                    # Another request may have registered the username after validation.
+                    if not get_user_model().objects.filter(username=username).exists():
+                        raise
+                    form.add_error("username", "A user with that username already exists.")
+                else:
+                    login(request, user)
+                    _clear_attempts(action, request)
+                    return HttpResponseRedirect(destination)
+        _register_attempt(action, request)
 
-    return render(request, "courses/login.html", {
-        "login_form": login_form,
-        "signup_form": signup_form,
-        "active_tab": active_tab,
-    })
+    return render(request, "courses/login.html", context)
 
 
 @login_required
@@ -1646,4 +1666,4 @@ def knowledge_check_dismiss(request, course_id):
         check.save(update_fields=["status"])
 
     messages.info(request, "Starting Knowledge Check skipped. You can always review course materials directly.")
-    return redirect("courses:course_detail", pk=course.pk)
+    return redirect("courses:course_detail", pk=course.pk)

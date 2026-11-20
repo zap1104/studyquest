@@ -1,5 +1,6 @@
 import io
 import json
+from types import SimpleNamespace
 from unittest.mock import patch, MagicMock
 
 from django.contrib.auth.models import User
@@ -26,6 +27,7 @@ from courses.services import (
     call_gemini_with_retry,
     extract_and_bundle_sources,
     generate_course_journey,
+    generate_course_journey_from_bundle,
     sanitize_filename,
 )
 from courses.course_generation_queue import claim_next_job
@@ -229,6 +231,26 @@ class MultiSourcePromptSecurityTests(TestCase):
 
 
 class QuizAnswerCoverageValidationTests(TestCase):
+    @override_settings(USE_MOCK_COURSE_GENERATION=False)
+    def test_worker_retries_an_invalid_comparison_row(self):
+        valid = _generate_mock_journey("Enterprise Architecture")
+        malformed = json.loads(json.dumps(valid))
+        malformed["chapters"][0]["comparisons"][0]["rows"][0] = {"wrong": "invalid private content"}
+        responses = [
+            SimpleNamespace(text=json.dumps(data)) for data in [malformed, valid]
+        ]
+        bundle = {
+            "bundled_text": "Enterprise architecture organizes systems, services, and data across a company.",
+            "filenames": ["architecture.txt"],
+        }
+        with patch("courses.services.call_gemini_with_retry", side_effect=responses) as generate:
+            with self.assertLogs("courses.services", level="WARNING") as logs:
+                journey = generate_course_journey_from_bundle("Enterprise Architecture", bundle)
+        self.assertEqual(generate.call_count, 2)
+        self.assertIn("chapters.0.comparisons.0.rows.0.criterion", generate.call_args.args[0])
+        self.assertNotIn("invalid private content", "\n".join(logs.output))
+        self.assertEqual(journey["course"]["source_filenames"], ["architecture.txt"])
+
     def test_normalize_for_coverage(self):
         from courses.services import normalize_for_coverage
         self.assertEqual(normalize_for_coverage("Paying triple for tools!"), "paying triple for tools")

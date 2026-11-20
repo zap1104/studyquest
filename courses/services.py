@@ -11,6 +11,7 @@ from pptx import Presentation
 from django.conf import settings
 from django.db import transaction
 from google import genai
+from pydantic import ValidationError
 from courses.schemas import GeneratedJourney, get_assessment_mix
 from .plan_policies import get_plan_policy
 from .topic_services import create_course_topic, link_question_to_topic
@@ -139,6 +140,7 @@ CONTENT DE-DUPLICATION (ZERO-BLOAT) RULES:
 2. Consistency Re-use Permitted: Canonical terms, named list items, and quiz-relevant vocabulary may appear again across widgets (e.g., in a section, enumerations, and key_takeaways) whenever needed for navigation, structured review, and assessment consistency.
 3. Use specialized widgets purposefully and sparsely:
    - "comparisons": ONLY if the source explicitly contrasts two items (e.g. Waterfall vs Agile).
+     Every comparison row is an object with exactly "criterion" (a string) and "values" (a list of strings in heading order, excluding the criterion heading). Never use the option names as JSON keys.
    - "enumerations": Extract explicit named lists, categories, phases, components, or rule sets from the source.
    - "analogy": Maximum ONE per chapter, only if directly in the text or directly clarifying an abstraction.
    - "common_confusions": Maximum ONE pair per chapter, only for genuinely mixed-up concepts.
@@ -720,28 +722,10 @@ def generate_course_journey(
         source_filenames=bundle_meta["filenames"] if bundle_meta else None,
     )
 
-    response = call_gemini_with_retry(prompt)
-    if response is None:
-        return _generate_mock_journey(
-            course_title,
-            assessment_formats=assessment_formats,
-            source_filenames=bundle_meta["filenames"] if bundle_meta else None,
-        )
-
-    try:
-        validated = _validate_response(response.text, get_assessment_mix(assessment_formats))
-    except Exception as validation_err:
-        logger.error(f"[AI Schema Validation Failed]: {validation_err}")
-        if getattr(settings, "USE_MOCK_COURSE_GENERATION", False):
-            return _generate_mock_journey(
-                course_title,
-                assessment_formats=assessment_formats,
-                source_filenames=bundle_meta["filenames"] if bundle_meta else None,
-            )
-        raise CourseGenerationError(
-            "The AI generated an invalid course structure. "
-            "Your course was not created, and no generation credit was consumed. Please try again."
-        ) from validation_err
+    validated = _generate_validated_journey(
+        prompt, course_title, assessment_formats,
+        bundle_meta["filenames"] if bundle_meta else None,
+    )
 
     if bundle_meta:
         validated["course"]["source_bundle_count"] = len(bundle_meta["filenames"])
@@ -790,32 +774,51 @@ def generate_course_journey_from_bundle(
         source_filenames=filenames,
     )
 
-    response = call_gemini_with_retry(prompt)
-    if response is None:
-        return _generate_mock_journey(
-            course_title, assessment_formats=assessment_formats,
-            source_filenames=filenames,
-        )
-
-    try:
-        validated = _validate_response(response.text, get_assessment_mix(assessment_formats))
-    except Exception as validation_err:
-        logger.error(f"[AI Schema Validation Failed]: {validation_err}")
-        if getattr(settings, "USE_MOCK_COURSE_GENERATION", False):
-            return _generate_mock_journey(
-                course_title, assessment_formats=assessment_formats,
-                source_filenames=filenames,
-            )
-        raise CourseGenerationError(
-            "The AI generated an invalid course structure. "
-            "Your course was not created, and no generation credit was consumed. Please try again."
-        ) from validation_err
-
+    validated = _generate_validated_journey(prompt, course_title, assessment_formats, filenames)
     if bundle:
         validated["course"]["source_bundle_count"] = len(filenames or [])
         validated["course"]["source_filenames"] = filenames or []
-
     return validated
+
+
+def _generate_validated_journey(prompt, course_title, assessment_formats, filenames):
+    use_mock = settings.USE_MOCK_COURSE_GENERATION
+    assessment_mix = get_assessment_mix(assessment_formats)
+    for attempt in range(2):
+        response = call_gemini_with_retry(prompt)
+        if response is None:
+            break
+        try:
+            return _validate_response(response.text, assessment_mix)
+        except (ValueError, TypeError) as error:
+            # Validation exceptions can include the original study material.
+            details = type(error).__name__
+            if isinstance(error, ValidationError):
+                paths = [
+                    ".".join(str(part) for part in issue["loc"])
+                    for issue in error.errors(include_input=False, include_context=False)[:12]
+                ]
+                details += ": " + ", ".join(paths)
+            logger.warning("[AI Schema Validation Failed] attempt=%s: %s", attempt + 1, details)
+            if use_mock:
+                break
+            if attempt == 0:
+                prompt += (
+                    "\n\nVALIDATION RETRY: Return the full course again as JSON. "
+                    "Follow the supplied structure exactly. For comparison rows use "
+                    'only "criterion" and "values" as keys. Recheck the required quiz '
+                    "distribution and that every answer is taught in the chapter. "
+                    f"Validation reported: {details}"
+                )
+                continue
+            raise CourseGenerationError(
+                "The AI generated an invalid course structure. "
+                "Your course was not created, and no generation credit was consumed. Please try again."
+            ) from error
+
+    return _generate_mock_journey(
+        course_title, assessment_formats=assessment_formats, source_filenames=filenames
+    )
 
 
 def validate_question_mix(journey, required_mix):

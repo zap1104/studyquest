@@ -69,6 +69,9 @@
     <!-- RIGHT PANEL: 40% Glassmorphic Auth Gate -->
     <section class="launcher-gate">
         <div class="auth-card">
+            {% if throttle_error %}
+                <p class="form-error" role="alert">{{ throttle_error }}</p>
+            {% endif %}
 
             <div class="auth-tabs">
                 <button type="button" class="tab-btn {% if active_tab == 'login' %}active{% endif %}" onclick="switchTab('login')">
@@ -87,15 +90,16 @@
                 <form method="post" class="stacked-form auth-form">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="login">
+                    <input type="hidden" name="next" value="{{ next_url }}">
 
-                    <label for="id_username">Username</label>
+                    <label for="{{ login_form.username.id_for_label }}">Username</label>
                     {{ login_form.username }}
 
-                    <label for="id_password">Password</label>
+                    <label for="{{ login_form.password.id_for_label }}">Password</label>
                     {{ login_form.password }}
 
                     {% if login_form.errors %}
-                        <p class="form-error">Invalid credentials. Please try again.</p>
+                        <p class="form-error" role="alert">Invalid credentials. Please try again.</p>
                     {% endif %}
 
                     <button type="submit" class="btn btn-primary btn-chunky">
@@ -112,18 +116,25 @@
                 <form method="post" class="stacked-form auth-form">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="signup">
+                    <input type="hidden" name="next" value="{{ next_url }}">
 
+                    {% for error in signup_form.non_field_errors %}
+                        <p class="form-error" role="alert">{{ error }}</p>
+                    {% endfor %}
                     {% for field in signup_form %}
                         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
+                        {% if field.errors %}
+                            <div id="{{ field.auto_id }}_error" role="alert">
+                                {% for error in field.errors %}
+                                    <p class="form-error">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                         {% if field.help_text %}
-                            <small class="field-help">{{ field.help_text }}</small>
+                            <div class="field-help" id="{{ field.auto_id }}_helptext">{{ field.help_text }}</div>
                         {% endif %}
                     {% endfor %}
-
-                    {% if signup_form.errors %}
-                        <p class="form-error">Please resolve the errors highlighted above.</p>
-                    {% endif %}
 
                     <button type="submit" class="btn btn-accent btn-chunky">
                         Create Account &rarr;
