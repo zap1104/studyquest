@@ -73,6 +73,10 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
 
 # Application definition
 
@@ -89,6 +93,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -110,6 +115,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'courses.context_processors.topbar_stats',
+                'courses.context_processors.generation_preview',
             ],
         },
     },
@@ -130,6 +136,16 @@ DATABASES = {
         },
     }
 }
+
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL:
+    import dj_database_url
+
+    DATABASES["default"] = dj_database_url.parse(
+        DATABASE_URL, conn_max_age=60, conn_health_checks=True
+    )
+elif RENDER_EXTERNAL_HOSTNAME:
+    raise RuntimeError("DATABASE_URL is required for persistent data on Render.")
 
 
 # Password validation
@@ -166,7 +182,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -216,5 +237,9 @@ CACHES = {
 }
 
 # Course Generation Settings
-# Set to True only for offline dev or automated testing; False in production to prevent silent mock fallback
-USE_MOCK_COURSE_GENERATION = False
+# The hosted prototype can demonstrate the complete study flow with sample content.
+# Configuring a Gemini key switches it to live generation.
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+USE_MOCK_COURSE_GENERATION = (
+    env_bool("PROTOTYPE_SAMPLE_GENERATION") and not GEMINI_API_KEY
+)

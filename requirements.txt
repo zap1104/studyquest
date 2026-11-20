@@ -14,3 +14,9 @@ python-dotenv>=1.0,<2.0
 pdfplumber>=0.11,<0.12
 python-docx>=1.1,<2.0
 python-pptx>=1.0,<2.0
+
+# Render web service and PostgreSQL
+dj-database-url>=2.3,<4.0
+gunicorn>=23,<26
+psycopg[binary]>=3.2,<4.0
+whitenoise>=6.9,<7.0

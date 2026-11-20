@@ -89,26 +89,12 @@ Test-out completion: Score 75% or higher on the quiz without completing the less
 
 ### Plans, quotas, and course credits
 
-StudyQuest includes prototype Free and Plus plan states.
-
-#### StudyQuest Free
+StudyQuest Free is the only plan available in the prototype. All learning features are included, including course creation, chapter reviews, mixed assessments, study focus, mastery tracking, and Dungeon Quest.
 
 - 1 standard course generation per rolling 7-day period
 - Up to 5 active courses
 - Up to 1 stored completion bonus credit
-- Core study modes and assessment formats
-- Limited sponsored placement
-
-#### StudyQuest Plus
-
-- 3 standard course generations per rolling 7-day period
-- Up to 15 active courses
-- Up to 2 stored completion bonus credits
-- Larger study-material allowance
-- Expanded analytics direction
-- Ad-free experience
-
-No live billing or payment gateway is connected. Developers can change plan state through Django Admin or development tooling.
+- Sample sponsored placement
 
 ### Course management
 

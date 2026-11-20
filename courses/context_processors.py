@@ -1,3 +1,5 @@
+from django.conf import settings
+
 """
 courses/context_processors.py
 Supplies topbar_stats to all templates extending base.html.
@@ -115,3 +117,7 @@ def topbar_stats(request):
         }
     }
 
+
+
+def generation_preview(request):
+    return {"sample_generation": settings.USE_MOCK_COURSE_GENERATION}

@@ -1376,76 +1376,15 @@ it matches the width of the rest of the dashboard.
             <button type="button" class="sponsor-modal-close" id="close-sponsor-modal" aria-label="Close sponsor preview">&times;</button>
             <span class="modal-eyebrow">Sponsored Partner Demo</span>
             <h2 id="sponsor-modal-title">StudyFuel Focus</h2>
-            <p class="sponsor-modal-sub">Clean energy and hydration formulated specifically for extended study sessions.</p>
+            <p class="sponsor-modal-sub">This fictional offer is a sample sponsorship for the StudyQuest prototype.</p>
 
             <div class="sponsor-media-wrap">
                 <img src="{% static 'courses/images/ads/study_fuel_poster.png' %}" alt="StudyFuel Focus" class="sponsor-modal-poster">
             </div>
 
-            <!-- Single action promotes ad-free upgrade without recursive loops -->
-            <div class="sponsor-modal-actions">
-                <button type="button" class="btn btn-primary btn-chunky js-open-plan-modal" id="sponsor-go-ad-free-btn">
-                    Go Ad-Free with StudyQuest Plus &rarr;
-                </button>
-            </div>
         </div>
     </div>
 
-    <!-- 2. ROOT-LEVEL PLAN COMPARISON MODAL -->
-    <div id="plus-preview-modal" class="sponsor-modal-backdrop" hidden aria-hidden="true">
-        <div class="sponsor-modal-card plan-comparison-card" role="dialog" aria-modal="true" aria-labelledby="plan-comparison-title">
-            <button type="button" class="sponsor-modal-close" id="close-plus-modal-btn" aria-label="Close plan comparison">&times;</button>
-            
-            <span class="modal-eyebrow">StudyQuest Plans</span>
-            <h3 id="plan-comparison-title">Choose the plan for your workload</h3>
-            <p>Core learning tools remain available on both plans.</p>
-
-            <div class="plan-cards">
-                <section class="plan-card">
-                    <span class="modal-eyebrow">Current Plan</span>
-                    <h4>StudyQuest Free</h4>
-                    <p>For focused, occasional study.</p>
-                    <ul class="modal-feature-list">
-                        <li>1 AI generation per week</li>
-                        <li>Up to 5 active courses</li>
-                        <li>1 stored completion bonus</li>
-                        <li>Mixed assessments included</li>
-                        <li>Limited sponsorships</li>
-                    </ul>
-                    <div class="plan-card-action">
-                        <button type="button" class="btn btn-secondary plan-card-btn" disabled>Current Plan</button>
-                    </div>
-                </section>
-
-                <section class="plan-card plan-card-plus">
-                    <span class="modal-eyebrow">Proposed Student Plan</span>
-                    <h4>StudyQuest Plus</h4>
-                    <p>For learners managing multiple subjects.</p>
-                    <ul class="modal-feature-list">
-                        <li>3 AI generations per week</li>
-                        <li>Up to 15 active courses</li>
-                        <li>2 stored completion bonuses</li>
-                        <li>Larger study-material uploads</li>
-                        <li>Expanded mastery insights</li>
-                        <li>Completely ad-free</li>
-                    </ul>
-                    <div class="plan-card-action">
-                        <button type="button" class="btn btn-primary btn-chunky plan-card-btn" disabled>Preview Plus</button>
-                    </div>
-                </section>
-            </div>
-
-            <div class="plan-matrix">
-                <strong>Detailed comparison</strong>
-                <div><span>Weekly generations</span><b>1 / 3</b></div>
-                <div><span>Active courses</span><b>5 / 15</b></div>
-                <div><span>Ads</span><b>Limited / None</b></div>
-                <div><span>Assessment formats</span><b>Included / Included</b></div>
-            </div>
-
-            <p class="modal-callout">StudyQuest Plus is a proposed plan for demonstration. No billing or payment functionality is connected.</p>
-        </div>
-    </div>
 {% endif %}
 
 {% include 'courses/includes/focus_checkin_modal.html' %}
@@ -1457,11 +1396,7 @@ it matches the width of the rest of the dashboard.
             el.style.width = el.getAttribute('data-progress') + '%';
         });
 
-        // 2. Remove duplicate modals from sidebar rail if present
-        document.querySelectorAll('.dashboard-ad-rail #demo-sponsor-modal, .dashboard-ad-rail #plus-preview-modal').forEach(el => el.remove());
-
         const sponsorModal = document.getElementById('demo-sponsor-modal');
-        const planModal = document.getElementById('plus-preview-modal');
         const focusModal = document.getElementById('focus-modal');
 
         function setModalState(modal, isOpen) {
@@ -1498,47 +1433,28 @@ it matches the width of the rest of the dashboard.
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setModalState(planModal, false);
                 setModalState(sponsorModal, true);
             });
         });
 
-        // 4. Open Plan Modal (Desktop "Go Ad-Free" link + Modal button)
-        document.querySelectorAll('.sponsor-upgrade-link, .js-open-plan-modal, #topbar-compare-plans').forEach(btn => {
-            btn.removeAttribute('onclick');
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setModalState(sponsorModal, false);
-                requestAnimationFrame(() => {
-                    setModalState(planModal, true);
-                });
-            });
-        });
-
         // 5. Close buttons
-        document.querySelectorAll('#close-sponsor-modal, #close-plus-modal-btn, .sponsor-modal-close').forEach(btn => {
+        document.querySelectorAll('#close-sponsor-modal').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 setModalState(sponsorModal, false);
-                setModalState(planModal, false);
             });
         });
 
         // 6. Backdrop dismiss
-        [sponsorModal, planModal].forEach(modal => {
-            if (!modal) return;
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) setModalState(modal, false);
-            });
+        sponsorModal?.addEventListener('click', (e) => {
+            if (e.target === sponsorModal) setModalState(sponsorModal, false);
         });
 
         // 7. ESC dismiss
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 setModalState(sponsorModal, false);
-                setModalState(planModal, false);
                 if (focusModal) setModalState(focusModal, false);
             }
         });

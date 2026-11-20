@@ -966,7 +966,10 @@
 
 <div class="forge-stage">
     <main class="forge-center-hub">
-        <!-- Consolidated Hero Row: Left Intro & Right Current Plan -->
+        {% if sample_generation %}
+        <p role="status">Course generation is in sample mode. Upload a study file to try Course Forge with sample lessons and questions.</p>
+    {% endif %}
+    <!-- Consolidated Hero Row: Left Intro & Right Current Plan -->
         <div class="forge-hero-row">
             <!-- Left: Heading and one-line description -->
             <div class="forge-intro-col">

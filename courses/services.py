@@ -21,9 +21,9 @@ logger = logging.getLogger(__name__)
 
 load_dotenv(find_dotenv())
 
-api_key = os.environ.get("GEMINI_API_KEY")
+api_key = settings.GEMINI_API_KEY
 client = genai.Client(api_key=api_key) if api_key else None
-GEMINI_MODEL = "gemini-3.6-flash"
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 
 
 class CourseGenerationError(Exception):
