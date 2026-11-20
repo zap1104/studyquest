@@ -238,3 +238,272 @@
 
     .forge-page-wrap .btn-remove-source { min-width: 44px; min-height: 44px; }
 }
+
+/* Keep study screens inside the viewport even when course names, streak
+   messages, and uploaded filenames have a large intrinsic width. */
+@media (max-width: 767px), (max-width: 950px) and (max-height: 500px) and (orientation: landscape) {
+    body[data-screen] { min-inline-size: 0; overflow-wrap: anywhere; }
+
+    body[data-screen] > .topbar {
+        inline-size: 100%;
+        max-inline-size: 100%;
+        gap: 12px;
+        padding-inline: max(14px, env(safe-area-inset-left)) max(14px, env(safe-area-inset-right));
+    }
+
+    body[data-screen] > main.page,
+    body[data-screen] > main.page > *,
+    body[data-screen] .page-header > *,
+    body[data-screen] .card > * {
+        min-inline-size: 0;
+    }
+
+    body[data-screen] > main.page,
+    body[data-screen] .page > .page,
+    body[data-screen] .profile-container,
+    body[data-screen] .leaderboard-container,
+    body[data-screen] .focus-summary-shell,
+    body[data-screen] .dungeon-summary-container {
+        max-inline-size: 100%;
+    }
+
+    body[data-screen] .page > .page {
+        padding-inline: 0 !important;
+    }
+
+    body[data-screen] > main.page :is(input:not([type="radio"], [type="checkbox"], [type="hidden"]), textarea, select) {
+        max-inline-size: 100%;
+        min-inline-size: 0;
+        font-size: 16px;
+    }
+
+    body[data-screen] > main.page :is(.btn, [role="button"]) {
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    body[data-screen] > main.page :is(img, canvas, video) {
+        max-inline-size: 100%;
+    }
+
+    body[data-screen] :is(.sq-modal-box, .study-focus-modal, .review-drawer-card, .forge-loader-card) {
+        min-inline-size: 0;
+        max-inline-size: 100%;
+        max-block-size: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    }
+
+    body[data-screen] :is(.sq-modal-box, .forge-loader-card) {
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    body[data-screen] :is(.sq-modal-actions, .focus-modal-actions, .summary-actions-row) {
+        flex-wrap: wrap;
+    }
+
+    body[data-screen] .theme-toggle-fab {
+        width: 44px;
+        height: 44px;
+        right: max(12px, env(safe-area-inset-right));
+    }
+
+    body[data-screen] .dashboard-page .dashboard-page-shell,
+    body[data-screen] .dashboard-page .dashboard-page-shell.no-ad-rail,
+    body[data-screen] .dashboard-page .dashboard-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body[data-screen] .dashboard-page .dashboard-greeting-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+        padding: 14px;
+    }
+
+    body[data-screen] .dashboard-page .dashboard-greeting-sub { flex-wrap: wrap; }
+
+    body[data-screen] .dashboard-page .streak-status-pill {
+        justify-self: start;
+        max-inline-size: 100%;
+        align-items: flex-start;
+        border-radius: 12px;
+        padding: 8px 10px;
+        white-space: normal;
+        line-height: 1.45;
+    }
+
+    body[data-screen] .dashboard-page .streak-icon { flex: none; }
+    body[data-screen] .dashboard-page .streak-message { min-inline-size: 0; }
+
+    body[data-screen] .dashboard-page .recent-course-card-top,
+    body[data-screen] .dashboard-page .course-progress-summary,
+    body[data-screen] .dashboard-page .prep-row-actions {
+        flex-wrap: wrap;
+    }
+
+    body[data-screen] .dashboard-page .focus-dashboard-card {
+        padding: 14px !important;
+        margin-bottom: 0 !important;
+    }
+
+    body[data-screen] .dashboard-page .focus-dashboard-card > div:first-child {
+        align-items: stretch !important;
+        flex-direction: column;
+        gap: 10px !important;
+    }
+
+    body[data-screen] .dashboard-page .focus-dashboard-card :is(div, form) { min-inline-size: 0; }
+    body[data-screen] .dashboard-page .focus-dashboard-card .btn { min-height: 44px; }
+
+    body[data-screen='course_detail'] main.page .card > div,
+    body[data-screen='knowledge_check_results'] main.page .card > div,
+    body[data-screen='focus_summary'] main.page .card > div {
+        min-inline-size: 0 !important;
+    }
+
+    body[data-screen='course_detail'] .path-node-card,
+    body[data-screen='course_detail'] .path-node-actions,
+    body[data-screen='course_detail'] .path-node-actions > * {
+        min-inline-size: 0;
+    }
+
+    body[data-screen='course_detail'] main.page .card > div:first-child > div:first-child,
+    body[data-screen='course_detail'] .path-node-actions,
+    body[data-screen='course_detail'] .node-header-row,
+    body[data-screen='course_detail'] .course-header-wrap .page-header {
+        flex-wrap: wrap;
+    }
+
+    body[data-screen='focus_recommendation'] .focus-recommendation-page .card > div div {
+        flex-wrap: wrap;
+        min-inline-size: 0;
+    }
+
+    body[data-screen='focus_recommendation'] .focus-recommendation-page > div:last-child > div {
+        flex-wrap: wrap;
+    }
+
+    body[data-screen='focus_summary'] .focus-summary-shell section.card > div,
+    body[data-screen='knowledge_check_results'] main.page section.card > div {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    body[data-screen] :is(.standings-table-wrap, .comparison-table-wrap, .chapters-breakdown-card) {
+        min-inline-size: 0;
+        max-inline-size: 100%;
+        overflow-x: auto;
+        overscroll-behavior-inline: contain;
+    }
+
+    body[data-screen] :is(.profile-workbench-grid, .achievement-items-grid, .forge-grid, .forge-config-group, .option-grid, .launcher-container, .auth-card) > * {
+        min-inline-size: 0;
+    }
+
+    body[data-screen] :is(.forge-pane, .forge-status-panel, .forge-game-panel, .forge-game-slot, .forge-camp-container, .dungeon-board-column, .dungeon-battle-column, .dungeon-chapter-card) {
+        min-inline-size: 0;
+        max-inline-size: 100%;
+    }
+
+    body[data-screen] :is(.dungeon-chapter-actions, .dungeon-active-actions, .dungeon-summary-actions, .forge-actions) {
+        flex-wrap: wrap;
+    }
+
+    body[data-screen='room'] .dungeon-board-frame {
+        min-inline-size: 0;
+        max-inline-size: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    body[data-screen='login'] .launcher-container {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    body[data-screen='login'] .launcher-showcase { gap: 8px; }
+    body[data-screen='login'] .launcher-hero { font-size: clamp(1.65rem, 7vw, 2.25rem); }
+    body[data-screen='login'] .launcher-showcase .mascot-stage { display: none; }
+    body[data-screen='login'] .feature-pills { display: none; }
+    body[data-screen='login'] .auth-card { padding: clamp(12px, 4vw, 22px); min-inline-size: 0; }
+
+    body[data-screen] .dashboard-page .dashboard-page-shell {
+        padding-inline: 0 !important;
+    }
+
+    body[data-screen] .dashboard-page .dashboard-greeting-title { font-size: clamp(1.25rem, 6vw, 1.65rem); }
+    body[data-screen] .dashboard-page .next-course-title { font-size: clamp(1.15rem, 5vw, 1.55rem); }
+    body[data-screen] .dashboard-page .next-action-card {
+        background: linear-gradient(145deg, color-mix(in srgb, var(--primary) 8%, var(--surface)), var(--surface) 65%);
+    }
+
+    body[data-screen] .dashboard-page .dashboard-recent-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body[data-screen] .dashboard-page .focus-dashboard-card > div:last-child {
+        flex-wrap: wrap;
+    }
+
+    body[data-screen='course_list'] .course-library-page {
+        padding-inline: 0 !important;
+    }
+
+    body[data-screen='course_list'] .course-library-grid { grid-template-columns: minmax(0, 1fr); }
+    body[data-screen='course_list'] .library-course-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    body[data-screen='course_list'] .library-course-actions > :first-child { grid-column: 1 / -1; }
+
+    body[data-screen='course_detail'] main.page .card,
+    body[data-screen='focus_summary'] .focus-summary-shell > .card,
+    body[data-screen='knowledge_check_results'] main.page .card,
+    body[data-screen='knowledge_check_start'] main.page .card,
+    body[data-screen='focus_recommendation'] .focus-recommendation-page .card {
+        padding: 14px !important;
+    }
+
+    body[data-screen] :is(.sq-modal-actions, .summary-actions-row, .path-node-actions) .btn {
+        min-height: 44px;
+    }
+
+    body[data-screen='chapter_review'] .reader-finish { gap: 8px; }
+    body[data-screen='chapter_review'] .reader-finish .btn { flex: 0 1 auto; }
+    body[data-screen='chapter_review'] .lesson-activity .activity-copy span { white-space: normal; }
+
+    body[data-screen='chapter_quiz'] .quiz-focus-header,
+    body[data-screen='chapter_quiz'] .quiz-header-meta,
+    body[data-screen='chapter_quiz'] .review-drawer-footer { min-inline-size: 0; }
+    body[data-screen='chapter_quiz'] .quiz-progress-top { min-inline-size: 24px; }
+    body[data-screen='chapter_quiz'] .result-metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    body[data-screen='chapter_quiz'] .review-drawer-card { height: auto; }
+    body[data-screen='chapter_quiz'] .review-drawer-scroll { min-block-size: 0; }
+
+    body[data-screen='leaderboard'] .leaderboard-header,
+    body[data-screen='leaderboard'] .tier-card-header,
+    body[data-screen='profile'] .profile-hero-card {
+        flex-wrap: wrap;
+        min-inline-size: 0;
+    }
+
+    body[data-screen='leaderboard'] .leaderboard-header-actions,
+    body[data-screen='profile'] .profile-hero-left {
+        flex-wrap: wrap;
+        min-inline-size: 0;
+        max-inline-size: 100%;
+    }
+
+    body[data-screen='course_generating'] .forge-game-slot,
+    body[data-screen='forge_sandbox'] .forge-game-slot {
+        inline-size: 100%;
+    }
+
+    body[data-screen='summary'] .dungeon-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 359px) {
+    body[data-screen='chapter_quiz'] .result-metric-grid,
+    body[data-screen='summary'] .dungeon-summary-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
