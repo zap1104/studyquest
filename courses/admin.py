@@ -54,7 +54,9 @@ class QuestionTopicAdmin(admin.ModelAdmin):
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'current_level', 'total_xp', 'streak_days', 'last_study_date')
+    list_display = ('user', 'plan', 'current_level', 'total_xp', 'streak_days', 'last_study_date')
+    list_filter = ('plan', 'user__is_staff')
+    search_fields = ('user__username',)
 
 @admin.register(QuizAttempt)
 class QuizAttemptAdmin(admin.ModelAdmin):

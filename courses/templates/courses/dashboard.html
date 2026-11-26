@@ -1371,6 +1371,7 @@ it matches the width of the rest of the dashboard.
             <div class="sponsor-media-wrap">
                 <img src="{% static 'courses/images/ads/study_fuel_poster.png' %}" alt="StudyFuel Focus" class="sponsor-modal-poster">
             </div>
+            <button type="button" class="btn btn-secondary" data-open-plan-comparison>Compare Plans</button>
 
         </div>
     </div>
@@ -1426,6 +1427,8 @@ it matches the width of the rest of the dashboard.
                 setModalState(sponsorModal, true);
             });
         });
+
+        sponsorModal?.querySelector('[data-open-plan-comparison]')?.addEventListener('click', () => setModalState(sponsorModal, false));
 
         // 5. Close buttons
         document.querySelectorAll('#close-sponsor-modal').forEach(btn => {

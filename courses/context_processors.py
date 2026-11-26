@@ -11,6 +11,7 @@ from datetime import timedelta
 from django.db.models import Sum
 from django.utils import timezone
 from .models import XPTransaction
+from .plan_policies import PLAN_POLICIES, get_plan_policy
 from .gamification import get_tier_info, get_level_progress
 from .dashboard_service import get_streak_status
 
@@ -120,4 +121,9 @@ def topbar_stats(request):
 
 
 def generation_preview(request):
-    return {"sample_generation": settings.USE_MOCK_COURSE_GENERATION}
+    profile = getattr(request.user, "userprofile", None)
+    return {
+        "sample_generation": settings.USE_MOCK_COURSE_GENERATION,
+        "comparison_plans": PLAN_POLICIES.items(),
+        "upload_policy": get_plan_policy(getattr(profile, "plan", "free")),
+    }

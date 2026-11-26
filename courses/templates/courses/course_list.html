@@ -100,6 +100,7 @@
         <strong>{{ profile.plan|title }} plan · Active courses {{ active_count }} / {{ active_limit }}</strong>
         <span>Archived courses do not consume active slots. Bonus credits: {{ user.userprofile.bonus_course_credits }} / {{ eligibility.bonus_limit }}</span>
     </div>
+    <button type="button" class="btn btn-secondary btn-sm" data-open-plan-comparison>Compare Plans</button>
 </div>
 
 {% if active_tab == 'active' %}

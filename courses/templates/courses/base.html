@@ -14,6 +14,7 @@
     <style>
         .topbar-plan { position:relative; }
         .topbar-plan-chip { min-height:32px; padding:0 12px; display:inline-flex; align-items:center; gap:7px; border:1px solid rgba(0,194,168,.28); border-radius:999px; background:linear-gradient(135deg,rgba(0,194,168,.12),rgba(108,92,231,.08)); color:var(--accent); font:inherit; font-size:.72rem; font-weight:900; letter-spacing:.05em; text-transform:uppercase; cursor:pointer; }
+        .topbar-plan-chip.is-plus { border-color:var(--gold); color:var(--gold); }
         .plan-dot { width:7px; height:7px; border-radius:999px; background:currentColor; box-shadow:0 0 8px currentColor; }
         .topbar-plan-menu { position:absolute; top:calc(100% + 12px); right:0; z-index:1200; width:min(340px,calc(100vw - 28px)); padding:16px; border:1px solid var(--border); border-radius:16px; background:var(--surface); box-shadow:0 18px 48px rgba(0,0,0,.45); }
         .topbar-plan-menu[hidden] { display:none; }
@@ -59,10 +60,11 @@
                     <span class="profile-chip-name">{{ user.username }}</span>
                 </a>
                 <div class="topbar-plan">
-                    <button type="button" class="topbar-plan-chip" id="topbar-plan-btn" aria-expanded="false" aria-controls="topbar-plan-menu"><span class="plan-dot"></span>Free<span aria-hidden="true">▾</span></button>
+                    <button type="button" class="topbar-plan-chip{% if user.userprofile.plan == 'plus' %} is-plus{% endif %}" id="topbar-plan-btn" aria-expanded="false" aria-controls="topbar-plan-menu"><span class="plan-dot"></span>{{ user.userprofile.plan|default:"free"|title }}<span aria-hidden="true">▾</span></button>
                     <div class="topbar-plan-menu" id="topbar-plan-menu" hidden>
-                        <div class="plan-menu-heading"><span>StudyQuest Free</span><strong>Current Plan</strong></div>
-                        <p class="plan-menu-copy">StudyQuest Free is the only plan available during the prototype. All learning features are included.</p>
+                        <div class="plan-menu-heading"><span>StudyQuest {{ user.userprofile.plan|default:"free"|title }}</span><strong>Current Plan</strong></div>
+                        <p class="plan-menu-copy">All study tools are included on both plans.</p>
+                        <button type="button" class="btn btn-secondary btn-sm" data-open-plan-comparison>Compare Plans</button>
                     </div>
                 </div>
                 <!-- LEVEL POPOVER -->
@@ -207,6 +209,8 @@
                     <a href="{% url 'courses:forge_sandbox' %}" style="opacity: 0.75; font-size: 0.84rem;">⛺ Camp Sandbox (Dev)</a>
                 {% endif %}
             </div>
+
+            <button type="button" class="btn btn-secondary btn-sm" data-open-plan-comparison>{{ user.userprofile.plan|default:"free"|title }} Plan · Compare Plans</button>
 
             <div class="mobile-nav-stats">
                 <a href="{% url 'courses:leaderboard' %}" class="stat" style="text-decoration: none;">🏅 Level {{ user.userprofile.current_level|default:1 }}</a>
@@ -371,6 +375,7 @@
     {% if user.is_authenticated %}
         <script src="{% static 'courses/js/studyquest_sandbox_unlock.js' %}"></script>
     {% endif %}
+    {% if user.is_authenticated %}{% include 'courses/components/plan_comparison_modal.html' %}{% endif %}
     {% block extra_js %}{% endblock %}
 </body>
 </html>

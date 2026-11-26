@@ -56,11 +56,13 @@ def get_generation_eligibility(profile):
     if profile.bonus_course_credits > 0:
         return GenerationEligibility(True, "bonus", "bonus_credit_available", None, active_count, limits["active_courses"], weekly_spend_count, limits["weekly_generations"], limits["bonus_credit_cap"])
 
-    last_spend = CourseCreditTransaction.objects.filter(
+    weekly_spends = CourseCreditTransaction.objects.filter(
         user=profile.user,
         transaction_type="weekly_spend",
-    ).order_by("-created_at").first()
-    available_at = last_spend.created_at + COURSE_GENERATION_COOLDOWN if last_spend else None
+    ).order_by("-created_at", "-pk").values_list("created_at", flat=True)
+    cutoff = next(iter(weekly_spends[limits["weekly_generations"] - 1:limits["weekly_generations"]]), None)
+    last_used = cutoff or profile.last_course_generated_at
+    available_at = last_used + COURSE_GENERATION_COOLDOWN if last_used else None
     return GenerationEligibility(False, None, "weekly_cooldown", available_at, active_count, limits["active_courses"], weekly_spend_count, limits["weekly_generations"], limits["bonus_credit_cap"])
 
 

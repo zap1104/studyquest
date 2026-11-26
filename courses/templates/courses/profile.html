@@ -24,7 +24,7 @@
                     <span class="tier-pill" style="--tier-color: {{ tier_progress.current_tier.color }};">
                         {{ tier_progress.current_tier.icon }} {{ tier_progress.current_tier.name }} Tier
                     </span>
-                    <span class="plan-pill">Free Plan</span>
+                    <span class="plan-pill{% if profile.plan == 'plus' %} is-plus{% endif %}">{{ profile.plan|default:"free"|title }} Plan</span>
                 </div>
                 <p class="profile-joined-text">
                     Academic Scholar · Member since {{ user.date_joined|date:"F Y" }}

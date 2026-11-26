@@ -1,0 +1,82 @@
+<dialog class="plan-comparison" id="plan-comparison" aria-labelledby="plan-comparison-title">
+    <form method="dialog">
+        <button type="submit" class="btn btn-ghost plan-comparison-close" aria-label="Close plan comparison" autofocus>&times;</button>
+    </form>
+    <h2 id="plan-comparison-title">Compare StudyQuest Plans</h2>
+    <p>Both plans include all study tools. New learners start on Free.</p>
+    <div class="plan-comparison-grid">
+        {% for key, plan in comparison_plans %}
+        <section class="plan-comparison-tier">
+            <h3>{{ plan.name }}</h3>
+            {% if key == user.userprofile.plan %}<p class="plan-comparison-current">Your current plan</p>{% endif %}
+            <ul>
+                <li>{{ plan.weekly_generations }} course generation{{ plan.weekly_generations|pluralize }} per rolling 7 days</li>
+                <li>Up to {{ plan.active_courses }} active courses</li>
+                <li>{{ plan.bonus_credit_cap }} stored completion bonus credit{{ plan.bonus_credit_cap|pluralize }}</li>
+                <li>{{ plan.upload_size_mb }} MB per file / {{ plan.max_bundle_bytes|filesizeformat }} per bundle</li>
+                <li>{% if plan.shows_sponsors %}Sample sponsored placements{% else %}Ad-free studying{% endif %}</li>
+            </ul>
+        </section>
+        {% endfor %}
+    </div>
+    <p>During the prototype, an admin assigns Plus. There is no checkout.</p>
+</dialog>
+
+<style>
+    .plan-comparison {
+        box-sizing: border-box;
+        inline-size: min(43rem, calc(100% - 24px));
+        max-block-size: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        padding: clamp(14px, 4vw, 26px);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--surface);
+        color: var(--ink);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        overflow-wrap: anywhere;
+    }
+    .plan-comparison::backdrop { background: rgb(5 10 22 / .75); }
+    .plan-comparison-close { float: right; min-inline-size: 44px; min-block-size: 44px; font-size: 1.25rem; }
+    .plan-comparison h2 { margin: 0 0 8px; font-size: clamp(1.2rem, 4vw, 1.6rem); }
+    .plan-comparison p { color: var(--muted); }
+    .plan-comparison-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+        gap: 12px;
+        clear: both;
+    }
+    .plan-comparison-tier { min-inline-size: 0; padding: 14px; border: 1px solid var(--border); border-radius: 12px; }
+    .plan-comparison-tier h3 { margin: 0; }
+    .plan-comparison-tier ul { margin: 8px 0 0; padding-inline-start: 20px; line-height: 1.6; }
+    .plan-comparison-tier .plan-comparison-current { color: var(--primary); font-weight: 700; margin: 4px 0; }
+</style>
+
+<script>
+    (() => {
+        const dialog = document.getElementById('plan-comparison');
+        let returnFocus;
+        document.querySelectorAll('[data-open-plan-comparison]').forEach(button => {
+            button.addEventListener('click', () => {
+                returnFocus = button;
+                const popover = button.closest('.topbar-plan-menu');
+                const drawer = button.closest('#mobile-nav-drawer');
+                if (popover) returnFocus = document.getElementById('topbar-plan-btn');
+                if (drawer) returnFocus = document.getElementById('mobile-nav-toggle');
+                if (popover || drawer) returnFocus.click();
+                if (button.closest('#demo-sponsor-modal')) {
+                    const sponsorTriggers = document.querySelectorAll('.open-sponsor-trigger, .sponsor-cta');
+                    returnFocus = Array.from(sponsorTriggers).find(trigger => trigger.getClientRects().length);
+                }
+                dialog.showModal();
+            });
+        });
+        dialog.addEventListener('close', () => returnFocus?.focus());
+        dialog.addEventListener('click', event => {
+            if (event.target !== dialog) return;
+            const bounds = dialog.getBoundingClientRect();
+            if (event.clientX < bounds.left || event.clientX > bounds.right ||
+                event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
+        });
+    })();
+</script>

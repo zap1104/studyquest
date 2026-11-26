@@ -89,12 +89,14 @@ Test-out completion: Score 75% or higher on the quiz without completing the less
 
 ### Plans, quotas, and course credits
 
-StudyQuest Free is the only plan available in the prototype. All learning features are included, including course creation, chapter reviews, mixed assessments, study focus, mastery tracking, and Dungeon Quest.
+Both plans include chapter reviews, mixed assessments, Study Focus, mastery tracking, and Dungeon Quest.
 
-- 1 standard course generation per rolling 7-day period
-- Up to 5 active courses
-- Up to 1 stored completion bonus credit
-- Sample sponsored placement
+| Plan | Generations per rolling 7 days | Active courses | Stored completion bonuses | Upload limit per file | Sample sponsors |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Free | 1 | 5 | 1 | 10 MB | Shown |
+| Plus | 3 | 15 | 2 | 25 MB | Hidden |
+
+New learners start on Free. Assign Plus in Django Admin under **User profiles**. Admin access is managed separately under **Users**. Plus uses manual assignment during the prototype.
 
 ### Course management
 

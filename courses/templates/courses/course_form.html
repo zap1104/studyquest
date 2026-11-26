@@ -1,4 +1,5 @@
 {% extends 'courses/base.html' %}
+{% load l10n %}
 {% load static %}
 
 {% block title %}Create Course — StudyQuest{% endblock %}
@@ -1088,9 +1089,9 @@
                     <div class="drop-zone" id="drop-zone">
                         <div id="drop-empty-state">
                             <div class="upload-icon-wrap">📄</div>
-                            <h3 class="drop-title" id="drop-title-text">Add up to 3 study files</h3>
+                            <h3 class="drop-title" id="drop-title-text">Add up to {{ upload_policy.max_source_files }} study files</h3>
                             <p class="drop-subtitle"><button type="button" id="browse-study-files" class="btn btn-secondary browse-link">Choose Files</button></p>
-                            <span class="drop-formats">Supports PDF, DOCX, PPTX, TXT (Max 10 MB each, 20 MB total)</span>
+                            <span class="drop-formats">Supports PDF, DOCX, PPTX, TXT (Max {{ upload_policy.upload_size_mb }} MB each, {{ upload_policy.max_bundle_bytes|filesizeformat }} total)</span>
                         </div>
                         <input type="file" id="file-upload" name="content_files" class="hidden-file-input" accept=".pdf,.docx,.pptx,.txt" multiple>
                     </div>
@@ -1102,7 +1103,7 @@
                     <div class="bundle-meter" id="bundle-meter">
                         <div class="meter-info">
                             <span>File upload size:</span>
-                            <strong id="bundle-total-size">0.0 MB / 20 MB</strong>
+                            <strong id="bundle-total-size">0.0 MB / {{ upload_policy.max_bundle_bytes|filesizeformat }}</strong>
                         </div>
                         <div class="meter-bar">
                             <div class="meter-fill" id="meter-fill" style="width: 0%;"></div>
@@ -1112,7 +1113,7 @@
                     <div class="content-limit-note">
                         <span>
                             Course content limit:
-                            <strong>{% if profile.plan == 'plus' %}125,000{% else %}75,000{% endif %} characters</strong>
+                            <strong>{{ upload_policy.max_extracted_characters|floatformat:"0g" }} characters</strong>
                         </span>
                         <span
                             class="content-limit-help"
@@ -1223,8 +1224,10 @@
 </div>
 
 <script>
-    const MAX_FILES = 3;
-    const MAX_BUNDLE_BYTES = 20 * 1024 * 1024; // 20 MB default
+    const MAX_FILES = {{ upload_policy.max_source_files|unlocalize }};
+    const MAX_FILE_BYTES = {{ upload_policy.max_file_bytes|unlocalize }};
+    const MAX_BUNDLE_BYTES = {{ upload_policy.max_bundle_bytes|unlocalize }};
+    const BUNDLE_LIMIT_LABEL = "{{ upload_policy.max_bundle_bytes|filesizeformat|escapejs }}";
     const ALLOWED_EXTS = ['.pdf', '.docx', '.pptx', '.txt'];
 
     let stagedFiles = [];
@@ -1289,7 +1292,7 @@
         // Update badge and sizes
         bundleCountBadge.textContent = `${stagedFiles.length} / ${MAX_FILES} Files`;
         const totalMb = (totalBytes / (1024 * 1024)).toFixed(1);
-        bundleTotalSizeDisplay.textContent = `${totalMb} MB / 20 MB`;
+        bundleTotalSizeDisplay.textContent = `${totalMb} MB / ${BUNDLE_LIMIT_LABEL}`;
 
         const pct = Math.min(100, Math.round((totalBytes / MAX_BUNDLE_BYTES) * 100));
         meterFill.style.width = `${pct}%`;
@@ -1298,7 +1301,7 @@
         // Update dropzone appearance
         if (stagedFiles.length >= MAX_FILES) {
             dropZone.classList.add('is-full', 'compact');
-            dropTitleText.textContent = 'Bundle full (3 of 3 files staged)';
+            dropTitleText.textContent = `Bundle full (${MAX_FILES} of ${MAX_FILES} files staged)`;
         } else if (stagedFiles.length > 0) {
             dropZone.classList.remove('is-full');
             dropZone.classList.add('compact');
@@ -1306,7 +1309,7 @@
             dropTitleText.textContent = `+ Add file (${remaining} slot${remaining === 1 ? '' : 's'} remaining)`;
         } else {
             dropZone.classList.remove('is-full', 'compact');
-            dropTitleText.textContent = 'Add up to 3 study files';
+            dropTitleText.textContent = `Add up to ${MAX_FILES} study files`;
         }
 
         // Render cards with drag handle and reordering support
@@ -1435,6 +1438,17 @@
             );
             if (isDuplicate) {
                 continue; // Skip duplicate silently or gracefully
+            }
+
+            if (file.size > MAX_FILE_BYTES) {
+                alert("Each file must be {{ upload_policy.upload_size_mb }} MB or smaller.");
+                continue;
+            }
+
+            const stagedBytes = stagedFiles.reduce((total, entry) => total + entry.size, 0);
+            if (stagedBytes + file.size > MAX_BUNDLE_BYTES) {
+                alert("The combined upload must be " + BUNDLE_LIMIT_LABEL + " or smaller.");
+                continue;
             }
 
             stagedFiles.push(file);
