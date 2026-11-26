@@ -50,10 +50,25 @@ class PrototypePlanTests(TestCase):
             key: {"username": f"sq-demo-{key}", "password_hash": make_password(f"test-password-{key}")}
             for key in ("free", "plus")
         }
-        with patch.dict(os.environ, {"STUDYQUEST_PROTOTYPE_LEARNERS": json.dumps(configuration)}):
+        staff_config = {
+            "username": "sq-demo-admin", "password_hash": make_password("local-staff-password")
+        }
+        with patch.dict(os.environ, {
+            "STUDYQUEST_PROTOTYPE_LEARNERS": json.dumps(configuration),
+            "STUDYQUEST_PROTOTYPE_ADMIN": json.dumps(staff_config),
+        }):
             call_command("provision_prototype_learners")
             call_command("provision_prototype_learners")
+            staff = User.objects.get(username="sq-demo-admin")
+            self.assertTrue(staff.is_staff)
+            self.assertFalse(staff.is_superuser)
+            self.assertEqual(staff.get_all_permissions(), {"courses.view_userprofile", "courses.change_userprofile"})
+            self.client.force_login(staff)
             plus = User.objects.get(username="sq-demo-plus")
+            profile_edit = reverse("admin:courses_userprofile_change", args=[plus.userprofile.pk])
+            response = self.client.get(profile_edit)
+            self.assertContains(response, 'name="plan"')
+            self.assertNotContains(response, 'name="total_xp"')
             self.assertTrue(plus.check_password("test-password-plus"))
             self.assertEqual(plus.userprofile.plan, "plus")
             self.assertFalse(plus.is_staff)

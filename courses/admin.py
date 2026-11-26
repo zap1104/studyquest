@@ -58,6 +58,22 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_filter = ('plan', 'user__is_staff')
     search_fields = ('user__username',)
 
+    def get_queryset(self, request):
+        profiles = super().get_queryset(request)
+        if not request.user.is_superuser:
+            return profiles.filter(user__is_staff=False, user__is_superuser=False)
+        return profiles
+
+    def get_fields(self, request, obj=None):
+        if not request.user.is_superuser:
+            return ("user", "plan")
+        return super().get_fields(request, obj)
+
+    def get_readonly_fields(self, request, obj=None):
+        if not request.user.is_superuser:
+            return ("user",)
+        return super().get_readonly_fields(request, obj)
+
 @admin.register(QuizAttempt)
 class QuizAttemptAdmin(admin.ModelAdmin):
     list_display = ('user', 'quiz', 'score', 'total_questions', 'xp_earned', 'completed_at')
